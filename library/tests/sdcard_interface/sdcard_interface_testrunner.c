@@ -86,7 +86,23 @@ TEST_GROUP_RUNNER(sdcard_interface)
 	RUN_TEST_CASE(sdcard_interface,	ReadEventCopiesAvailableEventsIfNisMoreForN_FROM_LAST);
 	RUN_TEST_CASE(sdcard_interface,	ReadEventCopiesNEventsIfNEventsAvailableForN_FROM_LAST);
 	
+	RUN_TEST_CASE(sdcard_interface,	CreateFirmwareFile_errorIfFilenameIsNull);
+	RUN_TEST_CASE(sdcard_interface,	CreateFirmwareFile_errorIfFileIsAlreadyThere);
+	//RUN_TEST_CASE(sdcard_interface,	CreateFirmwareFile_errorIfFileCreationFailed);
+	RUN_TEST_CASE(sdcard_interface,	CreateFirmwareFile_CreatesAnEmptyFile);
 	
+	RUN_TEST_CASE(sdcard_interface,	DeleteFirmwareFile_errorIfFilenameIsNull);
+	RUN_TEST_CASE(sdcard_interface,	DeleteFirmwareFile_successIfFileNotthere);
+	//RUN_TEST_CASE(sdcard_interface,	DeleteFirmwareFile_errorIfFileDeletionFailed);
+	RUN_TEST_CASE(sdcard_interface,	DeleteFirmwareFile_DeletesTheFile);
+	
+	RUN_TEST_CASE(sdcard_interface,	AppendFirmwareData_errorIfFilenameIsNull);
+	RUN_TEST_CASE(sdcard_interface,	AppendFirmwareData_errorIfFileNotAvailable);
+	//RUN_TEST_CASE(sdcard_interface,	AppendFirmwareData_errorIfFileNotAccessible);
+	RUN_TEST_CASE(sdcard_interface,	AppendFirmwareData_errorIfDataBufferIsNull);
+	RUN_TEST_CASE(sdcard_interface,	AppendFirmwareData_errorIfDataLengthIsZero);
+	RUN_TEST_CASE(sdcard_interface,	AppendFirmwareData_errorIfDataLengthIsNegative);
+	RUN_TEST_CASE(sdcard_interface,	AppendFirmwareData_AppendsDataToTheEndOfFile);
 	
 	
 	RUN_TEST_CASE(sdcard_interface,	GetCurrentLogFileCopiesTheLogFileNameToTheBuffer);

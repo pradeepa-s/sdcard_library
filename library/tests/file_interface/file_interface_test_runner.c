@@ -69,6 +69,15 @@ TEST_GROUP_RUNNER(file_interface)
 	RUN_TEST_CASE(file_interface, FileIF_ReadLineErrorIfLineNumberIsMore);
 	RUN_TEST_CASE(file_interface, FileIF_ReadLineECopiesTheStringIfSuccessful);
 	
+	RUN_TEST_CASE(file_interface, FileIF_CopyBufferToFile_errorIfFilenameIsNULL);
+	RUN_TEST_CASE(file_interface, FileIF_CopyBufferToFile_errorIfFileNotAvailable);
+	//RUN_TEST_CASE(file_interface, FileIF_CopyBufferToFile_errorIfFileNotAccessible);
+	RUN_TEST_CASE(file_interface, FileIF_CopyBufferToFile_errorIfBufferIsNULL);
+	RUN_TEST_CASE(file_interface, FileIF_CopyBufferToFile_errorIfBufferSizeIsZero);
+	RUN_TEST_CASE(file_interface, FileIF_CopyBufferToFile_errorIfBufferSizeIsNegative);
+	RUN_TEST_CASE(file_interface, FileIF_CopyBufferToFile_CopiesDataToTheEndOfFile);
+	
+	
 	
 	
 	RUN_TEST_CASE(file_interface, DeleteFileGeneratesAnErrorIfFileCannotBeRemoved);

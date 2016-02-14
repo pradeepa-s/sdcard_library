@@ -441,3 +441,58 @@ int FileIF_ReadLine(const char *filename, int line_no, char *line_buffer, int *b
 	
 	return ret;
 }
+
+/**
+ * @brief Function to copy buffer content to file
+ * 
+ * This function appends buffer content to a file 
+ * 
+ * @param filename[in] 		Filename 
+ * @param buffer[in] 		Data to append
+ * @param buf_size[in] 		Data amount
+ * 
+ * @return 	FILEIF_OP_SUCCESS				Operation success 
+ * @return 	FILEIF_ERR_INVALID_PARAM		Function parameters are invalid
+ * @return 	FILEIF_ERR_FILE_NOT_AVAILABLE	File cannot be found
+ * @return 	FILEIF_ERR_FILE_ACCESS			File cannot be accessed
+ * 
+ * 
+ * @warning None
+ */
+
+int FileIF_CopyBufferToFile(const char *filename, char *buffer, int buf_size)
+{
+	int ret = FILEIF_OP_SUCCESS;
+	
+	FILE *f;
+	int copied_amount = 0;
+	
+	if(	(NULL == filename)	||
+		(NULL == buffer)	||
+		(buf_size <= 0)){
+		ret = FILEIF_ERR_INVALID_PARAM;
+	}
+	else{
+		ret = FileIF_IsFileAvailable(filename);
+	}
+	
+	if(FILEIF_OP_SUCCESS == ret){
+		f = fopen(filename, "a+");
+		
+		if(f){
+			copied_amount = fwrite(buffer, sizeof(char), buf_size, f);
+			
+			if(copied_amount != buf_size){
+				ret = FILEIF_ERR_FILE_ACCESS;
+			}
+			
+			fclose(f);
+		}
+		else{
+			ret = FILEIF_ERR_FILE_NOT_AVAILABLE;
+		}
+	}
+	
+	return ret;
+}
+

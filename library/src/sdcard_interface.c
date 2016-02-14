@@ -455,6 +455,98 @@ int SDCardIF_ReadEventLog(const char* filename, ITSI_LOG_EVENT *event, READ_TYPE
 	return ret;
 }
 
+
+/**
+ * @brief Function to create an empty firmware file
+ * 
+ * This function creates an empty file provided that a file
+ * with the same name does not exist in the provided location.
+ * 
+ * @param filename[in]			Filename of the firmware file
+ * 
+ * @return 	SDCARD_IF_OP_SUCCESS					Operation success
+ * @return 	SDCARD_IF_ERR_INVALID_PARAM				Invalid input parameters 
+ * @return 	SDCARD_IF_ERR_FILE_ACCESS				File creation failed
+ * @return 	SDCARD_IF_ERR_FILE_NOT_AVAILABLE		File creation failed
+ * 
+ * @note 	This function can work without initilizing the library.
+ * 			ie: without calling @SDCardIF_Initialize
+ */
+
+int SDCardIF_CreateFirmwareFile(const char *filename)
+{
+	int ret = SDCARD_IF_OP_SUCCESS;
+	
+	if(NULL == filename){
+		ret = SDCARD_IF_ERR_INVALID_PARAM;
+	}
+	else if(SDCARD_IF_OP_SUCCESS == FileIF_IsFileAvailable(filename)){
+		ret = SDCARD_IF_ERR_FILE_ACCESS;
+	}
+	else{
+		ret = FileIF_CreateFile(filename);
+	}
+	
+	return ret;
+}
+
+/**
+ * @brief Function to delete a firmware file
+ * 
+ * This function delets an empty file. 
+ * If the file is not there, the function will return SUCCESS.
+ * 
+ * @param filename[in]			Filename of the firmware file
+ * 
+ * @return 	SDCARD_IF_OP_SUCCESS					Operation success
+ * @return 	SDCARD_IF_ERR_INVALID_PARAM				Invalid input parameters  
+ * @return 	SDCARD_IF_ERR_FILE_NOT_AVAILABLE		File deletion failed
+ * 
+ * @note 	This function can work without initilizing the library.
+ * 			ie: without calling @SDCardIF_Initialize
+ */
+
+int SDCardIF_DeleteFirmwareFile(const char *filename)
+{
+	int ret = SDCARD_IF_OP_SUCCESS;
+	
+	if(NULL == filename){
+		ret = SDCARD_IF_ERR_INVALID_PARAM;
+	}	
+	else{
+		ret = FileIF_DeleteFile(filename);
+		
+		if(SDCARD_IF_ERR_FILE_NOT_AVAILABLE == ret){
+			ret = SDCARD_IF_OP_SUCCESS;
+		}
+	}
+	
+	return ret;
+}
+
+
+int SDCardIF_AppendFirmwareData(const char *filename, char* data, int data_size)
+{		
+	int ret = SDCARD_IF_OP_SUCCESS;
+	
+	if(	(NULL == filename)	||
+		(NULL == data)	||
+		(data_size <= 0)){
+			ret = SDCARD_IF_ERR_INVALID_PARAM;
+	}
+	
+	if(SDCARD_IF_OP_SUCCESS == ret){
+		ret = FileIF_IsFileAvailable(filename);
+	}
+	
+	if(SDCARD_IF_OP_SUCCESS == ret){
+		ret = FileIF_CopyBufferToFile(filename, data, data_size);
+	}	
+	
+	return ret;
+}
+
+
 /**
  * @brief Function to reset all the static and global buffers
  * 

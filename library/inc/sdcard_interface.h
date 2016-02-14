@@ -64,4 +64,7 @@ int SDCardIF_LogEvent(ITSI_LOG_EVENT *event);
 int SDCardIF_ReadEventLog(const char* filename, ITSI_LOG_EVENT *event, READ_TYPE read_type, int *no_of_events);
 int SDCardIF_GetCurrentLogFile(char *filename, int *filename_size);
 int SDCardIF_ReadFirmwareFile(char *filename, int offset, char *buffer, int *buf_size, int *file_size);
+int SDCardIF_CreateFirmwareFile(const char *filename);
+int SDCardIF_DeleteFirmwareFile(const char *filename);
+int SDCardIF_AppendFirmwareData(const char *filename, char* data, int data_size);
 void SDCardIF_Reset();

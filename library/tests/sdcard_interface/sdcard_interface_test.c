@@ -24,6 +24,8 @@ TEST_TEAR_DOWN(sdcard_interface)
 	remove("sdcard_interface/event_file_not_available.dat");
 	remove("sdcard_interface/event_file1.txt");
 	remove("sdcard_interface/event_file2.txt");
+	remove("sdcard_interface/empty_firmware.bin");
+	remove("sdcard_interface/data_append");
 	remove(DEFAULT_EVENT_LOG);
 		
 }
@@ -1129,3 +1131,92 @@ TEST(sdcard_interface, InitFunctionCreatesTheDefaultLogIfNotAlreadyThere)
 	SDCardIF_Initialize();
 	TEST_ASSERT_EQUAL(1, IsFileAvailable(DEFAULT_EVENT_LOG));
 }
+
+TEST(sdcard_interface, CreateFirmwareFile_errorIfFilenameIsNull)
+{	
+	TEST_ASSERT_EQUAL(SDCARD_IF_ERR_INVALID_PARAM, SDCardIF_CreateFirmwareFile(NULL));
+}
+
+TEST(sdcard_interface, CreateFirmwareFile_errorIfFileIsAlreadyThere)
+{	
+	TEST_ASSERT_EQUAL(SDCARD_IF_ERR_FILE_ACCESS, SDCardIF_CreateFirmwareFile("sdcard_interface/10k_firmware.bin"));
+}
+
+TEST(sdcard_interface, CreateFirmwareFile_CreatesAnEmptyFile)
+{	
+	TEST_ASSERT_EQUAL(SDCARD_IF_OP_SUCCESS, SDCardIF_CreateFirmwareFile("sdcard_interface/empty_firmware.bin"));
+	TEST_ASSERT_EQUAL(1, IsFileAvailable("sdcard_interface/empty_firmware.bin"));
+}
+
+TEST(sdcard_interface, DeleteFirmwareFile_errorIfFilenameIsNull)
+{	
+	TEST_ASSERT_EQUAL(SDCARD_IF_ERR_INVALID_PARAM, SDCardIF_DeleteFirmwareFile(NULL));
+}
+
+TEST(sdcard_interface, DeleteFirmwareFile_successIfFileNotthere)
+{	
+	TEST_ASSERT_EQUAL(SDCARD_IF_OP_SUCCESS, SDCardIF_DeleteFirmwareFile("sdcard_interface/not_a_file"));
+}
+
+TEST(sdcard_interface, DeleteFirmwareFile_DeletesTheFile)
+{	
+	TEST_ASSERT_EQUAL(SDCARD_IF_OP_SUCCESS, SDCardIF_CreateFirmwareFile("sdcard_interface/empty_firmware.bin"));
+	TEST_ASSERT_EQUAL(1, IsFileAvailable("sdcard_interface/empty_firmware.bin"));
+	TEST_ASSERT_EQUAL(SDCARD_IF_OP_SUCCESS, SDCardIF_DeleteFirmwareFile("sdcard_interface/empty_firmware.bin"));
+	TEST_ASSERT_EQUAL(0, IsFileAvailable("sdcard_interface/empty_firmware.bin"));
+}
+
+TEST(sdcard_interface, AppendFirmwareData_errorIfFilenameIsNull)
+{	
+	char filecontent[10];
+	TEST_ASSERT_EQUAL(SDCARD_IF_ERR_INVALID_PARAM, SDCardIF_AppendFirmwareData(NULL, filecontent, sizeof(filecontent)));
+}
+
+TEST(sdcard_interface, AppendFirmwareData_errorIfFileNotAvailable)
+{	
+	char filecontent[10];
+	TEST_ASSERT_EQUAL(SDCARD_IF_ERR_FILE_NOT_AVAILABLE, SDCardIF_AppendFirmwareData("sdcard_interface/not_a_file", filecontent, sizeof(filecontent)));
+}
+
+TEST(sdcard_interface, AppendFirmwareData_errorIfDataBufferIsNull)
+{	
+	TEST_ASSERT_EQUAL(SDCARD_IF_ERR_INVALID_PARAM, SDCardIF_AppendFirmwareData("sdcard_interface/not_a_file", NULL, 50));
+}
+
+TEST(sdcard_interface, AppendFirmwareData_errorIfDataLengthIsZero)
+{	
+	char filecontent[10];
+	TEST_ASSERT_EQUAL(SDCARD_IF_ERR_INVALID_PARAM, SDCardIF_AppendFirmwareData("sdcard_interface/not_a_file", filecontent, 0));
+}
+
+TEST(sdcard_interface, AppendFirmwareData_errorIfDataLengthIsNegative)
+{	
+	char filecontent[10];
+	TEST_ASSERT_EQUAL(SDCARD_IF_ERR_INVALID_PARAM, SDCardIF_AppendFirmwareData("sdcard_interface/not_a_file", filecontent, -100));
+}
+
+
+TEST(sdcard_interface, AppendFirmwareData_AppendsDataToTheEndOfFile)
+{	
+	char filename[] = "sdcard_interface/data_append";	
+	char data[60];		
+	int data_size = sizeof(data);
+	int i;
+	
+	for(i = 0; i < data_size; i++){
+		data[i] = i;
+	}
+	
+	TEST_ASSERT_EQUAL(SDCARD_IF_OP_SUCCESS, SDCardIF_CreateFirmwareFile(filename));
+	TEST_ASSERT_EQUAL(1, IsFileAvailable(filename));
+	TEST_ASSERT_EQUAL(SDCARD_IF_OP_SUCCESS, SDCardIF_AppendFirmwareData(filename, data, data_size));				
+	TEST_ASSERT_EQUAL(1, CompareFiles("sdcard_interface/data_append", "sdcard_interface/data_append_test1"));
+	
+	for(i = 0; i < data_size; i++){
+		data[i] = data_size-i;
+	}
+	
+	TEST_ASSERT_EQUAL(SDCARD_IF_OP_SUCCESS, SDCardIF_AppendFirmwareData(filename, data, data_size));	
+	TEST_ASSERT_EQUAL(1, CompareFiles(filename, "sdcard_interface/data_append_test2"));
+}
+

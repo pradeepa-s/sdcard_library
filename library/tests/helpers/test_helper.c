@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include "test_helper.h"
+#include <unistd.h>
 
 char IsFileAvailable(const char *filename)
 {
@@ -28,6 +29,8 @@ char CompareFiles(const char *file1, const char *file2)
 	char state = 0;
 	char *content1 = NULL;
 	char *content2 = NULL;
+	
+	usleep(10000);
 	
 	f1 = fopen(file1, "r");
 	f2 = fopen(file2, "r");
@@ -57,10 +60,20 @@ char CompareFiles(const char *file1, const char *file2)
 				free(content1);
 				free(content2);
 			}
+			else{
+				printf("content mismatch\n");
+			}
+				
+		}
+		else{
+			printf("size mismatch: %d, %d\n",size1, size2);
 		}
 		
 		fclose(f1);
 		fclose(f2);
+	}
+	else{
+		printf("access error\n");
 	}
 	
 	return state;
