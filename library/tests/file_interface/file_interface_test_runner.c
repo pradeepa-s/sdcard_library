@@ -1,0 +1,75 @@
+#include "unity_fixture.h"
+
+TEST_GROUP_RUNNER(file_interface)
+{
+	RUN_TEST_CASE(file_interface, CopyFileToBufferErrorIfFileNameIsNULL);
+	RUN_TEST_CASE(file_interface, CopyFileToBufferErrorIfBuffSizeIsNULL);	
+	RUN_TEST_CASE(file_interface, CopyFileToBufferErrorIfFileNotAvailable);
+	RUN_TEST_CASE(file_interface, CopyFileToBufferErrorIfBufferIsNULL);
+	RUN_TEST_CASE(file_interface, CopyFileToBufferErrorIfFilesizeIsNULL);
+	RUN_TEST_CASE(file_interface, CopyFileToBufferErrorIfBufferSizeIsZero);
+	RUN_TEST_CASE(file_interface, CopyFileToBufferErrorIfBufferSizeIsLessThanZero);
+	RUN_TEST_CASE(file_interface, CopyFileToBufferWarningIfBufferSizeMoreThanFileSize);
+	RUN_TEST_CASE(file_interface, CopyFileToBufferWarningIfBufferSizeLessThanFileSize);
+	RUN_TEST_CASE(file_interface, CopyFileToBufferCopiesTheFileContentToBufferSameBufferSize);
+	RUN_TEST_CASE(file_interface, CopyFileToBufferCopiesTheFileContentToBufferWhenBufferSizeIsLess);
+	RUN_TEST_CASE(file_interface, CopyFileToBufferCopiesTheFileContentToBufferWhenBufferSizeIsMore);
+	RUN_TEST_CASE(file_interface, CopyFileToBufferWhenBufferSizeIsMoreMakesRestOfTheBufferZero);
+	RUN_TEST_CASE(file_interface, CopyFileToBufferSetsTheReadAmountInBufSizeVariable);
+	RUN_TEST_CASE(file_interface, CopyFileToBufferReturnsSuccessIfNoErrors);
+	RUN_TEST_CASE(file_interface, CopyFileToBufferClosesTheFileAtTheEnd);
+	RUN_TEST_CASE(file_interface, CopyFileToBufferStoresFilesizeCorrectly);
+	RUN_TEST_CASE(file_interface, CopyFileToBufferErrorIfOffsetIsNegative);
+	RUN_TEST_CASE(file_interface, CopyFileToBufferGeneratesErrorIfOffsetIsMoreThenFileSize);
+	RUN_TEST_CASE(file_interface, CopyFileToBufferStartsReadingDataFromTheOffset);
+	RUN_TEST_CASE(file_interface, CopyFileToBufferCopiesFileSizeEvenIfOffsetIsInvalid);
+	RUN_TEST_CASE(file_interface, CopyFileToBufferCopiesFileSizeEvenIfOffsetIsMore);
+	RUN_TEST_CASE(file_interface, CopyFileToBufferCopiesFileSizeEvenIfBufferSizeIsInvalid);
+	RUN_TEST_CASE(file_interface, CopyFileToBufferCopiesFileSizeEvenIfBufferIsInvalid);
+	
+	RUN_TEST_CASE(file_interface, IsFileAvailableErrorIfFilenameIsNULL);
+	RUN_TEST_CASE(file_interface, IsFileAvailableErrorIfFileNotAvailable);
+	RUN_TEST_CASE(file_interface, IsFileAvailableSuccessIfFileAvailable);
+	RUN_TEST_CASE(file_interface, IsFileAvailableClosesTheFileBeforeReturning);
+	
+	RUN_TEST_CASE(file_interface, CreateFileGeneratesErrorIfFilenameIsNULL);
+	RUN_TEST_CASE(file_interface, CreateFileGeneratesSuccessIfFileAvailable);
+	RUN_TEST_CASE(file_interface, CreateFileCreatesTheFileIfFileNotAvailable);
+	RUN_TEST_CASE(file_interface, CreateFileClosesTheFileAtTheEnd);
+	RUN_TEST_CASE(file_interface, DeleteFileGeneratesAnErrorIfFileNameIsNULL);
+	RUN_TEST_CASE(file_interface, DeleteFileGeneratesAnErrorIfFileIsNotAvailable);
+	RUN_TEST_CASE(file_interface, DeleteFileDeletesFileIfFileIsAvailable);
+	
+	
+	RUN_TEST_CASE(file_interface, GetFileSizeGeneratesAnErrorIfFilenameNULL);
+	RUN_TEST_CASE(file_interface, GetFileSizeGeneratesAnErrorIfFilesizeNULL);
+	RUN_TEST_CASE(file_interface, GetFileSizeGeneratesAnErrorIfFileCannotBeAccessed);
+	RUN_TEST_CASE(file_interface, GetFileSizeCopiesTheFileSizeIfSuccess);
+	
+	RUN_TEST_CASE(file_interface, FileIF_AppendStringErrorIfFilenameIsNULL);
+	RUN_TEST_CASE(file_interface, FileIF_AppendStringErrorIfStringIsNULL);
+	RUN_TEST_CASE(file_interface, FileIF_AppendStringErrorIfFileNotAvailable);
+	RUN_TEST_CASE(file_interface, FileIF_AppendStringAppendsStringToEndOfTheFile);
+	
+	RUN_TEST_CASE(file_interface, FileIF_GetNoOfLinesIfFilenameIsNULL);
+	RUN_TEST_CASE(file_interface, FileIF_GetNoOfLinesIfFileNotAvailable);
+	RUN_TEST_CASE(file_interface, FileIF_GetNoOfLinesIfNoOfLinesIsNULL);
+	RUN_TEST_CASE(file_interface, FileIF_GetNoOfLinesReturnsNoOfLinesInTheFile);
+	RUN_TEST_CASE(file_interface, FileIF_GetNoOfLinesReturnsZeroAsNoOfLinesForEmptyFile);
+
+	RUN_TEST_CASE(file_interface, FileIF_ReadLineErrorIfFilenameIsNULL);
+	RUN_TEST_CASE(file_interface, FileIF_ReadLineErrorIfLineBufferIsNULL);
+	RUN_TEST_CASE(file_interface, FileIF_ReadLineErrorIfBufferSizeIsNULL);
+	RUN_TEST_CASE(file_interface, FileIF_ReadLineErrorIfBufferSizeIsSmall);
+	RUN_TEST_CASE(file_interface, FileIF_ReadLineReturnsTheRequiredBufferSizeIfBufferSizeIsSmall);
+	RUN_TEST_CASE(file_interface, FileIF_ReadLineReturnsCopiedDataAmountIfFunctionIsSuccessful);
+	RUN_TEST_CASE(file_interface, FileIF_ReadLineErrorIfFileNotAccessible);
+	RUN_TEST_CASE(file_interface, FileIF_ReadLineErrorIfLineNumberIsNegetive);
+	RUN_TEST_CASE(file_interface, FileIF_ReadLineErrorIfLineNumberIsZero);
+	RUN_TEST_CASE(file_interface, FileIF_ReadLineErrorIfLineNumberIsMore);
+	RUN_TEST_CASE(file_interface, FileIF_ReadLineECopiesTheStringIfSuccessful);
+	
+	
+	
+	RUN_TEST_CASE(file_interface, DeleteFileGeneratesAnErrorIfFileCannotBeRemoved);
+}
