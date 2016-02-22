@@ -83,6 +83,7 @@ SECTIONS
     
 
 /* USER CODE BEGIN (4) */
+	LOG_DATA : START( ulLOGStartAddr ), END( ulLOGEndAddr ) > RAM
 /* USER CODE END */
 }
 

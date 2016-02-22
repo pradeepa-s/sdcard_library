@@ -50,8 +50,9 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/fatfs/port}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/HALCoGen/include}&quot;"/>
 								</option>
-								<option id="com.ti.ccstudio.buildDefinitions.TMS470_5.2.compilerID.DEFINE.54996859" superClass="com.ti.ccstudio.buildDefinitions.TMS470_5.2.compilerID.DEFINE" valueType="definedSymbols">
+								<option id="com.ti.ccstudio.buildDefinitions.TMS470_5.2.compilerID.DEFINE.54996859" name="Pre-define NAME (--define, -D)" superClass="com.ti.ccstudio.buildDefinitions.TMS470_5.2.compilerID.DEFINE" valueType="definedSymbols">
 									<listOptionValue builtIn="false" value="_VFP_SUPPORT_=1"/>
+									<listOptionValue builtIn="false" value="DEBUG_MODE"/>
 									<listOptionValue builtIn="false" value="_TMS570LS12x_"/>
 									<listOptionValue builtIn="false" value="EXTERNAL_SP_INIT"/>
 								</option>
