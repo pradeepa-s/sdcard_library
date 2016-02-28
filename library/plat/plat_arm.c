@@ -24,6 +24,8 @@
 #include "plat_arm.h"
 #include "ff.h"
 
+static int ff_return_code_translate(int return_code);
+
 /**
  * @brief Function to open a file and copy the content to a buffer
  * 
@@ -114,23 +116,26 @@ int FileIF_CopyFileToBuffer(const char *filename, int offset, char *buffer, int 
 					ret = FILEIF_WARN_BUFFER_SIZE_SMALL;
 				}
 				
-				if(FR_OK == f_lseek(&f, offset)){
-					if(FR_OK == f_read(&f, buffer, amount_to_read, &f_read_size)){
+				ret = f_lseek(&f, offset);
+				
+				if(FR_OK == ret){
+					ret = f_read(&f, buffer, amount_to_read, &f_read_size);
+					
+					if(FR_OK == ret){
 						*buf_size = f_read_size;
 					}
-					else{
-						ret = FILEIF_ERR_FILE_NOT_AVAILABLE;
-					}
-				}
-				else{
-					ret = FILEIF_ERR_FILE_NOT_AVAILABLE;
 				}
 				
 				f_close(&f);
 			}
 		}
-		else{
+		
+		/* If file is not available translate  */
+		if((FR_NO_FILE == ret) || (FR_NO_PATH == ret)){
 			ret = FILEIF_ERR_FILE_NOT_AVAILABLE;
+		}
+		else{
+			ret = ff_return_code_translate(ret);
 		}
 	}
 	
@@ -205,10 +210,15 @@ int FileIF_CreateFile(const char *filename)
 				f_close(&f);
 			}
 		}
-
-		if(ret != FR_OK){
+		
+		/* If file is not available translate  */
+		if((FR_NO_FILE == ret) || (FR_NO_PATH == ret)){
 			ret = FILEIF_ERR_FILE_NOT_AVAILABLE;
 		}
+		else{
+			ret = ff_return_code_translate(ret);
+		}
+
 	}
 	
 	return ret;
@@ -231,9 +241,15 @@ int FileIF_DeleteFile(const char *filename)
 {		
 	int ret = FileIF_IsFileAvailable(filename);
 	
-	if(FILEIF_OP_SUCCESS == ret){								
-		if(f_unlink(filename) != 0){
+	if(FILEIF_OP_SUCCESS == ret){	
+		ret = f_unlink(filename);
+		
+		/* If file is not available translate  */
+		if((FR_NO_FILE == ret) || (FR_NO_PATH == ret)){
 			ret = FILEIF_ERR_FILE_NOT_AVAILABLE;
+		}
+		else{
+			ret = ff_return_code_translate(ret);
 		}
 	}
 	
@@ -272,8 +288,13 @@ int FileIF_GetFileSize(const char *filename, int *file_size)
 			
 			ret = FILEIF_OP_SUCCESS;
 		}
-		else{
+		
+		/* If file is not available translate  */
+		if((FR_NO_FILE == ret) || (FR_NO_PATH == ret)){
 			ret = FILEIF_ERR_FILE_NOT_AVAILABLE;
+		}
+		else{
+			ret = ff_return_code_translate(ret);
 		}
 			
 	}
@@ -315,8 +336,13 @@ int FileIF_AppendString(const char *filename, const char *string)
 				f_close(&f);
 				ret = FILEIF_OP_SUCCESS;
 			}
-			else{
+			
+			/* If file is not available translate  */
+			if((FR_NO_FILE == ret) || (FR_NO_PATH == ret)){
 				ret = FILEIF_ERR_FILE_NOT_AVAILABLE;
+			}
+			else{
+				ret = ff_return_code_translate(ret);
 			}
 		}			
 	}
@@ -365,8 +391,13 @@ int FileIF_GetNoOfLines(const char *filename,int *no_of_lines)
 				f_close(&f);
 				*no_of_lines = line_count;
 			}
-			else{
+			
+			/* If file is not available translate  */
+			if((FR_NO_FILE == ret) || (FR_NO_PATH == ret)){
 				ret = FILEIF_ERR_FILE_NOT_AVAILABLE;
+			}
+			else{
+				ret = ff_return_code_translate(ret);
 			}
 		}		
 	}
@@ -454,14 +485,28 @@ int FileIF_ReadLine(const char *filename, int line_no, char *line_buffer, int *b
 			
 			f_close(&f);
 		}
-		else{
+		
+		/* If file is not available translate  */
+		if((FR_NO_FILE == ret) || (FR_NO_PATH == ret)){
 			ret = FILEIF_ERR_FILE_NOT_AVAILABLE;
+		}
+		else{
+			ret = ff_return_code_translate(ret);
 		}
 	}
 	
 	return ret;
 }
 
+
+/**
+ * @brief Translate return fat file system return codes
+ * 
+ * 
+ * @param return_code[in] 		Input return code 
+ * 
+ * @return	Translated return code
+ */
 
 static int ff_return_code_translate(int return_code)
 {
@@ -548,8 +593,8 @@ static int ff_return_code_translate(int return_code)
 			break;
 			
 		default:
-		ret = FILEIF_WARN_FF_UNKNOWN;
-		break;
+			ret = FILEIF_WARN_FF_UNKNOWN;
+			break;
 	}
 	
 	return ret;

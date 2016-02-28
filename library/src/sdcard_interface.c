@@ -35,15 +35,25 @@ static void DecodeEvents(ITSI_LOG_EVENT *event, char *line_buffer);
  *
  * @return None
  * @note Make sure to call this function before calling any other API functions. 
+ * 
+ * @return	SDCARD_IF_OP_SUCCESS				-	Success
+ * @return 	SDCARD_IF_ERR_NOT_INITIALIZED		-	Init function has not been called
+ * @return 	SDCARD_IF_ERR_INVALID_PARAM			-	Invalid input parameter 
+ * @return 	SDCARD_IF_ERR_FILE_NOT_AVAILABLE	-	Failed to create  new file 
+ * @return	Refer to sdcard_err_codes.h
  */
 
-void SDCardIF_Initialize()
+int SDCardIF_Initialize()
 {
+	int ret = SDCARD_IF_OP_SUCCESS;
+	
 	sdcardif_initialized = TRUE;
 	audio_buffer = NULL;
 	audio_buffer_size = 0;
 	
-	SDCardIF_SetLogFile(DEFAULT_EVENT_LOG);
+	ret = SDCardIF_SetLogFile(DEFAULT_EVENT_LOG);
+	
+	return ret;
 }
 
 
@@ -83,8 +93,7 @@ int SDCardIF_SetAudioFileBuffer(char *buffer, int buf_size)
  * 
  * @param filename[in] 	Filename of the audio file
  * @return 	SDCARD_IF_OP_SUCCESS			Operation success 
- * @note Something to note.
- * @warning Warning.
+ * @return	Refer to sdcard_err_codes.h
  */
 int SDCardIF_PlayAudioFile(const char *filename)
 {
@@ -116,6 +125,7 @@ int SDCardIF_PlayAudioFile(const char *filename)
  * @return 	SDCARD_IF_ERR_NOT_INITIALIZED		Init function has not been called
  * @return 	SDCARD_IF_ERR_INVALID_PARAM			Invalid input parameter 
  * @return 	SDCARD_IF_ERR_FILE_NOT_AVAILABLE	Failed to create  new file 
+ * @return	Refer to sdcard_err_codes.h
  * 
  * @note None
  * @warning Maximum filename size is MAX_FILENAME_SIZE
@@ -159,6 +169,7 @@ int SDCardIF_SetLogFile(const char* filename)
  * @return 	SDCARD_IF_OP_SUCCESS				Operation success
  * @return 	SDCARD_IF_ERR_INVALID_PARAM			Invalid input parameter 
  * @return 	SDCARD_IF_ERR_FILE_NOT_AVAILABLE	Failed to delete the file 
+ * @return	Refer to sdcard_err_codes.h
  * 
  * @note No need to initialize the API to use this.
  * @warning Maximum filename size is MAX_FILENAME_SIZE
@@ -197,6 +208,7 @@ int SDCardIF_DeleteLogFile(const char* filename)
  * @return 	SDCARD_IF_OP_SUCCESS				Operation success
  * @return 	SDCARD_IF_ERR_NOT_INITIALIZED		Init function was not called
  * @return 	SDCARD_IF_ERR_INVALID_PARAM			Invalid input parameter/buffer size  
+ * @return	Refer to sdcard_err_codes.h
  * 
  * @see SDCardIF_SetLogFile
  * 
@@ -252,6 +264,7 @@ int SDCardIF_GetCurrentLogFile(char *filename, int *filename_size)
  * @return 	SDCARD_IF_ERR_BUFFER_OFFSET			Offset is negetive or more than filesize
  * @return 	SDCARD_IF_WARN_BUFFER_SIZE_SMALL	Warning buffer size is smaller than filesize
  * @return 	SDCARD_IF_WARN_BUFFER_SIZE_LARGE	Warning buffer size is larger than filesize
+ * @return	Refer to sdcard_err_codes.h
  * 
  * 
  * @note 	If a offset is provided data copying will start after applying
@@ -299,6 +312,7 @@ int SDCardIF_ReadFirmwareFile(char *filename, int offset, char *buffer, int *buf
  * @return 	SDCARD_IF_ERR_NOT_INITIALIZED		Init function has not been called
  * @return 	SDCARD_IF_ERR_FILE_NOT_AVAILABLE	File is not accessible
  * @return 	SDCARD_IF_ERR_INVALID_PARAM			Invalid input parameter
+ * @return	Refer to sdcard_err_codes.h
  * 
  * @see 	SDCardIF_SetLogFile
  * @see 	SDCardIF_Initialize
@@ -359,6 +373,7 @@ int SDCardIF_LogEvent(ITSI_LOG_EVENT *event)
  * @return 	SDCARD_IF_ERR_EVENT_COUNT				Provided @no_of_events parameter is invalid
  * @return 	SDCARD_IF_ERR_EVENT_NOT_FOUND			Error in fetching the event 
  * @return 	SDCARD_IF_WARN_LESS_NO_Of_EVENTS_AVAIL	Required no of events is more than available
+ * @return	Refer to sdcard_err_codes.h
  * 
  * @see 	SDCardIF_LogEvent
  * 
@@ -468,6 +483,7 @@ int SDCardIF_ReadEventLog(const char* filename, ITSI_LOG_EVENT *event, READ_TYPE
  * @return 	SDCARD_IF_ERR_INVALID_PARAM				Invalid input parameters 
  * @return 	SDCARD_IF_ERR_FILE_ACCESS				File creation failed
  * @return 	SDCARD_IF_ERR_FILE_NOT_AVAILABLE		File creation failed
+ * @return	Refer to sdcard_err_codes.h
  * 
  * @note 	This function can work without initilizing the library.
  * 			ie: without calling @SDCardIF_Initialize
@@ -501,6 +517,7 @@ int SDCardIF_CreateFirmwareFile(const char *filename)
  * @return 	SDCARD_IF_OP_SUCCESS					Operation success
  * @return 	SDCARD_IF_ERR_INVALID_PARAM				Invalid input parameters  
  * @return 	SDCARD_IF_ERR_FILE_NOT_AVAILABLE		File deletion failed
+ * @return	Refer to sdcard_err_codes.h
  * 
  * @note 	This function can work without initilizing the library.
  * 			ie: without calling @SDCardIF_Initialize
@@ -524,7 +541,21 @@ int SDCardIF_DeleteFirmwareFile(const char *filename)
 	return ret;
 }
 
-
+/**
+ * @brief Append the firmware data to a file
+ * 
+ * Append provided data to the firmware file
+ * 
+ * @param filename[in]			Filename of the firmware file
+ * @param data[in]				Firmware data buffer
+ * @param data_size[in]			Size of the data buffer
+ * 
+ * @return 	SDCARD_IF_OP_SUCCESS					Operation success
+ * @return 	SDCARD_IF_ERR_INVALID_PARAM				Invalid input parameters  
+ * @return	Refer to sdcard_err_codes.h
+ * 
+ */
+ 
 int SDCardIF_AppendFirmwareData(const char *filename, char* data, int data_size)
 {		
 	int ret = SDCARD_IF_OP_SUCCESS;
