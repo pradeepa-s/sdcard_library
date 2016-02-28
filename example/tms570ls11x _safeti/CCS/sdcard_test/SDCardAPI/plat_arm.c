@@ -699,14 +699,14 @@ static int get_disk_utilization(unsigned int *utilization)
 
 
 	/* Get volume information and free clusters of drive 1 */
-	ret = f_getfree("1:", &fre_clust, &fs);
+	ret = f_getfree("/", &fre_clust, &fs);
 	if (FR_OK == ret){
 		/* Get total sectors and free sectors */
 		tot_sect = (fs->n_fatent - 2) * fs->csize;
 		fre_sect = fre_clust * fs->csize;
 
 		if(utilization){
-			*utilization = (fre_sect / tot_sect);
+			*utilization = (100 * (tot_sect - fre_sect) / tot_sect);
 		}
 		else{
 			ret = FILEIF_ERR_INVALID_PARAM;
