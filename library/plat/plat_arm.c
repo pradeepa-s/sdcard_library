@@ -461,3 +461,98 @@ int FileIF_ReadLine(const char *filename, int line_no, char *line_buffer, int *b
 	
 	return ret;
 }
+
+
+static int ff_return_code_translate(int return_code)
+{
+	int ret = FILEIF_OP_SUCCESS;
+	
+	switch(return_code){		
+		case FR_OK:						/* (0) Succeeded */
+			break;
+		
+		case FR_DISK_ERR:				/* (1) A hard error occurred in the low level disk I/O layer */
+			ret = FILEIF_WARN_FF_DISK_ERROR;
+			break;
+
+		case FR_INT_ERR:				/* (2) Assertion failed */
+			ret = FILEIF_WARN_FF_INTERNAL_ERROR;
+			break;
+					
+		case FR_NOT_READY:				/* (3) The physical drive cannot work */
+			ret = FILEIF_WARN_FF_NOT_READY;
+			break;
+			
+		case FR_NO_FILE:				/* (4) Could not find the file */
+			ret = FILEIF_WARN_FF_NO_FILE;
+			break;
+			
+		case FR_NO_PATH:				/* (5) Could not find the path */
+			ret = FILEIF_WARN_FF_NO_PATH;
+			break;
+			
+		case FR_INVALID_NAME:			/* (6) The path name format is invalid */
+			ret = FILEIF_WARN_FF_INVALID_NAME;
+			break;
+			
+		case FR_DENIED:					/* (7) Access denied due to prohibited access or directory full */
+			ret = FILEIF_WARN_FF_DENIED;
+			break;
+			
+		case FR_EXIST:					/* (8) Access denied due to prohibited access */
+			ret = FILEIF_WARN_FF_EXIST;
+			break;
+			
+		case FR_INVALID_OBJECT:			/* (9) The file/directory object is invalid */
+			ret = FILEIF_WARN_FF_INVALID_OBJECT;
+			break;
+			
+		case FR_WRITE_PROTECTED:		/* (10) The physical drive is write protected */
+			ret = FILEIF_WARN_FF_WRITE_PROTECTED;
+			break;
+			
+		case FR_INVALID_DRIVE:			/* (11) The logical drive number is invalid */
+			ret = FILEIF_WARN_FF_INVALID_DRIVE;
+			break;
+			
+		case FR_NOT_ENABLED:			/* (12) The volume has no work area */
+			ret = FILEIF_WARN_FF_NOT_ENABLED;
+			break;
+			
+		case FR_NO_FILESYSTEM:			/* (13) There is no valid FAT volume */
+			ret = FILEIF_WARN_FF_NO_FILESYSTEM;
+			break;
+			
+		case FR_MKFS_ABORTED:			/* (14) The f_mkfs() aborted due to any parameter error */
+			ret = FILEIF_WARN_FF_MKFS_ABORTED;
+			break;
+			
+		case FR_TIMEOUT:				/* (15) Could not get a grant to access the volume within defined period */
+			ret = FILEIF_WARN_FF_TIMEOUT;
+			break;
+			
+		case FR_LOCKED:					/* (16) The operation is rejected according to the file sharing policy */
+			ret = FILEIF_WARN_FF_LOCKED;
+			break;
+		
+		case FR_NOT_ENOUGH_CORE:		/* (17) LFN working buffer could not be allocated */
+			ret = FILEIF_WARN_FF_NOT_ENOUGH_CORE;
+			break;
+			
+		case FILEIF_WARN_FF_TOO_MANY_OPEN_FILES:	/* (18) Number of open files > _FS_LOCK */
+			ret = FILEIF_WARN_FF_DISK_ERROR;
+			break;
+			
+		case FILEIF_WARN_FF_INVALID_PARAM:		/* (19) Given parameter is invalid */
+			ret = FILEIF_WARN_FF_DISK_ERROR;
+			break;
+			
+		default:
+		ret = FILEIF_WARN_FF_UNKNOWN;
+		break;
+	}
+	
+	return ret;
+}
+
+
