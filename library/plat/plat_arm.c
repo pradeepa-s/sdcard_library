@@ -500,6 +500,67 @@ int FileIF_ReadLine(const char *filename, int line_no, char *line_buffer, int *b
 
 
 /**
+ * @brief Function to copy buffer content to file
+ * 
+ * This function appends buffer content to a file 
+ * 
+ * @param filename[in] 		Filename 
+ * @param buffer[in] 		Data to append
+ * @param buf_size[in] 		Data amount
+ * 
+ * @return 	FILEIF_OP_SUCCESS				Operation success 
+ * @return 	FILEIF_ERR_INVALID_PARAM		Function parameters are invalid
+ * @return 	FILEIF_ERR_FILE_NOT_AVAILABLE	File cannot be found
+ * @return 	FILEIF_ERR_FILE_ACCESS			File cannot be accessed
+ * 
+ * 
+ * @warning None
+ */
+
+int FileIF_CopyBufferToFile(const char *filename, char *buffer, int buf_size)
+{
+	int ret = FILEIF_OP_SUCCESS;
+	
+	FILE f;
+	unsigned int copied_amount = 0;
+	
+	if(	(NULL == filename)	||
+		(NULL == buffer)	||
+		(buf_size <= 0)){
+		ret = FILEIF_ERR_INVALID_PARAM;
+	}
+	else{
+		ret = FileIF_IsFileAvailable(filename);
+	}
+	
+	if(FILEIF_OP_SUCCESS == ret){
+		ret = f_open(&f,filename,FA_READ);
+		
+		if(FR_OK == ret){
+			ret = f_write(&f, buffer, buf_size, &copied_amount);
+			
+			if(copied_amount != buf_size){
+				ret = FILEIF_ERR_FILE_ACCESS;
+			}
+			
+			f_close(&f);
+		}
+		
+		/* If file is not available translate  */
+		if((FR_NO_FILE == ret) || (FR_NO_PATH == ret)){
+			ret = FILEIF_ERR_FILE_NOT_AVAILABLE;
+		}
+		else{
+			ret = ff_return_code_translate(ret);
+		}
+	}
+	
+	return ret;
+}
+
+
+
+/**
  * @brief Translate return fat file system return codes
  * 
  * 

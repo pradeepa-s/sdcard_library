@@ -24,6 +24,7 @@
 #define FILEIF_ERR_BUFFER_SIZE			-3
 #define FILEIF_ERR_FILE_OFFSET			-4
 #define FILEIF_ERR_LINE_NO				-5
+#define FILEIF_ERR_FILE_ACCESS			-6
 
 #define FILEIF_WARN_BUFFER_SIZE_SMALL	-200
 #define FILEIF_WARN_BUFFER_SIZE_LARGE	-201
@@ -58,6 +59,7 @@
 #define FILEIF_ERR_BUFFER_SIZE			SDCARD_IF_ERR_INVALID_BUFFER_SIZE
 #define FILEIF_ERR_FILE_OFFSET			SDCARD_IF_ERR_BUFFER_OFFSET
 #define FILEIF_ERR_LINE_NO				SDCARD_IF_ERR_EVENT_NOT_FOUND
+#define FILEIF_ERR_FILE_ACCESS			SDCARD_IF_ERR_FILE_ACCESS
 
 #define FILEIF_WARN_BUFFER_SIZE_SMALL	SDCARD_IF_WARN_BUFFER_SIZE_SMALL
 #define FILEIF_WARN_BUFFER_SIZE_LARGE	SDCARD_IF_WARN_BUFFER_SIZE_LARGE
@@ -93,5 +95,6 @@ int FileIF_GetFileSize(const char *filename, int *file_size);
 int FileIF_AppendString(const char *filename, const char *string);
 int FileIF_GetNoOfLines(const char *filename,int *no_of_lines);
 int FileIF_ReadLine(const char *filename, int line_no, char *line_buffer, int *buf_size);
+int FileIF_CopyBufferToFile(const char *filename, char *buffer, int buf_size);
 
 #endif
