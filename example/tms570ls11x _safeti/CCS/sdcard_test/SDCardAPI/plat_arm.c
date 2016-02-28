@@ -25,6 +25,8 @@
 #include "ff.h"
 
 static int ff_return_code_translate(int return_code);
+static int check_size(unsigned int utilization);
+static int get_disk_utilization(unsigned int *utilization);
 
 /**
  * @brief Function to open a file and copy the content to a buffer
@@ -139,6 +141,13 @@ int FileIF_CopyFileToBuffer(const char *filename, int offset, char *buffer, int 
 		}
 	}
 	
+	if(FILEIF_OP_SUCCESS == ret){
+		unsigned int uti;
+		if(FILEIF_OP_SUCCESS == get_disk_utilization(&uti)){
+			ret = check_size(uti);
+		}
+	}
+
 	return ret;
 }
 
@@ -219,6 +228,13 @@ int FileIF_CreateFile(const char *filename)
 			ret = ff_return_code_translate(ret);
 		}
 
+	}
+
+	if(FILEIF_OP_SUCCESS == ret){
+		unsigned int uti;
+		if(FILEIF_OP_SUCCESS == get_disk_utilization(&uti)){
+			ret = check_size(uti);
+		}
 	}
 	
 	return ret;
@@ -346,7 +362,13 @@ int FileIF_AppendString(const char *filename, const char *string)
 			}
 		}			
 	}
-	
+
+	if(FILEIF_OP_SUCCESS == ret){
+		unsigned int uti;
+		if(FILEIF_OP_SUCCESS == get_disk_utilization(&uti)){
+			ret = check_size(uti);
+		}
+	}
 	return ret;
 }
 
@@ -554,7 +576,14 @@ int FileIF_CopyBufferToFile(const char *filename, char *buffer, int buf_size)
 			ret = ff_return_code_translate(ret);
 		}
 	}
-	
+
+	if(FILEIF_OP_SUCCESS == ret){
+		unsigned int uti;
+		if(FILEIF_OP_SUCCESS == get_disk_utilization(&uti)){
+			ret = check_size(uti);
+		}
+	}
+
 	return ret;
 }
 
@@ -662,3 +691,41 @@ static int ff_return_code_translate(int return_code)
 }
 
 
+static int get_disk_utilization(unsigned int *utilization)
+{
+	int ret = FILEIF_OP_SUCCESS;
+	FATFS *fs;
+	DWORD fre_clust, fre_sect, tot_sect;
+
+
+	/* Get volume information and free clusters of drive 1 */
+	ret = f_getfree("1:", &fre_clust, &fs);
+	if (FR_OK == ret){
+		/* Get total sectors and free sectors */
+		tot_sect = (fs->n_fatent - 2) * fs->csize;
+		fre_sect = fre_clust * fs->csize;
+
+		if(utilization){
+			*utilization = (fre_sect / tot_sect);
+		}
+		else{
+			ret = FILEIF_ERR_INVALID_PARAM;
+		}
+	}
+	else{
+		ret = ff_return_code_translate(ret);
+	}
+
+	return ret;
+}
+
+
+static int check_size(unsigned int utilization)
+{
+	if(utilization >= 80){
+		return FILEIF_WARN_EIGHTY_PERCENT;
+	}
+	else{
+		return FILEIF_OP_SUCCESS;
+	}
+}
