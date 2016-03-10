@@ -2,8 +2,12 @@
 
 TEST_GROUP_RUNNER(file_interface)
 {
+	
+	RUN_TEST_CASE(file_interface, DummyTest);
+	
 	RUN_TEST_CASE(file_interface, CopyFileToBufferErrorIfFileNameIsNULL);
 	RUN_TEST_CASE(file_interface, CopyFileToBufferErrorIfBuffSizeIsNULL);	
+	RUN_TEST_CASE(file_interface, CopyFileToBufferErrorIfNotInitialized);
 	RUN_TEST_CASE(file_interface, CopyFileToBufferErrorIfFileNotAvailable);
 	RUN_TEST_CASE(file_interface, CopyFileToBufferErrorIfBufferIsNULL);
 	RUN_TEST_CASE(file_interface, CopyFileToBufferErrorIfFilesizeIsNULL);
@@ -27,15 +31,18 @@ TEST_GROUP_RUNNER(file_interface)
 	RUN_TEST_CASE(file_interface, CopyFileToBufferCopiesFileSizeEvenIfBufferSizeIsInvalid);
 	RUN_TEST_CASE(file_interface, CopyFileToBufferCopiesFileSizeEvenIfBufferIsInvalid);
 	
+	RUN_TEST_CASE(file_interface, IsFileAvailableInternallyInitializesIfNotInitialized);
 	RUN_TEST_CASE(file_interface, IsFileAvailableErrorIfFilenameIsNULL);
 	RUN_TEST_CASE(file_interface, IsFileAvailableErrorIfFileNotAvailable);
 	RUN_TEST_CASE(file_interface, IsFileAvailableSuccessIfFileAvailable);
 	RUN_TEST_CASE(file_interface, IsFileAvailableClosesTheFileBeforeReturning);
 	
+	RUN_TEST_CASE(file_interface, CreateFileInternallyInitializesIfNotInitialized);
 	RUN_TEST_CASE(file_interface, CreateFileGeneratesErrorIfFilenameIsNULL);
 	RUN_TEST_CASE(file_interface, CreateFileGeneratesSuccessIfFileAvailable);
 	RUN_TEST_CASE(file_interface, CreateFileCreatesTheFileIfFileNotAvailable);
 	RUN_TEST_CASE(file_interface, CreateFileClosesTheFileAtTheEnd);
+	
 	RUN_TEST_CASE(file_interface, DeleteFileGeneratesAnErrorIfFileNameIsNULL);
 	RUN_TEST_CASE(file_interface, DeleteFileGeneratesAnErrorIfFileIsNotAvailable);
 	RUN_TEST_CASE(file_interface, DeleteFileDeletesFileIfFileIsAvailable);
@@ -77,8 +84,7 @@ TEST_GROUP_RUNNER(file_interface)
 	RUN_TEST_CASE(file_interface, FileIF_CopyBufferToFile_errorIfBufferSizeIsNegative);
 	RUN_TEST_CASE(file_interface, FileIF_CopyBufferToFile_CopiesDataToTheEndOfFile);
 	
-	
-	
+	RUN_TEST_CASE(file_interface, InitializeFunctionReturnsSucceess);
 	
 	RUN_TEST_CASE(file_interface, DeleteFileGeneratesAnErrorIfFileCannotBeRemoved);
 }

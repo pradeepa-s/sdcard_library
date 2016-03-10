@@ -6,6 +6,9 @@
 /*
  * TESTS
  * 
+ * FileIF_Initialize returns SUCCESS	-	OK
+ * 
+ * CopyFileToBuffer generates error if not initialized - OK
  * CopyFileToBuffer generates error if file name is NULL - OK
  * CopyFileToBuffer generates error if file is not available - OK
  * CopyFileToBuffer generates error if buffer is NULL - OK 
@@ -29,37 +32,45 @@
  * CopyFileToBuffer copies the filesize if buffer size is invalid - OK
  * CopyFileToBuffer copies the filesize if buffer is invalid - OK
  * 
+ * FileIF_IsFileAvailable internally initializes if not initialized - OK
  * FileIF_IsFileAvailable generates error if file name is NULL - OK
  * FileIF_IsFileAvailable generates error if file is not available - OK
  * FileIF_IsFileAvailable is success if file is available - OK
  * FileIF_IsFileAvailable closes the file after checking for availability - OK
  * 
+ * 
+ * CreateFile internally initializes if not initialized
  * CreateFile generates error if file name is NULL - OK
  * CreateFile returns success if file is already there - OK
  * CreateFile creates a file with given name - OK
  * CreateFile closes the file after creating it  and return success - OK
  * 
+ * FileIF_IsFileAvailable internally initializes if not initialized
  * DeleteFile generates error if file name is NULL - OK
  * DeleteFile generates error if file is not available - OK
  * DeleteFile removes the file and returns success is file is available - OK
  * DeleteFile generates error if file cannot be removed - IGNORED
  * 
+ * GetFileSize internally initializes if not initialized
  * GetFileSize generates error if filename is NULL - OK
  * GetFileSize generates error if file_size parameter is NULL - OK
  * GetFileSize generates error if file cannot be accessed - OK
  * GetFileSize reads file size and returns success if file is available - OK
  * 
+ * FileIF_AppendString internally initializes if not initialized
  * FileIF_AppendString returns error if filename is NULL - OK
  * FileIF_AppendString returns error if string is NULL - OK
  * FileIF_AppendString returns error if file is not accessible - OK
  * FileIF_AppendString appends the string at the end of the file - OK
  * 
+ * FileIF_GetNoOfLines internally initializes if not initialized
  * FileIF_GetNoOfLines returns error if filename is NULL - OK
  * FileIF_GetNoOfLines returns error if file is not available - OK
  * FileIF_GetNoOfLines returns error if no_of_lines parameter is NULL - OK
  * FileIF_GetNoOfLines returns success and copies the number of lines if parameters are correct - OK
  * FileIF_GetNoOfLines returns zero as no_of_lines of empty file - OK
  * 
+ * FileIF_ReadLine internally initializes if not initialized
  * FileIF_ReadLine returns error if filename is NULL - OK
  * FileIF_ReadLine returns error if line buffer is NULL - OK
  * FileIF_ReadLine returns error if buffer_size is NULL - OK
@@ -72,13 +83,14 @@
  * FileIF_ReadLine returns error if line_no is more than total lines - OK
  * FileIF_ReadLine copies the string to the buffer if successful - OK
  * 
- * FileIF_CopyBufferToFile returns error if filename is NULL
- * FileIF_CopyBufferToFile returns error if file not availabe
- * FileIF_CopyBufferToFile returns error if file not accessible
- * FileIF_CopyBufferToFile returns error if buffer is NULL
- * FileIF_CopyBufferToFile returns error if buffer size is zero
- * FileIF_CopyBufferToFile returns error if buffer size is negative
- * FileIF_CopyBufferToFile returns success and appends data to the end
+ * FileIF_CopyBufferToFile internally initializes if not initialized
+ * FileIF_CopyBufferToFile returns error if filename is NULL - OK
+ * FileIF_CopyBufferToFile returns error if file not availabe - OK
+ * FileIF_CopyBufferToFile returns error if file not accessible - OK
+ * FileIF_CopyBufferToFile returns error if buffer is NULL - OK
+ * FileIF_CopyBufferToFile returns error if buffer size is zero - OK
+ * FileIF_CopyBufferToFile returns error if buffer size is negative - OK
+ * FileIF_CopyBufferToFile returns success and appends data to the end - OK
  * 
  */
  
@@ -91,9 +103,29 @@ TEST_SETUP(file_interface)
 
 TEST_TEAR_DOWN(file_interface)
 {
+	FileIF_Uninit();
 	remove("file_interface/new_file");
 	remove("file_interface/appendstring_test_file.txt");
 	remove("file_interface/data_append");
+}
+
+TEST(file_interface, DummyTest)
+{
+	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS,FILEIF_OP_SUCCESS);
+}
+
+TEST(file_interface, InitializeFunctionReturnsSucceess)
+{
+	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_Initialize());
+}
+
+TEST(file_interface, CopyFileToBufferErrorIfNotInitialized)
+{
+	int buf_size = 10;
+	char buffer;
+	int file_size;
+	
+	TEST_ASSERT_EQUAL(FILEIF_ERR_UNINIT, FileIF_CopyFileToBuffer(NULL, 0, &buffer, &buf_size, &file_size));
 }
 
 TEST(file_interface, CopyFileToBufferErrorIfFileNameIsNULL)
@@ -102,6 +134,7 @@ TEST(file_interface, CopyFileToBufferErrorIfFileNameIsNULL)
 	char buffer;
 	int file_size;
 	
+	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_Initialize());
 	TEST_ASSERT_EQUAL(FILEIF_ERR_INVALID_PARAM, FileIF_CopyFileToBuffer(NULL, 0, &buffer, &buf_size, &file_size));
 }
 
@@ -111,6 +144,7 @@ TEST(file_interface, CopyFileToBufferErrorIfBuffSizeIsNULL)
 	char buffer;
 	int file_size;
 	
+	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_Initialize());
 	TEST_ASSERT_EQUAL(FILEIF_ERR_INVALID_PARAM, FileIF_CopyFileToBuffer("file_interface/file_20_bytes.bin", 0, &buffer, NULL, &file_size));
 }
 
@@ -120,6 +154,7 @@ TEST(file_interface, CopyFileToBufferErrorIfOffsetIsNegative)
 	int buf_size = 10;
 	int file_size;
 	
+	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_Initialize());
 	TEST_ASSERT_EQUAL(FILEIF_ERR_FILE_OFFSET, FileIF_CopyFileToBuffer("file_interface/file_20_bytes.bin", -1, &buffer, &buf_size, &file_size));
 }
 
@@ -127,6 +162,8 @@ TEST(file_interface, CopyFileToBufferErrorIfBufferIsNULL)
 {		
 	int buf_size = 10;
 	int file_size;
+	
+	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_Initialize());
 	TEST_ASSERT_EQUAL(FILEIF_ERR_INVALID_PARAM, FileIF_CopyFileToBuffer("file_interface/file_20_bytes.bin", 0, NULL, &buf_size, &file_size));
 }
 
@@ -134,6 +171,8 @@ TEST(file_interface, CopyFileToBufferErrorIfFilesizeIsNULL)
 {		
 	int buf_size = 10;	
 	char buffer;
+	
+	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_Initialize());
 	TEST_ASSERT_EQUAL(FILEIF_ERR_INVALID_PARAM, FileIF_CopyFileToBuffer("file_interface/file_20_bytes.bin", 0, &buffer, &buf_size, NULL));
 }
 
@@ -143,6 +182,7 @@ TEST(file_interface, CopyFileToBufferErrorIfBufferSizeIsZero)
 	char buffer;
 	int file_size;
 	
+	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_Initialize());
 	TEST_ASSERT_EQUAL(FILEIF_ERR_BUFFER_SIZE, FileIF_CopyFileToBuffer("file_interface/file_20_bytes.bin", 0, &buffer, &buf_size, &file_size));
 }
 
@@ -152,6 +192,7 @@ TEST(file_interface, CopyFileToBufferErrorIfBufferSizeIsLessThanZero)
 	char buffer;
 	int file_size;
 	
+	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_Initialize());
 	TEST_ASSERT_EQUAL(FILEIF_ERR_BUFFER_SIZE, FileIF_CopyFileToBuffer("file_interface/file_20_bytes.bin", 0, &buffer, &buf_size, &file_size));
 }
 
@@ -161,6 +202,7 @@ TEST(file_interface, CopyFileToBufferErrorIfFileNotAvailable)
 	int buf_size = 1;
 	int file_size;
 	
+	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_Initialize());
 	TEST_ASSERT_EQUAL(FILEIF_ERR_FILE_NOT_AVAILABLE, FileIF_CopyFileToBuffer("test", 0, &buffer, &buf_size, &file_size));
 }
 
@@ -171,6 +213,7 @@ TEST(file_interface, CopyFileToBufferWarningIfBufferSizeMoreThanFileSize)
 	int buf_size = sizeof(buffer);
 	int file_size = 0;
 	
+	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_Initialize());
 	TEST_ASSERT_EQUAL(FILEIF_WARN_BUFFER_SIZE_LARGE, FileIF_CopyFileToBuffer("file_interface/file_20_bytes.bin", 0, buffer, &buf_size, &file_size));
 }
 
@@ -181,6 +224,7 @@ TEST(file_interface, CopyFileToBufferStartsReadingDataFromTheOffset)
 	int buf_size = sizeof(buffer);
 	int file_size = 0;
 	
+	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_Initialize());
 	TEST_ASSERT_EQUAL(FILEIF_WARN_BUFFER_SIZE_SMALL, FileIF_CopyFileToBuffer("file_interface/file_100bytes_counter.bin", 10, buffer, &buf_size, &file_size));
 	TEST_ASSERT_EQUAL_MEMORY(expect, buffer, 10);
 }
@@ -191,6 +235,7 @@ TEST(file_interface, CopyFileToBufferCopiesFileSizeEvenIfOffsetIsInvalid)
 	int buf_size = sizeof(buffer);
 	int file_size = 0;
 	
+	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_Initialize());
 	TEST_ASSERT_EQUAL(FILEIF_ERR_FILE_OFFSET, FileIF_CopyFileToBuffer("file_interface/file_100bytes_counter.bin", -1, buffer, &buf_size, &file_size));
 	TEST_ASSERT_EQUAL(100, file_size);
 }
@@ -201,6 +246,7 @@ TEST(file_interface, CopyFileToBufferCopiesFileSizeEvenIfOffsetIsMore)
 	int buf_size = sizeof(buffer);
 	int file_size = 0;
 	
+	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_Initialize());
 	TEST_ASSERT_EQUAL(FILEIF_ERR_FILE_OFFSET, FileIF_CopyFileToBuffer("file_interface/file_100bytes_counter.bin", 500, buffer, &buf_size, &file_size));
 	TEST_ASSERT_EQUAL(100, file_size);
 }
@@ -211,6 +257,7 @@ TEST(file_interface, CopyFileToBufferCopiesFileSizeEvenIfBufferSizeIsInvalid)
 	int buf_size = -1;
 	int file_size = 0;
 	
+	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_Initialize());
 	TEST_ASSERT_EQUAL(FILEIF_ERR_BUFFER_SIZE, FileIF_CopyFileToBuffer("file_interface/file_100bytes_counter.bin", 10, buffer, &buf_size, &file_size));
 	TEST_ASSERT_EQUAL(100, file_size);
 }
@@ -220,6 +267,7 @@ TEST(file_interface, CopyFileToBufferCopiesFileSizeEvenIfBufferIsInvalid)
 	int buf_size = 5;
 	int file_size = 0;
 	
+	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_Initialize());
 	TEST_ASSERT_EQUAL(FILEIF_ERR_INVALID_PARAM, FileIF_CopyFileToBuffer("file_interface/file_100bytes_counter.bin", 10, NULL, &buf_size, &file_size));
 	TEST_ASSERT_EQUAL(100, file_size);
 }
@@ -230,6 +278,7 @@ TEST(file_interface, CopyFileToBufferStoresFilesizeCorrectly)
 	int buf_size = sizeof(buffer);
 	int file_size;
 	
+	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_Initialize());
 	TEST_ASSERT_EQUAL(FILEIF_WARN_BUFFER_SIZE_LARGE, FileIF_CopyFileToBuffer("file_interface/file_20_bytes.bin", 0, buffer, &buf_size, &file_size));
 	TEST_ASSERT_EQUAL(20, file_size);
 }
@@ -240,6 +289,7 @@ TEST(file_interface, CopyFileToBufferWarningIfBufferSizeLessThanFileSize)
 	int buf_size = sizeof(buffer);
 	int file_size;
 	
+	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_Initialize());
 	TEST_ASSERT_EQUAL(FILEIF_WARN_BUFFER_SIZE_SMALL, FileIF_CopyFileToBuffer("file_interface/file_20_bytes.bin", 0, buffer, &buf_size, &file_size));
 }
 
@@ -257,6 +307,7 @@ TEST(file_interface, CopyFileToBufferCopiesTheFileContentToBufferSameBufferSize)
 		expected[i] = i;
 	} 
 	
+	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_Initialize());
 	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_CopyFileToBuffer("file_interface/file_100bytes_counter.bin", 0, buffer, &buf_size, &file_size));
 	
 	TEST_ASSERT_EQUAL_MEMORY(expected, buffer, sizeof(buffer));
@@ -276,6 +327,7 @@ TEST(file_interface, CopyFileToBufferCopiesTheFileContentToBufferWhenBufferSizeI
 		expected[i] = i;
 	} 
 	
+	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_Initialize());
 	TEST_ASSERT_EQUAL(FILEIF_WARN_BUFFER_SIZE_SMALL, FileIF_CopyFileToBuffer("file_interface/file_100bytes_counter.bin", 0, buffer, &buf_size, &file_size));
 	
 	TEST_ASSERT_EQUAL_MEMORY(expected, buffer, sizeof(buffer));
@@ -295,6 +347,7 @@ TEST(file_interface, CopyFileToBufferCopiesTheFileContentToBufferWhenBufferSizeI
 		expected[i] = i;
 	} 
 	
+	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_Initialize());
 	TEST_ASSERT_EQUAL(FILEIF_WARN_BUFFER_SIZE_LARGE, FileIF_CopyFileToBuffer("file_interface/file_100bytes_counter.bin", 0, buffer, &buf_size, &file_size));
 	
 	TEST_ASSERT_EQUAL_MEMORY(expected, buffer, sizeof(expected));
@@ -315,6 +368,7 @@ TEST(file_interface, CopyFileToBufferWhenBufferSizeIsMoreMakesRestOfTheBufferZer
 		expected[i] = i;
 	} 
 	
+	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_Initialize());
 	TEST_ASSERT_EQUAL(FILEIF_WARN_BUFFER_SIZE_LARGE, FileIF_CopyFileToBuffer("file_interface/file_100bytes_counter.bin", 0, buffer, &buf_size, &file_size));
 	
 	TEST_ASSERT_EQUAL_MEMORY(expected, buffer, sizeof(expected));
@@ -326,6 +380,7 @@ TEST(file_interface, CopyFileToBufferSetsTheReadAmountInBufSizeVariable)
 	int buf_size = sizeof(buffer);
 	int file_size;
 	
+	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_Initialize());
 	FileIF_CopyFileToBuffer("file_interface/file_100bytes_counter.bin", 0, buffer, &buf_size, &file_size);
 	
 	TEST_ASSERT_EQUAL(50, buf_size);
@@ -337,6 +392,8 @@ TEST(file_interface, CopyFileToBufferReturnsSuccessIfNoErrors)
 	char buffer[100];	
 	int buf_size = sizeof(buffer);
 	int file_size;
+	
+	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_Initialize());
 	
 	ret = FileIF_CopyFileToBuffer("file_interface/file_100bytes_counter.bin", 0, buffer, &buf_size, &file_size);
 	
@@ -350,6 +407,7 @@ TEST(file_interface, CopyFileToBufferGeneratesErrorIfOffsetIsMoreThenFileSize)
 	int buf_size = sizeof(buffer);
 	int file_size;
 	
+	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_Initialize());
 	ret = FileIF_CopyFileToBuffer("file_interface/file_100bytes_counter.bin", 300, buffer, &buf_size, &file_size);
 	
 	TEST_ASSERT_EQUAL(FILEIF_ERR_FILE_OFFSET, ret);
@@ -363,6 +421,7 @@ TEST(file_interface, CopyFileToBufferClosesTheFileAtTheEnd)
 	int file_size;
 	int i;
 	
+	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_Initialize());
 	for(i=0; i < 10000; i++){
 		ret = FileIF_CopyFileToBuffer("file_interface/file_100bytes_counter.bin", 0, buffer, &buf_size, &file_size);
 		
@@ -370,42 +429,60 @@ TEST(file_interface, CopyFileToBufferClosesTheFileAtTheEnd)
 	}
 }
 
+TEST(file_interface, IsFileAvailableInternallyInitializesIfNotInitialized)
+{
+	TEST_ASSERT_EQUAL(FILEIF_ERR_INVALID_PARAM, FileIF_IsFileAvailable(NULL));
+}
+
 TEST(file_interface, IsFileAvailableErrorIfFilenameIsNULL)
 {
+	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_Initialize());
 	TEST_ASSERT_EQUAL(FILEIF_ERR_INVALID_PARAM, FileIF_IsFileAvailable(NULL));
 }
 
 TEST(file_interface, IsFileAvailableErrorIfFileNotAvailable)
 {
+	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_Initialize());
 	TEST_ASSERT_EQUAL(FILEIF_ERR_FILE_NOT_AVAILABLE, FileIF_IsFileAvailable("file_interface/not_a_file"));
 }
 
 TEST(file_interface, IsFileAvailableSuccessIfFileAvailable)
 {
+	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_Initialize());
 	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_IsFileAvailable("file_interface/file_available"));
 }
 
 TEST(file_interface, IsFileAvailableClosesTheFileBeforeReturning)
 {
 	int i;
+	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_Initialize());
+	
 	for(i=0; i < 10000; i++){
 		TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_IsFileAvailable("file_interface/file_available"));
 		TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_IsFileAvailable("file_interface/file_available"));
 	}
 }
 
+TEST(file_interface, CreateFileInternallyInitializesIfNotInitialized)
+{
+	TEST_ASSERT_EQUAL(FILEIF_ERR_INVALID_PARAM, FileIF_CreateFile(NULL));
+}
+
 TEST(file_interface, CreateFileGeneratesErrorIfFilenameIsNULL)
 {
+	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_Initialize());
 	TEST_ASSERT_EQUAL(FILEIF_ERR_INVALID_PARAM, FileIF_CreateFile(NULL));
 }
 
 TEST(file_interface, CreateFileGeneratesSuccessIfFileAvailable)
 {
+	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_Initialize());
 	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_CreateFile("file_interface/file_available"));
 }
 
 TEST(file_interface, CreateFileCreatesTheFileIfFileNotAvailable)
 {
+	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_Initialize());
 	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_CreateFile("file_interface/new_file"));
 	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_IsFileAvailable("file_interface/new_file"));
 }
@@ -413,6 +490,7 @@ TEST(file_interface, CreateFileCreatesTheFileIfFileNotAvailable)
 TEST(file_interface, CreateFileClosesTheFileAtTheEnd)
 {
 	int i;
+	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_Initialize());
 	for(i=0; i < 10000; i++){
 		TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_CreateFile("file_interface/new_file"));
 	}
@@ -420,16 +498,19 @@ TEST(file_interface, CreateFileClosesTheFileAtTheEnd)
 
 TEST(file_interface, DeleteFileGeneratesAnErrorIfFileNameIsNULL)
 {
+	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_Initialize());
 	TEST_ASSERT_EQUAL(FILEIF_ERR_INVALID_PARAM, FileIF_DeleteFile(NULL));
 }
 
 TEST(file_interface, DeleteFileGeneratesAnErrorIfFileIsNotAvailable)
 {
+	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_Initialize());
 	TEST_ASSERT_EQUAL(FILEIF_ERR_FILE_NOT_AVAILABLE, FileIF_DeleteFile("file_interface/not_a_file"));
 }
 
 TEST(file_interface, DeleteFileDeletesFileIfFileIsAvailable)
 {
+	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_Initialize());
 	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_CreateFile("file_interface/new_file"));
 	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_DeleteFile("file_interface/new_file"));
 	TEST_ASSERT_EQUAL(FILEIF_ERR_FILE_NOT_AVAILABLE, FileIF_IsFileAvailable("file_interface/new_file"));
@@ -444,17 +525,20 @@ IGNORE_TEST(file_interface, DeleteFileGeneratesAnErrorIfFileCannotBeRemoved)
 
 TEST(file_interface, GetFileSizeGeneratesAnErrorIfFilenameNULL)
 {
+	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_Initialize());
 	int size;
 	TEST_ASSERT_EQUAL(FILEIF_ERR_INVALID_PARAM, FileIF_GetFileSize(NULL, &size));
 }
 
 TEST(file_interface, GetFileSizeGeneratesAnErrorIfFilesizeNULL)
 {
+	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_Initialize());
 	TEST_ASSERT_EQUAL(FILEIF_ERR_INVALID_PARAM, FileIF_GetFileSize("test", NULL));
 }
 
 TEST(file_interface, GetFileSizeGeneratesAnErrorIfFileCannotBeAccessed)
 {
+	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_Initialize());
 	int size;
 	TEST_ASSERT_EQUAL(FILEIF_ERR_FILE_NOT_AVAILABLE, FileIF_GetFileSize("file_interface/not_a_file", &size));
 }
@@ -462,6 +546,7 @@ TEST(file_interface, GetFileSizeGeneratesAnErrorIfFileCannotBeAccessed)
 TEST(file_interface, GetFileSizeCopiesTheFileSizeIfSuccess)
 {
 	int size;
+	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_Initialize());
 	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_GetFileSize("file_interface/file_20_bytes.bin", &size));
 	TEST_ASSERT_EQUAL(20, size);
 }
@@ -469,12 +554,14 @@ TEST(file_interface, GetFileSizeCopiesTheFileSizeIfSuccess)
 TEST(file_interface, FileIF_AppendStringErrorIfFilenameIsNULL)
 {
 	char value[] = "Hello";
+	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_Initialize());
 	TEST_ASSERT_EQUAL(FILEIF_ERR_INVALID_PARAM, FileIF_AppendString(NULL, value));
 }
 
 TEST(file_interface, FileIF_AppendStringErrorIfStringIsNULL)
 {
 	char filename[] = "Hello";
+	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_Initialize());
 	TEST_ASSERT_EQUAL(FILEIF_ERR_INVALID_PARAM, FileIF_AppendString(filename, NULL));
 }
 
@@ -482,6 +569,7 @@ TEST(file_interface, FileIF_AppendStringErrorIfFileNotAvailable)
 {
 	char filename[] = "file_interface/not_a_file";
 	char value[] = "Hello";
+	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_Initialize());
 	TEST_ASSERT_EQUAL(FILEIF_ERR_FILE_NOT_AVAILABLE, FileIF_AppendString(filename, value));
 }
 
@@ -491,6 +579,7 @@ TEST(file_interface, FileIF_AppendStringAppendsStringToEndOfTheFile)
 	char value1[] = "Hello1\n";
 	char value2[] = "Hello2\n";
 	
+	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_Initialize());
 	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_CreateFile(filename));	
 	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_AppendString(filename, value1));
 	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_AppendString(filename, value2));
@@ -500,6 +589,7 @@ TEST(file_interface, FileIF_AppendStringAppendsStringToEndOfTheFile)
 TEST(file_interface, FileIF_GetNoOfLinesIfFilenameIsNULL)
 {
 	int no_of_lines;
+	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_Initialize());
 	TEST_ASSERT_EQUAL(FILEIF_ERR_INVALID_PARAM, FileIF_GetNoOfLines(NULL, &no_of_lines));
 }
 
@@ -507,12 +597,14 @@ TEST(file_interface, FileIF_GetNoOfLinesIfFileNotAvailable)
 {
 	int no_of_lines;
 	char filename[] = "file_interface/not_a_file";
+	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_Initialize());
 	TEST_ASSERT_EQUAL(FILEIF_ERR_FILE_NOT_AVAILABLE, FileIF_GetNoOfLines(filename, &no_of_lines));
 }
 
 TEST(file_interface, FileIF_GetNoOfLinesIfNoOfLinesIsNULL)
 {	
 	char filename[] = "file_interface/file_20_bytes.bin";
+	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_Initialize());
 	TEST_ASSERT_EQUAL(FILEIF_ERR_INVALID_PARAM, FileIF_GetNoOfLines(filename, NULL));
 }
 
@@ -520,6 +612,7 @@ TEST(file_interface, FileIF_GetNoOfLinesReturnsNoOfLinesInTheFile)
 {	
 	char filename[] = "file_interface/line_8_file.txt";
 	int no_of_lines = 0;
+	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_Initialize());
 	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_GetNoOfLines(filename, &no_of_lines));
 	TEST_ASSERT_EQUAL(8,no_of_lines);
 }
@@ -528,6 +621,7 @@ TEST(file_interface, FileIF_GetNoOfLinesReturnsZeroAsNoOfLinesForEmptyFile)
 {	
 	char filename[] = "file_interface/empty_file.txt";
 	int no_of_lines = 0;
+	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_Initialize());
 	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_GetNoOfLines(filename, &no_of_lines));
 	TEST_ASSERT_EQUAL(0,no_of_lines);
 }
@@ -536,7 +630,7 @@ TEST(file_interface, FileIF_ReadLineErrorIfFilenameIsNULL)
 {	
 	char string_val[100];
 	int string_size = sizeof(string_val);
-	
+	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_Initialize());
 	TEST_ASSERT_EQUAL(FILEIF_ERR_INVALID_PARAM, FileIF_ReadLine(NULL, 1, string_val, &string_size));	
 }
 
@@ -544,7 +638,7 @@ TEST(file_interface, FileIF_ReadLineErrorIfLineBufferIsNULL)
 {	
 	char filename[] = "file_interface/empty_file.txt";	
 	int string_size = 100;
-	
+	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_Initialize());
 	TEST_ASSERT_EQUAL(FILEIF_ERR_INVALID_PARAM, FileIF_ReadLine(filename, 1, NULL, &string_size));	
 }
 
@@ -553,6 +647,7 @@ TEST(file_interface, FileIF_ReadLineErrorIfBufferSizeIsNULL)
 	char filename[] = "file_interface/empty_file.txt";	
 	char string_val[100];	
 	
+	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_Initialize());
 	TEST_ASSERT_EQUAL(FILEIF_ERR_INVALID_PARAM, FileIF_ReadLine(filename, 1, string_val, NULL));	
 }
 
@@ -562,6 +657,7 @@ TEST(file_interface, FileIF_ReadLineErrorIfBufferSizeIsSmall)
 	char string_val[10];	
 	int string_size = sizeof(string_val);
 		
+	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_Initialize());	
 	TEST_ASSERT_EQUAL(FILEIF_ERR_BUFFER_SIZE, FileIF_ReadLine(filename, 1, string_val, &string_size));	
 }
 
@@ -570,7 +666,8 @@ TEST(file_interface, FileIF_ReadLineReturnsTheRequiredBufferSizeIfBufferSizeIsSm
 	char filename[] = "file_interface/file_with_30char_line.txt";	
 	char string_val[10];	
 	int string_size = sizeof(string_val);
-		
+	
+	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_Initialize());	
 	TEST_ASSERT_EQUAL(FILEIF_ERR_BUFFER_SIZE, FileIF_ReadLine(filename, 1, string_val, &string_size));	
 	TEST_ASSERT_EQUAL(31,string_size);
 }
@@ -581,7 +678,8 @@ TEST(file_interface, FileIF_ReadLineReturnsCopiedDataAmountIfFunctionIsSuccessfu
 	char filename[] = "file_interface/file_with_30char_line.txt";	
 	char string_val[60];	
 	int string_size = sizeof(string_val);
-		
+	
+	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_Initialize());	
 	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_ReadLine(filename, 1, string_val, &string_size));	
 	TEST_ASSERT_EQUAL(31,string_size);
 }
@@ -591,7 +689,8 @@ TEST(file_interface, FileIF_ReadLineErrorIfFileNotAccessible)
 	char filename[] = "file_interface/not_a_file";	
 	char string_val[60];	
 	int string_size = sizeof(string_val);
-		
+	
+	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_Initialize());	
 	TEST_ASSERT_EQUAL(FILEIF_ERR_FILE_NOT_AVAILABLE, FileIF_ReadLine(filename, 1, string_val, &string_size));	
 }
 
@@ -600,7 +699,8 @@ TEST(file_interface, FileIF_ReadLineErrorIfLineNumberIsNegetive)
 	char filename[] = "file_interface/file_with_30char_line.txt";	
 	char string_val[60];	
 	int string_size = sizeof(string_val);
-		
+	
+	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_Initialize());	
 	TEST_ASSERT_EQUAL(FILEIF_ERR_LINE_NO, FileIF_ReadLine(filename, -1, string_val, &string_size));	
 }
 
@@ -609,7 +709,8 @@ TEST(file_interface, FileIF_ReadLineErrorIfLineNumberIsZero)
 	char filename[] = "file_interface/file_with_30char_line.txt";	
 	char string_val[60];	
 	int string_size = sizeof(string_val);
-		
+	
+	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_Initialize());	
 	TEST_ASSERT_EQUAL(FILEIF_ERR_LINE_NO, FileIF_ReadLine(filename, 0, string_val, &string_size));	
 }
 
@@ -618,7 +719,8 @@ TEST(file_interface, FileIF_ReadLineErrorIfLineNumberIsMore)
 	char filename[] = "file_interface/file_with_30char_line.txt";	
 	char string_val[60];	
 	int string_size = sizeof(string_val);
-		
+	
+	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_Initialize());	
 	TEST_ASSERT_EQUAL(FILEIF_ERR_LINE_NO, FileIF_ReadLine(filename, 500, string_val, &string_size));	
 }
 
@@ -628,7 +730,8 @@ TEST(file_interface, FileIF_ReadLineECopiesTheStringIfSuccessful)
 	char string_val[60];	
 	char expect[] = "1234567890asdfghjklzxcvbnmqwer\n";
 	int string_size = sizeof(string_val);
-		
+	
+	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_Initialize());	
 	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_ReadLine(filename, 1, string_val, &string_size));	
 	TEST_ASSERT_EQUAL(31,string_size);
 	TEST_ASSERT_EQUAL_MEMORY(expect, string_val, sizeof(expect));
@@ -640,6 +743,7 @@ TEST(file_interface, FileIF_CopyBufferToFile_errorIfFilenameIsNULL)
 	char data[60];		
 	int data_size = sizeof(data);
 		
+	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_Initialize());	
 	TEST_ASSERT_EQUAL(FILEIF_ERR_INVALID_PARAM, FileIF_CopyBufferToFile(NULL, data, data_size));			
 }
 
@@ -649,6 +753,7 @@ TEST(file_interface, FileIF_CopyBufferToFile_errorIfFileNotAvailable)
 	char data[60];		
 	int data_size = sizeof(data);
 		
+	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_Initialize());	
 	TEST_ASSERT_EQUAL(FILEIF_ERR_FILE_NOT_AVAILABLE, FileIF_CopyBufferToFile(filename, data, data_size));			
 }
 
@@ -658,6 +763,7 @@ TEST(file_interface, FileIF_CopyBufferToFile_errorIfBufferIsNULL)
 	char data[60];		
 	int data_size = sizeof(data);
 		
+	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_Initialize());	
 	TEST_ASSERT_EQUAL(FILEIF_ERR_INVALID_PARAM, FileIF_CopyBufferToFile(filename, NULL, data_size));			
 }
 
@@ -666,7 +772,8 @@ TEST(file_interface, FileIF_CopyBufferToFile_errorIfBufferSizeIsZero)
 	char filename[] = "file_interface/not_a_file";	
 	char data[60];		
 	//int data_size = sizeof(data);
-		
+	
+	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_Initialize());	
 	TEST_ASSERT_EQUAL(FILEIF_ERR_INVALID_PARAM, FileIF_CopyBufferToFile(filename, data, 0));			
 }
 
@@ -675,7 +782,8 @@ TEST(file_interface, FileIF_CopyBufferToFile_errorIfBufferSizeIsNegative)
 	char filename[] = "file_interface/not_a_file";	
 	char data[60];		
 	//int data_size = sizeof(data);
-		
+	
+	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_Initialize());	
 	TEST_ASSERT_EQUAL(FILEIF_ERR_INVALID_PARAM, FileIF_CopyBufferToFile(filename, data, -10));			
 }
 
@@ -690,6 +798,7 @@ TEST(file_interface, FileIF_CopyBufferToFile_CopiesDataToTheEndOfFile)
 		data[i] = i;
 	}
 	
+	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_Initialize());
 	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_CreateFile(filename));
 	TEST_ASSERT_EQUAL(1, IsFileAvailable(filename));
 	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_CopyBufferToFile(filename, data, data_size));				
@@ -702,5 +811,3 @@ TEST(file_interface, FileIF_CopyBufferToFile_CopiesDataToTheEndOfFile)
 	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_CopyBufferToFile(filename, data, data_size));	
 	TEST_ASSERT_EQUAL(1, CompareFiles(filename, "file_interface/data_append_test2"));
 }
-
-

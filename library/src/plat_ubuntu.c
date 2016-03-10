@@ -17,6 +17,19 @@
 #include <string.h>
 #include "plat_ubuntu.h"
 
+static char initialized = 0;
+
+/**
+ * @brief Function to initialize the file system access layer
+ * 
+ * @return 	FILEIF_OP_SUCCESS				Operation success 
+ */
+int FileIF_Initialize(void)
+{
+	initialized = 1;
+	return FILEIF_OP_SUCCESS;
+}
+
 /**
  * @brief Function to open a file and copy the content to a buffer
  * 
@@ -51,6 +64,7 @@
  * @return 	FILEIF_ERR_FILE_NOT_AVAILABLE	File cannot be accessed
  * @return 	FILEIF_WARN_BUFFER_SIZE_SMALL	Provided buffer is small (warning)
  * @return 	FILEIF_WARN_BUFFER_SIZE_LARGE	Provided buffer is large (warning)
+ * @return 	FILEIF_ERR_UNINIT				Not initialized
  * 
  * @note Do not treat warnings as errors
  * @warning Warning.
@@ -63,6 +77,10 @@ int FileIF_CopyFileToBuffer(const char *filename, int offset, char *buffer, int 
 	int amount_to_read = 0;	
 	int f_read_size = 0;
 	FILE *f = NULL;
+	
+	if(0 == initialized){
+		return FILEIF_ERR_UNINIT;
+	}
 	
 	ret = FileIF_GetFileSize(filename, file_size);
 	
@@ -131,12 +149,21 @@ int FileIF_CopyFileToBuffer(const char *filename, int offset, char *buffer, int 
  * @return 	FILEIF_OP_SUCCESS				Operation success 
  * @return 	FILEIF_ERR_INVALID_PARAM		Function parameters are invalid
  * @return 	FILEIF_ERR_FILE_NOT_AVAILABLE	File cannot be accessed
+ * @return 	FILEIF_ERR_UNINIT				Not initialized
  * 
  */
 int FileIF_IsFileAvailable(const char *filename)
 {
 	int ret;
 	FILE *f = NULL;
+	
+	if(0 == initialized){
+		ret = FileIF_Initialize();
+		
+		if(FILEIF_OP_SUCCESS != ret){
+			return ret;
+		}
+	}
 	
 	if(NULL == filename){
 		ret = FILEIF_ERR_INVALID_PARAM;
@@ -496,3 +523,7 @@ int FileIF_CopyBufferToFile(const char *filename, char *buffer, int buf_size)
 	return ret;
 }
 
+void FileIF_Uninit(void)
+{
+	initialized = 0;
+}

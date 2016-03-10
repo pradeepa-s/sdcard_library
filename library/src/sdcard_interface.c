@@ -53,6 +53,10 @@ int SDCardIF_Initialize()
 	
 	ret = SDCardIF_SetLogFile(DEFAULT_EVENT_LOG);
 	
+	if(SDCARD_IF_OP_SUCCESS == ret){
+		ret = FileIF_Initialize();
+	}
+	
 	return ret;
 }
 

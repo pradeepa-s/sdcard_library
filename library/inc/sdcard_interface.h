@@ -55,7 +55,7 @@ enum _READ_TYPE{
 
 typedef enum _READ_TYPE READ_TYPE;
 
-void SDCardIF_Initialize();
+int SDCardIF_Initialize(void);
 int SDCardIF_SetAudioFileBuffer(char *p_buffer, int buf_size);
 int SDCardIF_PlayAudioFile(const char *filename);
 int SDCardIF_SetLogFile(const char* filename);
