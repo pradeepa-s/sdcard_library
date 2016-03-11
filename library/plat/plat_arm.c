@@ -23,10 +23,40 @@
 #include <string.h>
 #include "plat_arm.h"
 #include "ff.h"
+enum {INITIALIZED = 1, NOT_INITIALIZED = 0};
+
+static char initialized = NOT_INITIALIZED;
+static FATFS g_sFatFsObj;
 
 static int ff_return_code_translate(int return_code);
+static int CheckInitialization(void);
 static int check_size(unsigned int utilization);
 static int get_disk_utilization(unsigned int *utilization);
+
+/**
+ * @brief Function to initialize the file system access layer
+ * 
+ * @return 	FILEIF_OP_SUCCESS				Operation success
+ * @return 	FILEIF_ERR_UNINIT				Failed to initialize
+ */
+int FileIF_Initialize(void)
+{
+	//
+	// Mount the file system, using logical disk 0.
+	//
+	//  iFResult = f_mount(&g_sFatFs,"",1);
+
+
+	int iFResult = f_mount(&g_sFatFsObj, "", 1);
+
+	if (iFResult != FR_OK) {
+		return (FILEIF_ERR_UNINIT);
+	}
+	else{
+		initialized = INITIALIZED;
+		return FILEIF_OP_SUCCESS;
+	}
+}
 
 /**
  * @brief Function to open a file and copy the content to a buffer
@@ -38,7 +68,7 @@ static int get_disk_utilization(unsigned int *utilization);
  * the rest of the buffer will have 0x00 value.
  * 
  * If the buffer size is less than the file size, this will only copy the amount 
- * of data that can be accomadated by the buffer.
+ * of data that can be accommodated by the buffer.
  * 
  * If an @offset is specified the data copying will start after applying the
  * offset to the file buffer.
@@ -60,10 +90,15 @@ static int get_disk_utilization(unsigned int *utilization);
  * @return 	FILEIF_ERR_BUFFER_SIZE			Invalid buffer size (zero or negative)
  * @return 	FILEIF_ERR_FILE_OFFSET			Offset is negative or more than file size
  * @return 	FILEIF_ERR_FILE_NOT_AVAILABLE	File cannot be accessed
+ * @return 	FILEIF_ERR_UNINIT				Failed to initialize
  * @return 	FILEIF_WARN_BUFFER_SIZE_SMALL	Provided buffer is small (warning)
  * @return 	FILEIF_WARN_BUFFER_SIZE_LARGE	Provided buffer is large (warning)
  * 
  * @note Do not treat warnings as errors
+ *
+ * @note	If called in uninitialized state, the function internally will
+ * 			initialize the library and continue.
+ *
  * @warning Warning.
  */
 
@@ -74,6 +109,12 @@ int FileIF_CopyFileToBuffer(const char *filename, int offset, char *buffer, int 
 	int amount_to_read = 0;	
 	UINT f_read_size = 0;
 	FILE f;
+	/* Check whether initialization is done */
+	ret = CheckInitialization();
+
+	if(FILEIF_OP_SUCCESS != ret){
+		return ret;
+	}
 	
 	ret = FileIF_GetFileSize(filename, file_size);
 	
@@ -160,13 +201,24 @@ int FileIF_CopyFileToBuffer(const char *filename, int offset, char *buffer, int 
  * @return 	FILEIF_OP_SUCCESS				Operation success 
  * @return 	FILEIF_ERR_INVALID_PARAM		Function parameters are invalid
  * @return 	FILEIF_ERR_FILE_NOT_AVAILABLE	File cannot be accessed
+ * @return 	FILEIF_ERR_UNINIT				Failed to initialize
  * 
+ * @note	If called in uninitialized state, the function internally will
+ * 			initialize the library and continue.
+ *
+ *
  */
 int FileIF_IsFileAvailable(const char *filename)
 {
 	int ret;
 	FILE f;
 	
+	/* Check whether initialization is done */
+	ret = CheckInitialization();
+	
+	if(FILEIF_OP_SUCCESS != ret){
+		return ret;
+	}
 	if(NULL == filename){
 		ret = FILEIF_ERR_INVALID_PARAM;
 	}
@@ -197,7 +249,11 @@ int FileIF_IsFileAvailable(const char *filename)
  * @return 	FILEIF_OP_SUCCESS				Operation success 
  * @return 	FILEIF_ERR_INVALID_PARAM		Function parameters are invalid
  * @return 	FILEIF_ERR_FILE_NOT_AVAILABLE	File cannot be accessed/created
+ * @return 	FILEIF_ERR_UNINIT				Failed to initialize
  * 
+ * @note	If called in uninitialized state, the function internally will
+ * 			initialize the library and continue.
+ 
  * @note If the file is already available function will return success.
  */
 
@@ -205,7 +261,12 @@ int FileIF_CreateFile(const char *filename)
 {
 	int ret;
 	FILE f;
-	
+	/* Check whether initialization is done */
+	ret = CheckInitialization();
+
+	if(FILEIF_OP_SUCCESS != ret){
+		return ret;
+	}
 	ret = FileIF_IsFileAvailable(filename);
 	
 	if(FILEIF_ERR_FILE_NOT_AVAILABLE == ret){
@@ -248,14 +309,26 @@ int FileIF_CreateFile(const char *filename)
  * @return 	FILEIF_OP_SUCCESS				Operation success 
  * @return 	FILEIF_ERR_INVALID_PARAM		Function parameters are invalid
  * @return 	FILEIF_ERR_FILE_NOT_AVAILABLE	File cannot be found or cannot be deleted
+ * @return 	FILEIF_ERR_UNINIT				Failed to initialize
  * 
- * @note None
+ * @note	If called in uninitialized state, the function internally will
+ * 			initialize the library and continue.
+ *
  * 
  * @warning None
  */
 int FileIF_DeleteFile(const char *filename)
 {		
-	int ret = FileIF_IsFileAvailable(filename);
+	int ret;
+
+	/* Check whether initialization is done */
+	ret = CheckInitialization();
+
+	if(FILEIF_OP_SUCCESS != ret){
+		return ret;
+	}
+
+	ret = FileIF_IsFileAvailable(filename);
 	
 	if(FILEIF_OP_SUCCESS == ret){	
 		ret = f_unlink(filename);
@@ -281,8 +354,11 @@ int FileIF_DeleteFile(const char *filename)
  * @return 	FILEIF_OP_SUCCESS				Operation success 
  * @return 	FILEIF_ERR_INVALID_PARAM		Function parameters are invalid
  * @return 	FILEIF_ERR_FILE_NOT_AVAILABLE	File cannot be found or cannot be accessed
+ * @return 	FILEIF_ERR_UNINIT				Failed to initialize
  * 
- * @note None
+ * @note	If called in uninitialized state, the function internally will
+ * 			initialize the library and continue.
+ *
  * 
  * @warning None
  */
@@ -290,7 +366,13 @@ int FileIF_GetFileSize(const char *filename, int *file_size)
 {
 	int ret;
 	FILE f;
-	
+
+	/* Check whether initialization is done */
+	ret = CheckInitialization();
+
+	if(FILEIF_OP_SUCCESS != ret){
+		return ret;
+	}
 	if(NULL == filename || NULL == file_size){
 		ret = FILEIF_ERR_INVALID_PARAM;
 	}
@@ -327,8 +409,11 @@ int FileIF_GetFileSize(const char *filename, int *file_size)
  * @return 	FILEIF_OP_SUCCESS				Operation success 
  * @return 	FILEIF_ERR_INVALID_PARAM		Function parameters are invalid
  * @return 	FILEIF_ERR_FILE_NOT_AVAILABLE	File cannot be found or cannot be accessed
+ * @return 	FILEIF_ERR_UNINIT				Failed to initialize
  * 
- * @note None
+ * @note	If called in uninitialized state, the function internally will
+ * 			initialize the library and continue.
+ *
  * 
  * @warning None
  */
@@ -336,7 +421,12 @@ int FileIF_AppendString(const char *filename, const char *string)
 {
 	int ret = FILEIF_OP_SUCCESS;
 	FILE f;
-	
+	/* Check whether initialization is done */
+	ret = CheckInitialization();
+
+	if(FILEIF_OP_SUCCESS != ret){
+		return ret;
+	}
 	if((NULL == filename) || (NULL == string)){
 		ret = FILEIF_ERR_INVALID_PARAM;
 	}
@@ -384,18 +474,28 @@ int FileIF_AppendString(const char *filename, const char *string)
  * @return 	FILEIF_OP_SUCCESS				Operation success 
  * @return 	FILEIF_ERR_INVALID_PARAM		Function parameters are invalid
  * @return 	FILEIF_ERR_FILE_NOT_AVAILABLE	File cannot be found or cannot be accessed
+ * @return 	FILEIF_ERR_UNINIT				Failed to initialize
  * 
- * @note None
+ * @note	If called in uninitialized state, the function internally will
+ * 			initialize the library and continue.
+ *
  * 
  * @warning None
  */
 int FileIF_GetNoOfLines(const char *filename,int *no_of_lines)
 {
-	int ret = FileIF_IsFileAvailable(filename);
+	int ret;
 	FILE f;
 	char ch[2];
 	int line_count = 0;
-	
+	/* Check whether initialization is done */
+	ret = CheckInitialization();
+
+	if(FILEIF_OP_SUCCESS != ret){
+		return ret;
+	}
+
+	ret = FileIF_IsFileAvailable(filename);
 	if(FILEIF_OP_SUCCESS == ret){
 		if(NULL == no_of_lines){
 			ret = FILEIF_ERR_INVALID_PARAM;
@@ -442,7 +542,10 @@ int FileIF_GetNoOfLines(const char *filename,int *no_of_lines)
  * @return 	FILEIF_ERR_FILE_NOT_AVAILABLE	File cannot be found or cannot be accessed
  * @return 	FILEIF_ERR_BUFFER_SIZE			Buffer size is invalid
  * @return 	FILEIF_ERR_LINE_NO				Line number is invalid
- * 
+ * @return 	FILEIF_ERR_UNINIT				Failed to initialize
+ *
+ * @note	If called in uninitialized state, the function internally will
+ * 			initialize the library and continue.
  * @note 	If FILEIF_ERR_BUFFER_SIZE is returned then the @buf_size 
  * 			will contain the required data amount
  * 
@@ -457,7 +560,14 @@ int FileIF_ReadLine(const char *filename, int line_no, char *line_buffer, int *b
 	int line_length = 0;
 	char line_found = 0;
 	char temp_line[256];
-	
+
+	/* Check whether initialization is done */
+	ret = CheckInitialization();
+
+	if(FILEIF_OP_SUCCESS != ret){
+		return ret;
+	}
+
 	/* Parameter validation */
 	if((NULL == filename) || (NULL == line_buffer) || (NULL == buf_size)){
 		ret = FILEIF_ERR_INVALID_PARAM;
@@ -534,8 +644,11 @@ int FileIF_ReadLine(const char *filename, int line_no, char *line_buffer, int *b
  * @return 	FILEIF_ERR_INVALID_PARAM		Function parameters are invalid
  * @return 	FILEIF_ERR_FILE_NOT_AVAILABLE	File cannot be found
  * @return 	FILEIF_ERR_FILE_ACCESS			File cannot be accessed
+ * @return 	FILEIF_ERR_UNINIT				Failed to initialize
  * 
- * 
+ * @note	If called in uninitialized state, the function internally will
+ * 			initialize the library and continue.
+ *
  * @warning None
  */
 
@@ -545,7 +658,12 @@ int FileIF_CopyBufferToFile(const char *filename, char *buffer, int buf_size)
 	
 	FILE f;
 	unsigned int copied_amount = 0;
-	
+	/* Check whether initialization is done */
+	ret = CheckInitialization();
+
+	if(FILEIF_OP_SUCCESS != ret){
+		return ret;
+	}
 	if(	(NULL == filename)	||
 		(NULL == buffer)	||
 		(buf_size <= 0)){
@@ -587,7 +705,38 @@ int FileIF_CopyBufferToFile(const char *filename, char *buffer, int buf_size)
 	return ret;
 }
 
+/**
+ * @brief	Function to reset the states to original
+ *
+ * This function is a debug function which can make the FileIf to
+ * move to uninitialized state.
+ *
+ * @param 	None
+ *
+ * @return 	None
+ *
+ */
+void FileIF_Uninit(void)
+{
+	initialized = NOT_INITIALIZED;
+}
 
+/************************** Static functions **************************/
+
+int CheckInitialization(void)
+{
+	int ret = FILEIF_OP_SUCCESS;
+
+	if(NOT_INITIALIZED == initialized){
+		ret = FileIF_Initialize();
+
+		if(FILEIF_OP_SUCCESS != ret){
+			return ret;
+		}
+	}
+
+	return ret;
+}
 
 /**
  * @brief Translate return fat file system return codes
