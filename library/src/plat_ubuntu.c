@@ -19,7 +19,7 @@
 
 enum {INITIALIZED = 1, NOT_INITIALIZED = 0};
 
-static char initialized = 0;
+static char initialized = NOT_INITIALIZED;
 
 
 static int CheckInitialization(void);
@@ -70,7 +70,6 @@ int FileIF_Initialize(void)
  * @return 	FILEIF_ERR_FILE_NOT_AVAILABLE	File cannot be accessed
  * @return 	FILEIF_WARN_BUFFER_SIZE_SMALL	Provided buffer is small (warning)
  * @return 	FILEIF_WARN_BUFFER_SIZE_LARGE	Provided buffer is large (warning)
- * @return 	FILEIF_ERR_UNINIT				Not initialized
  * 
  * @note Do not treat warnings as errors
  *
@@ -211,6 +210,9 @@ int FileIF_IsFileAvailable(const char *filename)
  * @return 	FILEIF_ERR_INVALID_PARAM		Function parameters are invalid
  * @return 	FILEIF_ERR_FILE_NOT_AVAILABLE	File cannot be accessed/created
  * 
+ * @note	If called in uninitialized state, the function internally will
+ * 			initialize the library and continue.
+ 
  * @note If the file is already available function will return success.
  */
 
@@ -458,7 +460,9 @@ int FileIF_GetNoOfLines(const char *filename,int *no_of_lines)
  * @return 	FILEIF_ERR_FILE_NOT_AVAILABLE	File cannot be found or cannot be accessed
  * @return 	FILEIF_ERR_BUFFER_SIZE			Buffer size is invalid
  * @return 	FILEIF_ERR_LINE_NO				Line number is invalid
- * 
+ *
+ * @note	If called in uninitialized state, the function internally will
+ * 			initialize the library and continue.
  * @note 	If FILEIF_ERR_BUFFER_SIZE is returned then the @buf_size 
  * 			will contain the required data amount
  * 

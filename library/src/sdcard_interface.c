@@ -16,7 +16,7 @@
  */
 
 #include "sdcard_interface.h"
-#include "plat_ubuntu.h"
+#include "plat_arm.h"
 #include <stdio.h>
 #include <string.h>
 
