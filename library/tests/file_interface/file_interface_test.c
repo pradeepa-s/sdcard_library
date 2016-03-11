@@ -39,38 +39,38 @@
  * FileIF_IsFileAvailable closes the file after checking for availability - OK
  * 
  * 
- * CreateFile internally initializes if not initialized
+ * CreateFile internally initializes if not initialized - OK
  * CreateFile generates error if file name is NULL - OK
  * CreateFile returns success if file is already there - OK
  * CreateFile creates a file with given name - OK
  * CreateFile closes the file after creating it  and return success - OK
  * 
- * FileIF_IsFileAvailable internally initializes if not initialized
+ * DeleteFile internally initializes if not initialized - OK
  * DeleteFile generates error if file name is NULL - OK
  * DeleteFile generates error if file is not available - OK
  * DeleteFile removes the file and returns success is file is available - OK
  * DeleteFile generates error if file cannot be removed - IGNORED
  * 
- * GetFileSize internally initializes if not initialized
+ * GetFileSize internally initializes if not initialized - OK
  * GetFileSize generates error if filename is NULL - OK
  * GetFileSize generates error if file_size parameter is NULL - OK
  * GetFileSize generates error if file cannot be accessed - OK
  * GetFileSize reads file size and returns success if file is available - OK
  * 
- * FileIF_AppendString internally initializes if not initialized
+ * FileIF_AppendString internally initializes if not initialized - OK
  * FileIF_AppendString returns error if filename is NULL - OK
  * FileIF_AppendString returns error if string is NULL - OK
  * FileIF_AppendString returns error if file is not accessible - OK
  * FileIF_AppendString appends the string at the end of the file - OK
  * 
- * FileIF_GetNoOfLines internally initializes if not initialized
+ * FileIF_GetNoOfLines internally initializes if not initialized - OK
  * FileIF_GetNoOfLines returns error if filename is NULL - OK
  * FileIF_GetNoOfLines returns error if file is not available - OK
  * FileIF_GetNoOfLines returns error if no_of_lines parameter is NULL - OK
  * FileIF_GetNoOfLines returns success and copies the number of lines if parameters are correct - OK
  * FileIF_GetNoOfLines returns zero as no_of_lines of empty file - OK
  * 
- * FileIF_ReadLine internally initializes if not initialized
+ * FileIF_ReadLine internally initializes if not initialized - OK
  * FileIF_ReadLine returns error if filename is NULL - OK
  * FileIF_ReadLine returns error if line buffer is NULL - OK
  * FileIF_ReadLine returns error if buffer_size is NULL - OK
@@ -83,9 +83,9 @@
  * FileIF_ReadLine returns error if line_no is more than total lines - OK
  * FileIF_ReadLine copies the string to the buffer if successful - OK
  * 
- * FileIF_CopyBufferToFile internally initializes if not initialized
+ * FileIF_CopyBufferToFile internally initializes if not initialized - OK
  * FileIF_CopyBufferToFile returns error if filename is NULL - OK
- * FileIF_CopyBufferToFile returns error if file not availabe - OK
+ * FileIF_CopyBufferToFile returns error if file not available - OK
  * FileIF_CopyBufferToFile returns error if file not accessible - OK
  * FileIF_CopyBufferToFile returns error if buffer is NULL - OK
  * FileIF_CopyBufferToFile returns error if buffer size is zero - OK
@@ -119,13 +119,13 @@ TEST(file_interface, InitializeFunctionReturnsSucceess)
 	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_Initialize());
 }
 
-TEST(file_interface, CopyFileToBufferErrorIfNotInitialized)
+TEST(file_interface, CopyFileToBufferInternallyInitializesIfNotInitialized)
 {
 	int buf_size = 10;
 	char buffer;
 	int file_size;
 	
-	TEST_ASSERT_EQUAL(FILEIF_ERR_UNINIT, FileIF_CopyFileToBuffer(NULL, 0, &buffer, &buf_size, &file_size));
+	TEST_ASSERT_EQUAL(FILEIF_ERR_INVALID_PARAM, FileIF_CopyFileToBuffer(NULL, 0, &buffer, &buf_size, &file_size));
 }
 
 TEST(file_interface, CopyFileToBufferErrorIfFileNameIsNULL)
@@ -496,6 +496,12 @@ TEST(file_interface, CreateFileClosesTheFileAtTheEnd)
 	}
 }
 
+
+TEST(file_interface, DeleteFileInternallyInitializesIfNotInitialized)
+{
+	TEST_ASSERT_EQUAL(FILEIF_ERR_INVALID_PARAM, FileIF_DeleteFile(NULL));
+}
+
 TEST(file_interface, DeleteFileGeneratesAnErrorIfFileNameIsNULL)
 {
 	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_Initialize());
@@ -521,6 +527,12 @@ IGNORE_TEST(file_interface, DeleteFileGeneratesAnErrorIfFileCannotBeRemoved)
 	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_CreateFile("file_interface/new_file"));
 	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_DeleteFile("file_interface/new_file"));
 	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_IsFileAvailable("file_interface/new_file"));
+}
+
+TEST(file_interface, GetFileSizeInternallyInitializesIfNotInitialized)
+{
+	int size;
+	TEST_ASSERT_EQUAL(FILEIF_ERR_INVALID_PARAM, FileIF_GetFileSize(NULL, &size));
 }
 
 TEST(file_interface, GetFileSizeGeneratesAnErrorIfFilenameNULL)
@@ -549,6 +561,12 @@ TEST(file_interface, GetFileSizeCopiesTheFileSizeIfSuccess)
 	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_Initialize());
 	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_GetFileSize("file_interface/file_20_bytes.bin", &size));
 	TEST_ASSERT_EQUAL(20, size);
+}
+
+TEST(file_interface, FileIF_AppendStringInternallyInitializesIfNotInitialized)
+{
+	char value[] = "Hello";
+	TEST_ASSERT_EQUAL(FILEIF_ERR_INVALID_PARAM, FileIF_AppendString(NULL, value));
 }
 
 TEST(file_interface, FileIF_AppendStringErrorIfFilenameIsNULL)
@@ -584,6 +602,12 @@ TEST(file_interface, FileIF_AppendStringAppendsStringToEndOfTheFile)
 	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_AppendString(filename, value1));
 	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_AppendString(filename, value2));
 	TEST_ASSERT_EQUAL(1, CompareFiles(filename, "file_interface/appendstring_test_file_expected.txt"));
+}
+
+TEST(file_interface, FileIF_GetNoOfLinesInternallyInitializesIfNotInitialized)
+{
+	int no_of_lines;
+	TEST_ASSERT_EQUAL(FILEIF_ERR_INVALID_PARAM, FileIF_GetNoOfLines(NULL, &no_of_lines));
 }
 
 TEST(file_interface, FileIF_GetNoOfLinesIfFilenameIsNULL)
@@ -624,6 +648,13 @@ TEST(file_interface, FileIF_GetNoOfLinesReturnsZeroAsNoOfLinesForEmptyFile)
 	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_Initialize());
 	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_GetNoOfLines(filename, &no_of_lines));
 	TEST_ASSERT_EQUAL(0,no_of_lines);
+}
+
+TEST(file_interface, FileIF_ReadLineInternallyInitializesIfNotInitialized)
+{
+	char string_val[100];
+	int string_size = sizeof(string_val);
+	TEST_ASSERT_EQUAL(FILEIF_ERR_INVALID_PARAM, FileIF_ReadLine(NULL, 1, string_val, &string_size));
 }
 
 TEST(file_interface, FileIF_ReadLineErrorIfFilenameIsNULL)
@@ -735,6 +766,14 @@ TEST(file_interface, FileIF_ReadLineECopiesTheStringIfSuccessful)
 	TEST_ASSERT_EQUAL(FILEIF_OP_SUCCESS, FileIF_ReadLine(filename, 1, string_val, &string_size));	
 	TEST_ASSERT_EQUAL(31,string_size);
 	TEST_ASSERT_EQUAL_MEMORY(expect, string_val, sizeof(expect));
+}
+
+TEST(file_interface, FileIF_CopyBufferToFile_InternallyInitializesIfNotInitialized)
+{
+	char data[60];
+	int data_size = sizeof(data);
+
+	TEST_ASSERT_EQUAL(FILEIF_ERR_INVALID_PARAM, FileIF_CopyBufferToFile(NULL, data, data_size));
 }
 
 TEST(file_interface, FileIF_CopyBufferToFile_errorIfFilenameIsNULL)
