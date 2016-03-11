@@ -32,6 +32,7 @@
 #include "cmdline.h"
 #include "sd_defs.h"
 #include "sdcard_interface.h"
+#include "plat_arm.h"
 
 extern void disk_timerproc (void);
 
@@ -1404,25 +1405,13 @@ int SD_Test(void) {
     int nStatus;
     FRESULT iFResult;
 
-    //
-    // Mount the file system, using logical disk 0.
-    //
-    //  iFResult = f_mount(&g_sFatFs,"",1);
-
-
-    iFResult = f_mount(&g_sFatFs, "", 1);
-
-    if (iFResult != FR_OK) {
-        UARTprintf("f_mount error: %s\n", StringFromFResult(iFResult));
-        return (1);
-    }
-
 
 
     // todo jc write soimething
 #define TEST_AUDIO_FILE    "TEST_AUDIO.WAV"
     FRESULT res;                /* FatFs function common result code */
 
+    FileIF_Initialize();
     // write some info
     FIL fsrc;                /* File objects */
 
