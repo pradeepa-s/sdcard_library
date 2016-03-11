@@ -94,7 +94,7 @@ void main(void)
     /* Start RTI Counter Block 1 */
     rtiStartCounter(rtiCOUNTER_BLOCK1);
 
-    mmcSelectSpi(mibspiPORT5, mibspiREG5);  // SD card is on the SPI5
+    mmcSelectSpi(mibspiPORT5, mibspiREG5, 4);  // SD card is on the SPI5
     SD_Test();
 
 #endif

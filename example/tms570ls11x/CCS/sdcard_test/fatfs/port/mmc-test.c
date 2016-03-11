@@ -48,11 +48,12 @@
 
 gioPORT_t *_spiPORT = 0;
 mibspiBASE_t *_spiREG = 0;
+uint32_t _tf_group = 0;
 
-
-void mmcSelectSpi(gioPORT_t *port, mibspiBASE_t *reg) {
+void mmcSelectSpi(gioPORT_t *port, mibspiBASE_t *reg, uint32_t tf_group) {
     _spiPORT = port;
     _spiREG = reg;
+    _tf_group = tf_group;
 }
 
 
@@ -89,10 +90,10 @@ unsigned char SPI_send (unsigned char outb) {
 
   while ((_spiREG->FLG & 0x0200) == 0); // Wait until TXINTFLG is set for previous transmission
   //_spiREG->DAT1 = outb | 0x100D0000;    // transmit register address
-  mibspiSetData(_spiREG, 0, &data);
-  mibspiTransfer(_spiREG,0);
+  mibspiSetData(_spiREG, _tf_group, &data);
+  mibspiTransfer(_spiREG,_tf_group);
 
-  while(!(mibspiIsTransferComplete(_spiREG, 0)));
+  while(!(mibspiIsTransferComplete(_spiREG, _tf_group)));
 
   //while ((_spiREG->FLG & 0x0100) == 0); // Wait until RXINTFLG is set when new value is received
   return((unsigned char)_spiREG->BUF);  // Return received value
@@ -139,10 +140,10 @@ void xmit_spi(BYTE dat)
 
     while ((_spiREG->FLG & 0x0200) == 0); // Wait until TXINTFLG is set for previous transmission
 
-    mibspiSetData(_spiREG, 0, &data);
-      mibspiTransfer(_spiREG,0);
+    mibspiSetData(_spiREG, _tf_group, &data);
+      mibspiTransfer(_spiREG,_tf_group);
 
-      while(!(mibspiIsTransferComplete(_spiREG, 0)));
+      while(!(mibspiIsTransferComplete(_spiREG, _tf_group)));
 
     //_spiREG->DAT1 = dat | 0x100D0000;    // transmit register address
 
@@ -166,13 +167,13 @@ BYTE rcvr_spi (void)
 
 
     while ((mibspiREG5->FLG & 0x0200) == 0); // Wait until TXINTFLG is set for previous transmission
-	mibspiSetData(_spiREG, 0, &tx_data);
-	mibspiTransfer(_spiREG,0);
+	mibspiSetData(_spiREG, _tf_group, &tx_data);
+	mibspiTransfer(_spiREG,_tf_group);
     //mibspiREG5->DAT1 = 0xFF | 0x100D0000;    // transmit register address
 
-	while(!(mibspiIsTransferComplete(_spiREG, 0)));
+	while(!(mibspiIsTransferComplete(_spiREG, _tf_group)));
 
-	mibspiGetData(_spiREG,0,&rx_data);
+	mibspiGetData(_spiREG,_tf_group,&rx_data);
 
     //while ((mibspiREG5->FLG & 0x0100) == 0); // Wait until RXINTFLG is set when new value is received
     //return((unsigned char)mibspiREG5->BUF);  // Return received value

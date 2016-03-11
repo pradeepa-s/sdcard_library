@@ -209,16 +209,16 @@ typedef struct mibspi_config_reg
 #define MIBSPI5_FMT3_CONFIGVALUE     ((uint32)((uint32)0U << 24U) | (uint32)((uint32)0U << 23U) | (uint32)((uint32)0U << 22U) | (uint32)((uint32)0U << 21U) | (uint32)((uint32)0U << 20U) | (uint32)((uint32)0U << 17U) | (uint32)((uint32)0U << 16U) | (uint32)((uint32)89U << 8U) | (uint32)((uint32)16U << 0U))
 
 #define MIBSPI5_MIBSPIE_CONFIGVALUE  1U
-#define MIBSPI5_LTGPEND_CONFIGVALUE  ((uint32)((uint32)((1U+0U+0U+0U+0U+0U+0U+0U)-1U) << 8U))
+#define MIBSPI5_LTGPEND_CONFIGVALUE  ((uint32)((uint32)((0U+0U+0U+0U+1U+0U+0U+0U)-1U) << 8U))
 
 #define MIBSPI5_TGCTRL0_CONFIGVALUE  (0xFFFF7FFFU & ((uint32)((uint32)1U << 30U) | (uint32)((uint32)0U << 29U) | (uint32)((uint32)TRG_ALWAYS << 20U) | (uint32)((uint32)TRG_DISABLED << 16U) | (uint32)((uint32)0U << 8U)))
-#define MIBSPI5_TGCTRL1_CONFIGVALUE  (0xFFFF7FFFU & ((uint32)((uint32)1U << 30U) | (uint32)((uint32)0U << 29U) | (uint32)((uint32)TRG_ALWAYS << 20U) | (uint32)((uint32)TRG_DISABLED << 16U) | (uint32)((uint32)1U << 8U)))
-#define MIBSPI5_TGCTRL2_CONFIGVALUE  (0xFFFF7FFFU & ((uint32)((uint32)1U << 30U) | (uint32)((uint32)0U << 29U) | (uint32)((uint32)TRG_ALWAYS << 20U) | (uint32)((uint32)TRG_DISABLED << 16U) | (uint32)((uint32)(1U+0U) << 8U)))
-#define MIBSPI5_TGCTRL3_CONFIGVALUE  (0xFFFF7FFFU & ((uint32)((uint32)1U << 30U) | (uint32)((uint32)0U << 29U) | (uint32)((uint32)TRG_ALWAYS << 20U) | (uint32)((uint32)TRG_DISABLED << 16U) | (uint32)((uint32)(1U+0U+0U) << 8U)))
-#define MIBSPI5_TGCTRL4_CONFIGVALUE  (0xFFFF7FFFU & ((uint32)((uint32)1U << 30U) | (uint32)((uint32)0U << 29U) | (uint32)((uint32)TRG_ALWAYS << 20U) | (uint32)((uint32)TRG_DISABLED << 16U) | (uint32)((uint32)(1U+0U+0U+0U) << 8U)))
-#define MIBSPI5_TGCTRL5_CONFIGVALUE  (0xFFFF7FFFU & ((uint32)((uint32)1U << 30U) | (uint32)((uint32)0U << 29U) | (uint32)((uint32)TRG_ALWAYS << 20U) | (uint32)((uint32)TRG_DISABLED << 16U) | (uint32)((uint32)(1U+0U+0U+0U+0U) << 8U)))
-#define MIBSPI5_TGCTRL6_CONFIGVALUE  (0xFFFF7FFFU & ((uint32)((uint32)1U << 30U) | (uint32)((uint32)0U << 29U) | (uint32)((uint32)TRG_ALWAYS << 20U) | (uint32)((uint32)TRG_DISABLED << 16U) | (uint32)((uint32)(1U+0U+0U+0U+0U+0U) << 8U)))
-#define MIBSPI5_TGCTRL7_CONFIGVALUE  (0xFFFF7FFFU & ((uint32)((uint32)1U << 30U) | (uint32)((uint32)0U << 29U) | (uint32)((uint32)TRG_ALWAYS << 20U) | (uint32)((uint32)TRG_DISABLED << 16U) | (uint32)((uint32)(1U+0U+0U+0U+0U+0U+0U) << 8U)))
+#define MIBSPI5_TGCTRL1_CONFIGVALUE  (0xFFFF7FFFU & ((uint32)((uint32)1U << 30U) | (uint32)((uint32)0U << 29U) | (uint32)((uint32)TRG_ALWAYS << 20U) | (uint32)((uint32)TRG_DISABLED << 16U) | (uint32)((uint32)0U << 8U)))
+#define MIBSPI5_TGCTRL2_CONFIGVALUE  (0xFFFF7FFFU & ((uint32)((uint32)1U << 30U) | (uint32)((uint32)0U << 29U) | (uint32)((uint32)TRG_ALWAYS << 20U) | (uint32)((uint32)TRG_DISABLED << 16U) | (uint32)((uint32)(0U+0U) << 8U)))
+#define MIBSPI5_TGCTRL3_CONFIGVALUE  (0xFFFF7FFFU & ((uint32)((uint32)1U << 30U) | (uint32)((uint32)0U << 29U) | (uint32)((uint32)TRG_ALWAYS << 20U) | (uint32)((uint32)TRG_DISABLED << 16U) | (uint32)((uint32)(0U+0U+0U) << 8U)))
+#define MIBSPI5_TGCTRL4_CONFIGVALUE  (0xFFFF7FFFU & ((uint32)((uint32)1U << 30U) | (uint32)((uint32)0U << 29U) | (uint32)((uint32)TRG_ALWAYS << 20U) | (uint32)((uint32)TRG_DISABLED << 16U) | (uint32)((uint32)(0U+0U+0U+0U) << 8U)))
+#define MIBSPI5_TGCTRL5_CONFIGVALUE  (0xFFFF7FFFU & ((uint32)((uint32)1U << 30U) | (uint32)((uint32)0U << 29U) | (uint32)((uint32)TRG_ALWAYS << 20U) | (uint32)((uint32)TRG_DISABLED << 16U) | (uint32)((uint32)(0U+0U+0U+0U+1U) << 8U)))
+#define MIBSPI5_TGCTRL6_CONFIGVALUE  (0xFFFF7FFFU & ((uint32)((uint32)1U << 30U) | (uint32)((uint32)0U << 29U) | (uint32)((uint32)TRG_ALWAYS << 20U) | (uint32)((uint32)TRG_DISABLED << 16U) | (uint32)((uint32)(0U+0U+0U+0U+1U+0U) << 8U)))
+#define MIBSPI5_TGCTRL7_CONFIGVALUE  (0xFFFF7FFFU & ((uint32)((uint32)1U << 30U) | (uint32)((uint32)0U << 29U) | (uint32)((uint32)TRG_ALWAYS << 20U) | (uint32)((uint32)TRG_DISABLED << 16U) | (uint32)((uint32)(0U+0U+0U+0U+1U+0U+0U) << 8U)))
 
 #define MIBSPI5_UERRCTRL_CONFIGVALUE (0x00000005U)
 
