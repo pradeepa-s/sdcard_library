@@ -7,7 +7,7 @@
  * This file contains generic functions to do file manipulation using
  * standard file access interface.
  *
- * The file can be easyly ported to any compiler to include compiler
+ * The file can be easily ported to any compiler to include compiler
  * specific functions.
  *
 
