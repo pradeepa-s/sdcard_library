@@ -105,6 +105,7 @@ int FileIF_Initialize(void)
 int FileIF_CopyFileToBuffer(const char *filename, int offset, char *buffer, int *buf_size, int *file_size)
 {
 	int ret = FILEIF_OP_SUCCESS;
+	int warn = FILEIF_OP_SUCCESS;
 	int f_size = 0;
 	int amount_to_read = 0;	
 	UINT f_read_size = 0;
@@ -152,11 +153,11 @@ int FileIF_CopyFileToBuffer(const char *filename, int offset, char *buffer, int 
 										
 				/* Check the buf size */
 				if(f_size < *buf_size){
-					ret = FILEIF_WARN_BUFFER_SIZE_LARGE;	
+					warn = FILEIF_WARN_BUFFER_SIZE_LARGE;
 					amount_to_read = f_size;			
 				}
 				else if(f_size > *buf_size){
-					ret = FILEIF_WARN_BUFFER_SIZE_SMALL;
+					warn = FILEIF_WARN_BUFFER_SIZE_SMALL;
 				}
 				
 				ret = f_lseek(&f, offset);
@@ -187,6 +188,11 @@ int FileIF_CopyFileToBuffer(const char *filename, int offset, char *buffer, int 
 		if(FILEIF_OP_SUCCESS == get_disk_utilization(&uti)){
 			ret = check_size(uti);
 		}
+	}
+
+	// Check whether a warning is there.
+	if((FILEIF_OP_SUCCESS == ret) && (warn != FILEIF_OP_SUCCESS)){
+		ret = warn;
 	}
 
 	return ret;
@@ -674,13 +680,21 @@ int FileIF_CopyBufferToFile(const char *filename, char *buffer, int buf_size)
 	}
 	
 	if(FILEIF_OP_SUCCESS == ret){
-		ret = f_open(&f,filename,FA_READ);
+		ret = f_open(&f,filename,FA_READ | FA_WRITE);
 		
 		if(FR_OK == ret){
-			ret = f_write(&f, buffer, buf_size, &copied_amount);
 			
-			if(copied_amount != buf_size){
-				ret = FILEIF_ERR_FILE_ACCESS;
+			// Go to the end
+			ret = f_lseek(&f,f_size(&f));
+
+			if(FR_OK == ret){
+				ret = f_write(&f, buffer, buf_size, &copied_amount);
+
+				if(FR_OK == ret){
+					if(copied_amount != buf_size){
+						ret = FILEIF_ERR_FILE_ACCESS;
+					}
+				}
 			}
 			
 			f_close(&f);
@@ -690,7 +704,7 @@ int FileIF_CopyBufferToFile(const char *filename, char *buffer, int buf_size)
 		if((FR_NO_FILE == ret) || (FR_NO_PATH == ret)){
 			ret = FILEIF_ERR_FILE_NOT_AVAILABLE;
 		}
-		else{
+		else if(ret > 0){
 			ret = ff_return_code_translate(ret);
 		}
 	}

@@ -760,7 +760,15 @@ int Cmd_read_firmware(int argc, char *argv[]) {
 			UARTprintf("Copied amount of data: %d\n",buf_size);
 			UARTprintf("Buffer content: \n");
 
-			UARTprintf("%s",buffer);
+			int i = 0;
+			for(i = 0; i<buf_size; i++){
+				if(i % 16 == 0){
+					UARTprintf("\n[%d]: ",i);
+				}
+
+				UARTprintf("0x%x ",buffer[i]);
+			}
+
 
 			iFResult = 0;
 		}
@@ -777,6 +785,191 @@ int Cmd_read_firmware(int argc, char *argv[]) {
 
 	return ((int) iFResult);
 }
+
+
+//*****************************************************************************
+//
+// This function implements the "create_fw" command.  Used to create a dummy
+// firmware file.
+//
+//*****************************************************************************
+int Cmd_create_firmware(int argc, char *argv[]) {
+
+	int iFResult = -1;
+
+	if(argc == 2){
+		 //
+		// First, check to make sure that the current path (CWD), plus the file
+		// name, plus a separator and trailing null, will all fit in the temporary
+		// buffer that will be used to hold the file name.  The file name must be
+		// fully specified, with path, to FatFs.
+		//
+		if (strlen(g_pcCwdBuf) + strlen(argv[1]) + 1 + 1 > sizeof(g_pcTmpBuf)) {
+			UARTprintf("Resulting path name is too long\n");
+			return (0);
+		}
+
+		//
+		// Copy the current path to the temporary buffer so it can be manipulated.
+		//
+		strcpy(g_pcTmpBuf, g_pcCwdBuf);
+
+		//
+		// If not already at the root level, then append a separator.
+		//
+		if (strcmp("/", g_pcCwdBuf)) {
+			strcat(g_pcTmpBuf, "/");
+		}
+
+		//
+		// Now finally, append the file name to result in a fully specified file.
+		//
+		strcat(g_pcTmpBuf, argv[1]);
+
+		//
+		// Create firmware data
+		//
+		iFResult = SDCardIF_CreateFirmwareFile(g_pcTmpBuf);
+
+		if((SDCARD_IF_OP_SUCCESS == iFResult) || (SDCARD_IF_WARN_BUFFER_SIZE_LARGE == iFResult) || (SDCARD_IF_WARN_BUFFER_SIZE_SMALL == iFResult)){
+			UARTprintf("Operation finished with condition: %d\n",iFResult);
+			UARTprintf("File %s should be created.\n",g_pcTmpBuf);
+
+			iFResult = 0;
+		}
+		else{
+			UARTprintf("Error in operation: %d \n",iFResult);
+		}
+	}
+
+	return ((int) iFResult);
+}
+
+
+//*****************************************************************************
+//
+// This function implements the "delete_fw" command.  Used to delete the
+// firmware file.
+//
+//*****************************************************************************
+int Cmd_delete_firmware(int argc, char *argv[]) {
+
+	int iFResult = -1;
+
+	if(argc == 2){
+		 //
+		// First, check to make sure that the current path (CWD), plus the file
+		// name, plus a separator and trailing null, will all fit in the temporary
+		// buffer that will be used to hold the file name.  The file name must be
+		// fully specified, with path, to FatFs.
+		//
+		if (strlen(g_pcCwdBuf) + strlen(argv[1]) + 1 + 1 > sizeof(g_pcTmpBuf)) {
+			UARTprintf("Resulting path name is too long\n");
+			return (0);
+		}
+
+		//
+		// Copy the current path to the temporary buffer so it can be manipulated.
+		//
+		strcpy(g_pcTmpBuf, g_pcCwdBuf);
+
+		//
+		// If not already at the root level, then append a separator.
+		//
+		if (strcmp("/", g_pcCwdBuf)) {
+			strcat(g_pcTmpBuf, "/");
+		}
+
+		//
+		// Now finally, append the file name to result in a fully specified file.
+		//
+		strcat(g_pcTmpBuf, argv[1]);
+
+		//
+		// Delete firmware data
+		//
+		iFResult = SDCardIF_DeleteFirmwareFile(g_pcTmpBuf);
+
+		if((SDCARD_IF_OP_SUCCESS == iFResult) || (SDCARD_IF_WARN_BUFFER_SIZE_LARGE == iFResult) || (SDCARD_IF_WARN_BUFFER_SIZE_SMALL == iFResult)){
+			UARTprintf("Operation finished with condition: %d\n",iFResult);
+			UARTprintf("File %s should be deleted.\n",g_pcTmpBuf);
+
+			iFResult = 0;
+		}
+		else{
+			UARTprintf("Error in operation: %d \n",iFResult);
+		}
+	}
+
+	return ((int) iFResult);
+}
+
+
+//****************************************************************************************
+//
+// This function implements the "append_fw" command.  Used to append a pre configured
+// data pattern to firmware file.
+//
+//*****************************************************************************************
+int Cmd_append_firmware(int argc, char *argv[]) {
+
+	int iFResult = -1;
+
+	if(argc == 3){
+		 //
+		// First, check to make sure that the current path (CWD), plus the file
+		// name, plus a separator and trailing null, will all fit in the temporary
+		// buffer that will be used to hold the file name.  The file name must be
+		// fully specified, with path, to FatFs.
+		//
+		if (strlen(g_pcCwdBuf) + strlen(argv[1]) + 1 + 1 > sizeof(g_pcTmpBuf)) {
+			UARTprintf("Resulting path name is too long\n");
+			return (0);
+		}
+
+		//
+		// Copy the current path to the temporary buffer so it can be manipulated.
+		//
+		strcpy(g_pcTmpBuf, g_pcCwdBuf);
+
+		//
+		// If not already at the root level, then append a separator.
+		//
+		if (strcmp("/", g_pcCwdBuf)) {
+			strcat(g_pcTmpBuf, "/");
+		}
+
+		//
+		// Now finally, append the file name to result in a fully specified file.
+		//
+		strcat(g_pcTmpBuf, argv[1]);
+
+		int data_pattern = atoi(argv[2]);
+		char buffer[10];
+		int i;
+		for(i = 0; i < sizeof(buffer); i++){
+			buffer[i] = data_pattern;
+		}
+
+		//
+		// Append firmware data
+		//
+		iFResult = SDCardIF_AppendFirmwareData(g_pcTmpBuf, buffer, sizeof(buffer));
+
+		if((SDCARD_IF_OP_SUCCESS == iFResult) || (SDCARD_IF_WARN_BUFFER_SIZE_LARGE == iFResult) || (SDCARD_IF_WARN_BUFFER_SIZE_SMALL == iFResult)){
+			UARTprintf("Operation finished with condition: %d\n",iFResult);
+			UARTprintf("File %s should be modified. Use read_firmware to confirm.\n",g_pcTmpBuf);
+
+			iFResult = 0;
+		}
+		else{
+			UARTprintf("Error in operation: %d \n",iFResult);
+		}
+	}
+
+	return ((int) iFResult);
+}
+
 
 
 //*****************************************************************************
@@ -1353,6 +1546,9 @@ tCmdLineEntry g_psCmdTable[] = {
 		{ "read_last", Cmd_read_last_n, "Read number of events from last, \n\t\t Ex:read_last <filename> <events>."},
 		{ "current_log", Cmd_current_log, "Get current log file"},
 		{ "read_firmware", Cmd_read_firmware, "Read firmware file to a buffer. \n\t\t Ex: read_firmware <filename> <offset> <amount>"},
+		{ "create_fw", Cmd_create_firmware, "Create a new firmware file with default data \n\t\t Ex: create_fw <filename>"},
+		{ "delete_fw", Cmd_delete_firmware, "Delete the firmware file \n\t\t Ex: delete_fw <filename>"},
+		{ "append_fw", Cmd_append_firmware, "Append pre configured data pattern to the firmware file \n\t\t Ex: append_fw <filename> <data_pattern>"},
 #ifdef LCD
         {    "load", Cmd_load, "Load a bmp file"},                  // Load_bmp.c
 #endif
