@@ -46,8 +46,7 @@ static void DecodeEvents(ITSI_LOG_EVENT *event, char *line_buffer);
 int SDCardIF_Initialize()
 {
 	int ret = SDCARD_IF_OP_SUCCESS;
-	
-	sdcardif_initialized = TRUE;
+		
 	audio_buffer = NULL;
 	audio_buffer_size = 0;
 	
@@ -55,6 +54,10 @@ int SDCardIF_Initialize()
 	
 	if(SDCARD_IF_OP_SUCCESS == ret){
 		ret = SDCardIF_SetLogFile(DEFAULT_EVENT_LOG);		
+		
+		if(SDCARD_IF_OP_SUCCESS == ret){
+			sdcardif_initialized = TRUE;
+		}
 	}
 	
 	return ret;
