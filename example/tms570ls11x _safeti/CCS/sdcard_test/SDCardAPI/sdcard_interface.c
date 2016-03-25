@@ -51,10 +51,10 @@ int SDCardIF_Initialize()
 	audio_buffer = NULL;
 	audio_buffer_size = 0;
 	
-	ret = SDCardIF_SetLogFile(DEFAULT_EVENT_LOG);
+	ret = FileIF_Initialize();
 	
 	if(SDCARD_IF_OP_SUCCESS == ret){
-		ret = FileIF_Initialize();
+		ret = SDCardIF_SetLogFile(DEFAULT_EVENT_LOG);		
 	}
 	
 	return ret;
