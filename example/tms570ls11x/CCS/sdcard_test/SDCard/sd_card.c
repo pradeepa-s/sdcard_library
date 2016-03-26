@@ -972,6 +972,154 @@ int Cmd_append_firmware(int argc, char *argv[]) {
 
 
 
+//****************************************************************************************
+//
+// This function implements the "append_test" command.  Used to create a new file by
+// copying the contents of another file
+//
+//*****************************************************************************************
+int Cmd_append_test(int argc, char *argv[]) {
+
+	int iFResult = -1;
+
+	if(argc == 4){
+		char pcFile1[80];
+		char pcFile2[80];
+
+		memset(pcFile1, 0x00, sizeof(pcFile1));
+		memset(pcFile2, 0x00, sizeof(pcFile2));
+
+		//
+		// First, check to make sure that the current path (CWD), plus the file
+		// name, plus a separator and trailing null, will all fit in the temporary
+		// buffer that will be used to hold the file name.  The file name must be
+		// fully specified, with path, to FatFs.
+		//
+		if (strlen(g_pcCwdBuf) + strlen(argv[1]) + 1 + 1 > sizeof(g_pcTmpBuf)) {
+			UARTprintf("Resulting path name is too long\n");
+			return (0);
+		}
+
+		//
+		// Copy the current path to the temporary buffer so it can be manipulated.
+		//
+		strcpy(g_pcTmpBuf, g_pcCwdBuf);
+
+		//
+		// If not already at the root level, then append a separator.
+		//
+		if (strcmp("/", g_pcCwdBuf)) {
+			strcat(g_pcTmpBuf, "/");
+		}
+
+		//
+		// Now finally, append the file name to result in a fully specified file.
+		//
+		strcat(g_pcTmpBuf, argv[1]);
+
+		strcpy(pcFile1,g_pcTmpBuf);
+
+		//
+		// First, check to make sure that the current path (CWD), plus the file
+		// name, plus a separator and trailing null, will all fit in the temporary
+		// buffer that will be used to hold the file name.  The file name must be
+		// fully specified, with path, to FatFs.
+		//
+
+		memset(g_pcTmpBuf, 0x00, sizeof(g_pcTmpBuf));
+
+		if (strlen(g_pcCwdBuf) + strlen(argv[2]) + 1 + 1 > sizeof(g_pcTmpBuf)) {
+			UARTprintf("Resulting path name is too long\n");
+			return (0);
+		}
+
+		//
+		// Copy the current path to the temporary buffer so it can be manipulated.
+		//
+		strcpy(g_pcTmpBuf, g_pcCwdBuf);
+
+		//
+		// If not already at the root level, then append a separator.
+		//
+		if (strcmp("/", g_pcCwdBuf)) {
+			strcat(g_pcTmpBuf, "/");
+		}
+
+		//
+		// Now finally, append the file name to result in a fully specified file.
+		//
+		strcat(g_pcTmpBuf, argv[2]);
+
+		strcpy(pcFile2,g_pcTmpBuf);
+
+		int transfer_size = atoi(argv[3]);
+
+		UARTprintf("Starting to copy %s to %s with each transfer size of %d. Please wait...\n",pcFile1,pcFile2,transfer_size);
+
+		char *buffer = (char*)malloc(transfer_size * sizeof(char));
+		int buffer_size = transfer_size;
+		int file_size = 0;
+		int i =0;
+		if(buffer){
+
+			//
+			// Get File1 size
+			//
+
+			iFResult = SDCardIF_ReadFirmwareFile(	pcFile1,
+													0,
+													buffer,
+													&buffer_size,
+													&file_size);
+
+			if((SDCARD_IF_OP_SUCCESS == iFResult) || (SDCARD_IF_WARN_BUFFER_SIZE_LARGE == iFResult) || (SDCARD_IF_WARN_BUFFER_SIZE_SMALL == iFResult)){
+
+				for(i = 0; i < file_size;){
+					buffer_size = transfer_size;
+
+					iFResult = SDCardIF_ReadFirmwareFile(pcFile1,i,buffer,&buffer_size,&file_size);
+
+					if((SDCARD_IF_OP_SUCCESS == iFResult) || (SDCARD_IF_WARN_BUFFER_SIZE_LARGE == iFResult) || (SDCARD_IF_WARN_BUFFER_SIZE_SMALL == iFResult)){
+						iFResult = SDCardIF_AppendFirmwareData(pcFile2,buffer,buffer_size);
+
+						if((SDCARD_IF_OP_SUCCESS == iFResult) || (SDCARD_IF_WARN_BUFFER_SIZE_LARGE == iFResult) || (SDCARD_IF_WARN_BUFFER_SIZE_SMALL == iFResult)){
+							i += buffer_size;
+							UARTprintf(".");
+						}
+						else{
+							UARTprintf("Error in operation: %d \n",iFResult);
+							break;
+						}
+					}
+					else{
+						UARTprintf("Error in operation: %d \n",iFResult);
+						break;
+					}
+				}
+			}
+
+			UARTprintf("\n");
+
+			if((SDCARD_IF_OP_SUCCESS == iFResult) || (SDCARD_IF_WARN_BUFFER_SIZE_LARGE == iFResult) || (SDCARD_IF_WARN_BUFFER_SIZE_SMALL == iFResult)){
+				UARTprintf("Operation finished with condition: %d\n",iFResult);
+
+				iFResult = 0;
+			}
+			else{
+				UARTprintf("Error in operation: %d \n",iFResult);
+			}
+
+			free(buffer);
+		}
+		else{
+			UARTprintf("Error in operation: Malloc failed \n");
+		}
+	}
+
+	return ((int) iFResult);
+}
+
+
 //*****************************************************************************
 //
 // This function implements the "Cmd_set_log" command.  It is used to set the
@@ -1549,6 +1697,7 @@ tCmdLineEntry g_psCmdTable[] = {
 		{ "create_fw", Cmd_create_firmware, "Create a new firmware file with default data \n\t\t Ex: create_fw <filename>"},
 		{ "delete_fw", Cmd_delete_firmware, "Delete the firmware file \n\t\t Ex: delete_fw <filename>"},
 		{ "append_fw", Cmd_append_firmware, "Append pre configured data pattern to the firmware file \n\t\t Ex: append_fw <filename> <data_pattern>"},
+		{ "sdcard_append_test", Cmd_append_test, "Copy file1 to the end of file2, each iteration copies 'transfer_size' number of bytes.\n\t\t Ex: append_fw <file1> <file2> <transfer_size>"},
 #ifdef LCD
         {    "load", Cmd_load, "Load a bmp file"},                  // Load_bmp.c
 #endif
