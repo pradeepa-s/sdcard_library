@@ -36,7 +36,7 @@
 
 extern void disk_timerproc (void);
 
-static char *g_audio_buffer = NULL;
+static char g_audio_buffer[50000];
 //*****************************************************************************
 //
 //! \addtogroup example_list
@@ -690,7 +690,23 @@ int Cmd_play_audio(int argc, char *argv[]) {
 		if((SDCARD_IF_OP_SUCCESS == iFResult) || (SDCARD_IF_WARN_BUFFER_SIZE_LARGE == iFResult) || (SDCARD_IF_WARN_BUFFER_SIZE_SMALL == iFResult)){
 			UARTprintf("Buffer content: \n");
 
-			UARTprintf("%s",g_audio_buffer);
+			int i = 0;
+
+			SDCardIF_DeleteFirmwareFile("play_audio.wav");
+			SDCardIF_CreateFirmwareFile("play_audio.wav");
+			SDCardIF_AppendFirmwareData("play_audio.wav", g_audio_buffer, sizeof(g_audio_buffer));
+			UARTprintf("play_audio.wav file is created. Which contains audio data.\n");
+#if 0
+			for(i = 0; i < sizeof(g_audio_buffer); i++){
+
+				if(i % 32 == 0){
+					UARTprintf("\n[0x%x]\t:", i);
+				}
+
+				UARTprintf(" 0x%x",g_audio_buffer[i]);
+
+			}
+#endif
 
 			iFResult = 0;
 		}
@@ -1241,11 +1257,11 @@ int Cmd_set_audio(int argc, char *argv[]) {
 		int size = atoi(argv[1]);
 
 		if(size > 0){
-			if(g_audio_buffer){
-				free(g_audio_buffer);
-			}
+			//if(g_audio_buffer){
+				//free(g_audio_buffer);
+			//}
 
-			g_audio_buffer = (char *)malloc(size);
+			//g_audio_buffer = (char *)malloc(size);
 
 			//
 			// Set audio file buffer
