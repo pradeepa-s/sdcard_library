@@ -163,13 +163,47 @@ int FileIF_CopyFileToBuffer(const char *filename, int offset, char *buffer, int 
 				ret = f_lseek(&f, offset);
 				
 				if(FR_OK == ret){
+#if 0				
 					ret = f_read(&f, buffer, amount_to_read, &f_read_size);
 					
 					if(FR_OK == ret){
 						*buf_size = f_read_size;
 					}
 				}
-				
+#else	
+
+					int amount_read = 256;
+					int final_read_size = 0;
+					
+					while(1){
+						if(amount_to_read > 256){
+							amount_read = 256;
+						}
+						else{
+							amount_read = amount_to_read;
+						}
+
+						amount_to_read -= amount_read;
+
+						ret = f_read(&f, buffer, amount_read, &f_read_size);
+
+						buffer += amount_read;
+
+						if(FR_OK == ret){
+							final_read_size += f_read_size;
+						}
+						else{
+							break;
+						}
+
+						if(0 == amount_to_read){
+							break;
+						}
+					}
+
+					*buf_size = final_read_size;
+				}
+#endif				
 				f_close(&f);
 			}
 		}
