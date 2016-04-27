@@ -54,12 +54,11 @@ int SDCardIF_Initialize()
 	
 	if(SDCARD_IF_OP_SUCCESS == ret){
 		sdcardif_initialized = TRUE;
-	}
-
-	if(SDCARD_IF_OP_SUCCESS == ret){
+		
 		ret = SDCardIF_SetLogFile(DEFAULT_EVENT_LOG);
 	}
-	else{
+
+	if(SDCARD_IF_OP_SUCCESS != ret){
 		sdcardif_initialized = FALSE;
 	}
 	
