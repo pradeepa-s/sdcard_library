@@ -704,7 +704,7 @@ TEST(sdcard_interface, ReadEventReturnsErrorIfEventsStructureIsNULL)
 	char read_type = 0;
 	int no_of_events = 1;
 	
-	TEST_ASSERT_EQUAL(SDCARD_IF_ERR_INVALID_PARAM , SDCardIF_ReadEventLog(NULL, &event, read_type, &no_of_events));
+	TEST_ASSERT_EQUAL(SDCARD_IF_ERR_INVALID_PARAM , SDCardIF_ReadEventLog(NULL, &event, read_type, &no_of_events, 0));
 }
 
 TEST(sdcard_interface, ReadEventReturnsErrorIfFileNotAvailable)
@@ -713,7 +713,7 @@ TEST(sdcard_interface, ReadEventReturnsErrorIfFileNotAvailable)
 	char read_type = 0;
 	int no_of_events = 1;
 	
-	TEST_ASSERT_EQUAL(SDCARD_IF_ERR_FILE_NOT_AVAILABLE , SDCardIF_ReadEventLog("sdcard_interface/event_file_not_available.dat", &event, read_type, &no_of_events));
+	TEST_ASSERT_EQUAL(SDCARD_IF_ERR_FILE_NOT_AVAILABLE , SDCardIF_ReadEventLog("sdcard_interface/event_file_not_available.dat", &event, read_type, &no_of_events, 0));
 }
 
 TEST(sdcard_interface, ReadEventReturnsErrorIfNoOfEventsParamIsNULL)
@@ -721,7 +721,7 @@ TEST(sdcard_interface, ReadEventReturnsErrorIfNoOfEventsParamIsNULL)
 	ITSI_LOG_EVENT event;
 	char read_type = 0;	
 	
-	TEST_ASSERT_EQUAL(SDCARD_IF_ERR_INVALID_PARAM , SDCardIF_ReadEventLog("sdcard_interface/event_file_not_available.dat", &event, read_type, NULL));
+	TEST_ASSERT_EQUAL(SDCARD_IF_ERR_INVALID_PARAM , SDCardIF_ReadEventLog("sdcard_interface/event_file_not_available.dat", &event, read_type, NULL, 0));
 }
 
 TEST(sdcard_interface, ReadEventReturnsErrorIfEventBufferIsNULL)
@@ -729,7 +729,7 @@ TEST(sdcard_interface, ReadEventReturnsErrorIfEventBufferIsNULL)
 	char read_type = 0;	
 	int no_of_events = 1;
 	
-	TEST_ASSERT_EQUAL(SDCARD_IF_ERR_INVALID_PARAM , SDCardIF_ReadEventLog("sdcard_interface/event_file_not_available.dat", NULL, read_type, &no_of_events));
+	TEST_ASSERT_EQUAL(SDCARD_IF_ERR_INVALID_PARAM , SDCardIF_ReadEventLog("sdcard_interface/event_file_not_available.dat", NULL, read_type, &no_of_events, 0));
 }
 
 TEST(sdcard_interface, ReadEventReturnsErrorIfReadTypeIsInvalid)
@@ -738,15 +738,15 @@ TEST(sdcard_interface, ReadEventReturnsErrorIfReadTypeIsInvalid)
 	int no_of_events = 40;
 	ITSI_LOG_EVENT event[40];
 	
-	TEST_ASSERT_EQUAL(SDCARD_IF_ERR_INVALID_PARAM , SDCardIF_ReadEventLog("sdcard_interface/event_file_with_10events.txt", event, read_type, &no_of_events));
+	TEST_ASSERT_EQUAL(SDCARD_IF_ERR_INVALID_PARAM , SDCardIF_ReadEventLog("sdcard_interface/event_file_with_10events.txt", event, read_type, &no_of_events, 0));
 	
 	read_type = 4;
 	
-	TEST_ASSERT_EQUAL(SDCARD_IF_ERR_INVALID_PARAM , SDCardIF_ReadEventLog("sdcard_interface/event_file_with_10events.txt", event, read_type, &no_of_events));
+	TEST_ASSERT_EQUAL(SDCARD_IF_ERR_INVALID_PARAM , SDCardIF_ReadEventLog("sdcard_interface/event_file_with_10events.txt", event, read_type, &no_of_events, 0));
 	
 	read_type = 200;
 	
-	TEST_ASSERT_EQUAL(SDCARD_IF_ERR_INVALID_PARAM , SDCardIF_ReadEventLog("sdcard_interface/event_file_with_10events.txt", event, read_type, &no_of_events));
+	TEST_ASSERT_EQUAL(SDCARD_IF_ERR_INVALID_PARAM , SDCardIF_ReadEventLog("sdcard_interface/event_file_with_10events.txt", event, read_type, &no_of_events, 0));
 }
 
 TEST(sdcard_interface, ReadEventReturnsWarningIfRequiredNoOfEventsByParameterAreNotAvailable)
@@ -755,7 +755,7 @@ TEST(sdcard_interface, ReadEventReturnsWarningIfRequiredNoOfEventsByParameterAre
 	int no_of_events = 40;
 	ITSI_LOG_EVENT event[40];
 	
-	TEST_ASSERT_EQUAL(SDCARD_IF_WARN_LESS_NO_Of_EVENTS_AVAIL, SDCardIF_ReadEventLog("sdcard_interface/event_file_with_10events.txt", event, read_type, &no_of_events));
+	TEST_ASSERT_EQUAL(SDCARD_IF_WARN_LESS_NO_Of_EVENTS_AVAIL, SDCardIF_ReadEventLog("sdcard_interface/event_file_with_10events.txt", event, read_type, &no_of_events, 0));
 }
 
 TEST(sdcard_interface, ReadEventReturnsErrorIfNoOfEventsIsZeroUnlessReadTypeLast100)
@@ -764,19 +764,19 @@ TEST(sdcard_interface, ReadEventReturnsErrorIfNoOfEventsIsZeroUnlessReadTypeLast
 	int no_of_events = 0;
 	ITSI_LOG_EVENT event[100];
 	
-	TEST_ASSERT_EQUAL(SDCARD_IF_ERR_EVENT_COUNT, SDCardIF_ReadEventLog("sdcard_interface/event_file_with_10events.txt", event, read_type, &no_of_events));
+	TEST_ASSERT_EQUAL(SDCARD_IF_ERR_EVENT_COUNT, SDCardIF_ReadEventLog("sdcard_interface/event_file_with_10events.txt", event, read_type, &no_of_events, 0));
 	
 	no_of_events = 0;
 	read_type = N_FROM_LAST;
-	TEST_ASSERT_EQUAL(SDCARD_IF_ERR_EVENT_COUNT, SDCardIF_ReadEventLog("sdcard_interface/event_file_with_10events.txt", event, read_type, &no_of_events));
+	TEST_ASSERT_EQUAL(SDCARD_IF_ERR_EVENT_COUNT, SDCardIF_ReadEventLog("sdcard_interface/event_file_with_10events.txt", event, read_type, &no_of_events, 0));
 	
 	no_of_events = 0;
 	read_type = FULL_READ;
-	TEST_ASSERT_EQUAL(SDCARD_IF_ERR_EVENT_COUNT, SDCardIF_ReadEventLog("sdcard_interface/event_file_with_10events.txt", event, read_type, &no_of_events));
+	TEST_ASSERT_EQUAL(SDCARD_IF_ERR_EVENT_COUNT, SDCardIF_ReadEventLog("sdcard_interface/event_file_with_10events.txt", event, read_type, &no_of_events, 0));
 	
 	no_of_events = 0;
 	read_type = LAST_100;
-	TEST_ASSERT_EQUAL(SDCARD_IF_OP_SUCCESS, SDCardIF_ReadEventLog("sdcard_interface/event_file_with_1000events.txt", event, read_type, &no_of_events));
+	TEST_ASSERT_EQUAL(SDCARD_IF_OP_SUCCESS, SDCardIF_ReadEventLog("sdcard_interface/event_file_with_1000events.txt", event, read_type, &no_of_events, 0));
 }
 
 TEST(sdcard_interface, ReadEventReturnsErrorIfNoOfEventsIsZeroReturnsRequiredAmount)
@@ -785,22 +785,22 @@ TEST(sdcard_interface, ReadEventReturnsErrorIfNoOfEventsIsZeroReturnsRequiredAmo
 	int no_of_events = 0;
 	ITSI_LOG_EVENT event[100];
 	
-	TEST_ASSERT_EQUAL(SDCARD_IF_ERR_EVENT_COUNT, SDCardIF_ReadEventLog("sdcard_interface/event_file_with_10events.txt", event, read_type, &no_of_events));
+	TEST_ASSERT_EQUAL(SDCARD_IF_ERR_EVENT_COUNT, SDCardIF_ReadEventLog("sdcard_interface/event_file_with_10events.txt", event, read_type, &no_of_events, 0));
 	TEST_ASSERT_EQUAL(10, no_of_events);
 	
 	no_of_events = 0;
 	read_type = N_FROM_LAST;
-	TEST_ASSERT_EQUAL(SDCARD_IF_ERR_EVENT_COUNT, SDCardIF_ReadEventLog("sdcard_interface/event_file_with_10events.txt", event, read_type, &no_of_events));
+	TEST_ASSERT_EQUAL(SDCARD_IF_ERR_EVENT_COUNT, SDCardIF_ReadEventLog("sdcard_interface/event_file_with_10events.txt", event, read_type, &no_of_events, 0));
 	TEST_ASSERT_EQUAL(10, no_of_events);
 	
 	no_of_events = 0;
 	read_type = FULL_READ;
-	TEST_ASSERT_EQUAL(SDCARD_IF_ERR_EVENT_COUNT, SDCardIF_ReadEventLog("sdcard_interface/event_file_with_10events.txt", event, read_type, &no_of_events));
+	TEST_ASSERT_EQUAL(SDCARD_IF_ERR_EVENT_COUNT, SDCardIF_ReadEventLog("sdcard_interface/event_file_with_10events.txt", event, read_type, &no_of_events, 0));
 	TEST_ASSERT_EQUAL(10, no_of_events);
 	
 	no_of_events = 0;
 	read_type = LAST_100;
-	TEST_ASSERT_EQUAL(SDCARD_IF_OP_SUCCESS, SDCardIF_ReadEventLog("sdcard_interface/event_file_with_1000events.txt", event, read_type, &no_of_events));
+	TEST_ASSERT_EQUAL(SDCARD_IF_OP_SUCCESS, SDCardIF_ReadEventLog("sdcard_interface/event_file_with_1000events.txt", event, read_type, &no_of_events, 0));
 	TEST_ASSERT_EQUAL(100, no_of_events);
 }
 
@@ -811,7 +811,7 @@ TEST(sdcard_interface, ReadEventReturnsWarningIf100EventsNotAvailableWhenLast100
 	ITSI_LOG_EVENT event[40];
 	
 	read_type = LAST_100;
-	TEST_ASSERT_EQUAL(SDCARD_IF_WARN_LESS_NO_Of_EVENTS_AVAIL, SDCardIF_ReadEventLog("sdcard_interface/event_file_with_10events.txt", event, read_type, &no_of_events));
+	TEST_ASSERT_EQUAL(SDCARD_IF_WARN_LESS_NO_Of_EVENTS_AVAIL, SDCardIF_ReadEventLog("sdcard_interface/event_file_with_10events.txt", event, read_type, &no_of_events, 0));
 }
 
 TEST(sdcard_interface, ReadEventReturnsReadNumberOfEventsWhenLessEventsAreThereForLast100)
@@ -821,7 +821,7 @@ TEST(sdcard_interface, ReadEventReturnsReadNumberOfEventsWhenLessEventsAreThereF
 	ITSI_LOG_EVENT event[40];
 	
 	read_type = LAST_100;
-	TEST_ASSERT_EQUAL(SDCARD_IF_WARN_LESS_NO_Of_EVENTS_AVAIL, SDCardIF_ReadEventLog("sdcard_interface/event_file_with_10events.txt", event, read_type, &no_of_events));
+	TEST_ASSERT_EQUAL(SDCARD_IF_WARN_LESS_NO_Of_EVENTS_AVAIL, SDCardIF_ReadEventLog("sdcard_interface/event_file_with_10events.txt", event, read_type, &no_of_events, 0));
 	TEST_ASSERT_EQUAL(10, no_of_events);
 }
 
@@ -832,7 +832,7 @@ TEST(sdcard_interface, ReadEventReturnsNoOfEventsAs100IfEventsAreThereForLast100
 	ITSI_LOG_EVENT event[100];
 	
 	read_type = LAST_100;
-	TEST_ASSERT_EQUAL(SDCARD_IF_OP_SUCCESS, SDCardIF_ReadEventLog("sdcard_interface/event_file_with_1000events.txt", event, read_type, &no_of_events));
+	TEST_ASSERT_EQUAL(SDCARD_IF_OP_SUCCESS, SDCardIF_ReadEventLog("sdcard_interface/event_file_with_1000events.txt", event, read_type, &no_of_events, 0));
 	TEST_ASSERT_EQUAL(100, no_of_events);
 }
 
@@ -857,7 +857,7 @@ TEST(sdcard_interface, ReadEventCopiesAvailableEventsIf100EventsAreNotThereForLa
 	memcpy(expected_event, val, sizeof(expected_event));
 	
 	read_type = LAST_100;
-	TEST_ASSERT_EQUAL(SDCARD_IF_WARN_LESS_NO_Of_EVENTS_AVAIL, SDCardIF_ReadEventLog("sdcard_interface/event_file_with_10events.txt", event, read_type, &no_of_events));
+	TEST_ASSERT_EQUAL(SDCARD_IF_WARN_LESS_NO_Of_EVENTS_AVAIL, SDCardIF_ReadEventLog("sdcard_interface/event_file_with_10events.txt", event, read_type, &no_of_events, 0));
 	TEST_ASSERT_EQUAL(10, no_of_events);
 	TEST_ASSERT_EQUAL_MEMORY(expected_event, event, sizeof(expected_event));
 }
@@ -973,7 +973,7 @@ TEST(sdcard_interface, ReadEventCopies100EventsIf100EventsAreThereForLast100)
 					
 	memcpy(expected_event, val, sizeof(expected_event));
 	read_type = LAST_100;
-	TEST_ASSERT_EQUAL(SDCARD_IF_OP_SUCCESS, SDCardIF_ReadEventLog("sdcard_interface/event_file_with_1000events.txt", event, read_type, &no_of_events));
+	TEST_ASSERT_EQUAL(SDCARD_IF_OP_SUCCESS, SDCardIF_ReadEventLog("sdcard_interface/event_file_with_1000events.txt", event, read_type, &no_of_events, 0));
 	TEST_ASSERT_EQUAL(100, no_of_events);	
 	TEST_ASSERT_EQUAL_MEMORY(expected_event, event, sizeof(expected_event));
 }
@@ -984,7 +984,7 @@ TEST(sdcard_interface, ReadEventReturnsErrorIfFULL_READusedButBufferNotEnough)
 	ITSI_LOG_EVENT event[5];
 	int no_of_events = 5;
 	
-	TEST_ASSERT_EQUAL(SDCARD_IF_ERR_EVENT_COUNT, SDCardIF_ReadEventLog("sdcard_interface/event_file_with_10events.txt", event, read_type, &no_of_events));
+	TEST_ASSERT_EQUAL(SDCARD_IF_ERR_EVENT_COUNT, SDCardIF_ReadEventLog("sdcard_interface/event_file_with_10events.txt", event, read_type, &no_of_events, 0));
 }
 
 TEST(sdcard_interface, ReadEventCopiesRequiredBufSizeIfFULL_READusedButBufferNotEnough)
@@ -993,7 +993,7 @@ TEST(sdcard_interface, ReadEventCopiesRequiredBufSizeIfFULL_READusedButBufferNot
 	ITSI_LOG_EVENT event[5];
 	int no_of_events = 5;
 	
-	TEST_ASSERT_EQUAL(SDCARD_IF_ERR_EVENT_COUNT, SDCardIF_ReadEventLog("sdcard_interface/event_file_with_10events.txt", event, read_type, &no_of_events));
+	TEST_ASSERT_EQUAL(SDCARD_IF_ERR_EVENT_COUNT, SDCardIF_ReadEventLog("sdcard_interface/event_file_with_10events.txt", event, read_type, &no_of_events, 0));
 	TEST_ASSERT_EQUAL(10, no_of_events);
 }
 
@@ -1017,7 +1017,7 @@ TEST(sdcard_interface, ReadEventCopiesAllTheEventsAvailable)
 					
 	memcpy(expected_event, val, sizeof(expected_event));
 	
-	TEST_ASSERT_EQUAL(SDCARD_IF_WARN_LESS_NO_Of_EVENTS_AVAIL, SDCardIF_ReadEventLog("sdcard_interface/event_file_with_10events.txt", event, read_type, &no_of_events));
+	TEST_ASSERT_EQUAL(SDCARD_IF_WARN_LESS_NO_Of_EVENTS_AVAIL, SDCardIF_ReadEventLog("sdcard_interface/event_file_with_10events.txt", event, read_type, &no_of_events, 0));
 	TEST_ASSERT_EQUAL(10, no_of_events);
 	TEST_ASSERT_EQUAL_MEMORY(expected_event, event, sizeof(expected_event));
 }
@@ -1042,7 +1042,7 @@ TEST(sdcard_interface, ReadEventCopiesAvailableEventsIfNisMoreForN_FROM_BEGINING
 					
 	memcpy(expected_event, val, sizeof(expected_event));
 		
-	TEST_ASSERT_EQUAL(SDCARD_IF_WARN_LESS_NO_Of_EVENTS_AVAIL, SDCardIF_ReadEventLog("sdcard_interface/event_file_with_10events.txt", event, read_type, &no_of_events));
+	TEST_ASSERT_EQUAL(SDCARD_IF_WARN_LESS_NO_Of_EVENTS_AVAIL, SDCardIF_ReadEventLog("sdcard_interface/event_file_with_10events.txt", event, read_type, &no_of_events, 0));
 	TEST_ASSERT_EQUAL(10, no_of_events);
 	TEST_ASSERT_EQUAL_MEMORY(expected_event, event, sizeof(expected_event));
 }
@@ -1062,7 +1062,7 @@ TEST(sdcard_interface, ReadEventCopiesNEventsIfNEventsAvailableForN_FROM_BEGININ
 					
 	memcpy(expected_event, val, sizeof(expected_event));
 		
-	TEST_ASSERT_EQUAL(SDCARD_IF_OP_SUCCESS, SDCardIF_ReadEventLog("sdcard_interface/event_file_with_10events.txt", event, read_type, &no_of_events));
+	TEST_ASSERT_EQUAL(SDCARD_IF_OP_SUCCESS, SDCardIF_ReadEventLog("sdcard_interface/event_file_with_10events.txt", event, read_type, &no_of_events, 0));
 	TEST_ASSERT_EQUAL(5, no_of_events);
 	TEST_ASSERT_EQUAL_MEMORY(expected_event, event, sizeof(expected_event));
 }
@@ -1088,7 +1088,7 @@ TEST(sdcard_interface, ReadEventCopiesAvailableEventsIfNisMoreForN_FROM_LAST)
 	memcpy(expected_event, val, sizeof(expected_event));
 	
 	read_type = FULL_READ;
-	TEST_ASSERT_EQUAL(SDCARD_IF_WARN_LESS_NO_Of_EVENTS_AVAIL, SDCardIF_ReadEventLog("sdcard_interface/event_file_with_10events.txt", event, read_type, &no_of_events));
+	TEST_ASSERT_EQUAL(SDCARD_IF_WARN_LESS_NO_Of_EVENTS_AVAIL, SDCardIF_ReadEventLog("sdcard_interface/event_file_with_10events.txt", event, read_type, &no_of_events, 0));
 	TEST_ASSERT_EQUAL(10, no_of_events);
 	TEST_ASSERT_EQUAL_MEMORY(expected_event, event, sizeof(expected_event));
 }
@@ -1108,7 +1108,103 @@ TEST(sdcard_interface, ReadEventCopiesNEventsIfNEventsAvailableForN_FROM_LAST)
 					
 	memcpy(expected_event, val, sizeof(expected_event));
 		
-	TEST_ASSERT_EQUAL(SDCARD_IF_OP_SUCCESS, SDCardIF_ReadEventLog("sdcard_interface/event_file_with_10events.txt", event, read_type, &no_of_events));
+	TEST_ASSERT_EQUAL(SDCARD_IF_OP_SUCCESS, SDCardIF_ReadEventLog("sdcard_interface/event_file_with_10events.txt", event, read_type, &no_of_events, 0));
+	TEST_ASSERT_EQUAL(5, no_of_events);
+	TEST_ASSERT_EQUAL_MEMORY(expected_event, event, sizeof(expected_event));
+}
+
+TEST(sdcard_interface, ReadEvent_detects_offset_out_of_bound_for_N_FROM_LAST)
+{
+	READ_TYPE read_type = N_FROM_LAST;	
+	int no_of_events = 5;
+	ITSI_LOG_EVENT event[2];
+		
+	TEST_ASSERT_EQUAL(SDCARD_IF_ERR_BUFFER_OFFSET, SDCardIF_ReadEventLog("sdcard_interface/event_file_with_10events.txt", event, read_type, &no_of_events, 11));
+}
+
+TEST(sdcard_interface, ReadEvent_detects_negetive_offset_for_N_FROM_LAST)
+{
+	READ_TYPE read_type = N_FROM_LAST;	
+	int no_of_events = 5;
+	ITSI_LOG_EVENT event[2];
+		
+	TEST_ASSERT_EQUAL(SDCARD_IF_ERR_BUFFER_OFFSET, SDCardIF_ReadEventLog("sdcard_interface/event_file_with_10events.txt", event, read_type, &no_of_events, -11));
+}
+
+TEST(sdcard_interface, ReadEvent_detects_offset_out_of_bound_for_N_FROM_BEGINING)
+{
+	READ_TYPE read_type = N_FROM_BEGINING;	
+	int no_of_events = 5;
+	ITSI_LOG_EVENT event[2];
+		
+	TEST_ASSERT_EQUAL(SDCARD_IF_ERR_BUFFER_OFFSET, SDCardIF_ReadEventLog("sdcard_interface/event_file_with_10events.txt", event, read_type, &no_of_events, 11));
+}
+
+TEST(sdcard_interface, ReadEvent_detects_negetive_offset_for_N_FROM_BEGINING)
+{
+	READ_TYPE read_type = N_FROM_BEGINING;	
+	int no_of_events = 5;
+	ITSI_LOG_EVENT event[2];
+		
+	TEST_ASSERT_EQUAL(SDCARD_IF_ERR_BUFFER_OFFSET, SDCardIF_ReadEventLog("sdcard_interface/event_file_with_10events.txt", event, read_type, &no_of_events, -11));
+}
+
+TEST(sdcard_interface, ReadEvent_copies_data_with_offset_correctly_for_N_FROM_LAST)
+{
+	READ_TYPE read_type = N_FROM_LAST;	
+	int no_of_events = 2;
+	ITSI_LOG_EVENT event[2];
+	ITSI_LOG_EVENT expected_event[2];
+	
+	char val[] = {	0,01,2,16,28,6,35,33,22,11,7,88,99, 
+					0,01,2,16,29,6,35,33,22,11,8,88,99
+					};
+					
+	memcpy(expected_event, val, sizeof(expected_event));
+		
+	TEST_ASSERT_EQUAL(SDCARD_IF_OP_SUCCESS, SDCardIF_ReadEventLog("sdcard_interface/event_file_with_10events.txt", event, read_type, &no_of_events, 2));
+	TEST_ASSERT_EQUAL(2, no_of_events);
+	TEST_ASSERT_EQUAL_MEMORY(expected_event, event, sizeof(expected_event));
+}
+
+TEST(sdcard_interface, ReadEvent_with_offset_for_N_FROM_LAST_copies_available_data_when_required_number_of_events_not_available)
+{
+	READ_TYPE read_type = N_FROM_LAST;	
+	int no_of_events = 10;
+	ITSI_LOG_EVENT event[10];
+	ITSI_LOG_EVENT expected_event[4];
+	
+	char val[] = {0,29,1,16,22,6,35,33,22,11,1,88,99, 
+					0,29,1,16,23,6,35,33,22,11,2,88,99,
+					0,30,1,16,24,6,35,33,22,11,3,88,99, 
+					0,30,1,16,25,6,35,33,22,11,4,88,99,  
+					};
+					
+	memcpy(expected_event, val, sizeof(expected_event));
+		
+	TEST_ASSERT_EQUAL(SDCARD_IF_WARN_LESS_NO_Of_EVENTS_AVAIL, SDCardIF_ReadEventLog("sdcard_interface/event_file_with_10events.txt", event, read_type, &no_of_events, 6));
+	TEST_ASSERT_EQUAL(4, no_of_events);
+	TEST_ASSERT_EQUAL_MEMORY(expected_event, event, sizeof(expected_event));
+}
+
+
+TEST(sdcard_interface, ReadEvent_with_offset_for_N_FROM_BEGINING_copies_available_data_when_required_number_of_events_not_available)
+{
+	READ_TYPE read_type = N_FROM_BEGINING;	
+	int no_of_events = 10;
+	ITSI_LOG_EVENT event[10];
+	ITSI_LOG_EVENT expected_event[4];
+	
+	char val[] = {	0,31,1,16,27,6,35,33,22,11,6,88,99,
+					0,01,2,16,28,6,35,33,22,11,7,88,99,
+					0,01,2,16,29,6,35,33,22,11,8,88,99,
+					0,02,2,16,20,6,35,33,22,11,9,88,99,
+					0,03,2,16,28,6,35,33,22,11,10,88,99 
+					};
+					
+	memcpy(expected_event, val, sizeof(expected_event));
+		
+	TEST_ASSERT_EQUAL(SDCARD_IF_WARN_LESS_NO_Of_EVENTS_AVAIL, SDCardIF_ReadEventLog("sdcard_interface/event_file_with_10events.txt", event, read_type, &no_of_events, 5));
 	TEST_ASSERT_EQUAL(5, no_of_events);
 	TEST_ASSERT_EQUAL_MEMORY(expected_event, event, sizeof(expected_event));
 }
