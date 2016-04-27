@@ -994,7 +994,7 @@ int Cmd_read_last_100(int argc, char *argv[]) {
 		int no_of_events = 100;
 
 		// Read events (LAST_100)
-		iFResult = SDCardIF_ReadEventLog(g_pcTmpBuf,events,LAST_100,&no_of_events);
+		iFResult = SDCardIF_ReadEventLog(g_pcTmpBuf,events,LAST_100,&no_of_events, 0);
 
 		if(	(iFResult == SDCARD_IF_OP_SUCCESS) ||
 			(iFResult == SDCARD_IF_WARN_LESS_NO_Of_EVENTS_AVAIL)){
@@ -1075,7 +1075,7 @@ int Cmd_read_full(int argc, char *argv[]) {
 		int no_of_events = 100;
 
 		// Read events (FULL_READ)
-		iFResult = SDCardIF_ReadEventLog(g_pcTmpBuf,events,FULL_READ,&no_of_events);
+		iFResult = SDCardIF_ReadEventLog(g_pcTmpBuf,events,FULL_READ,&no_of_events, 0);
 
 		if(	(iFResult == SDCARD_IF_OP_SUCCESS) ||
 			(iFResult == SDCARD_IF_WARN_LESS_NO_Of_EVENTS_AVAIL)){
@@ -1121,7 +1121,7 @@ int Cmd_read_full(int argc, char *argv[]) {
 int Cmd_read_begining_n(int argc, char *argv[]) {
 	int iFResult = -1;
 	int i;
-	if(argc == 3){
+	if(argc == 4){
 
 		//
 		// First, check to make sure that the current path (CWD), plus the file
@@ -1153,11 +1153,12 @@ int Cmd_read_begining_n(int argc, char *argv[]) {
 
 		ITSI_LOG_EVENT *events = NULL;
 		int no_of_events = atoi(argv[2]);
+		int offset = atoi(argv[3]);
 
 		events = (ITSI_LOG_EVENT *)malloc(sizeof(ITSI_LOG_EVENT) * no_of_events);
 
 		// Read events
-		iFResult = SDCardIF_ReadEventLog(g_pcTmpBuf,events,N_FROM_BEGINING,&no_of_events);
+		iFResult = SDCardIF_ReadEventLog(g_pcTmpBuf,events,N_FROM_BEGINING,&no_of_events,offset);
 
 		if(	(iFResult == SDCARD_IF_OP_SUCCESS) ||
 			(iFResult == SDCARD_IF_WARN_LESS_NO_Of_EVENTS_AVAIL)){
@@ -1209,7 +1210,7 @@ int Cmd_read_begining_n(int argc, char *argv[]) {
 int Cmd_read_last_n(int argc, char *argv[]) {
 	int iFResult = -1;
 	int i;
-	if(argc == 3){
+	if(argc == 4){
 
 		//
 		// First, check to make sure that the current path (CWD), plus the file
@@ -1241,11 +1242,12 @@ int Cmd_read_last_n(int argc, char *argv[]) {
 
 		ITSI_LOG_EVENT *events = NULL;
 		int no_of_events = atoi(argv[2]);
+		int offset = atoi(argv[3]);
 
 		events = (ITSI_LOG_EVENT *)malloc(sizeof(ITSI_LOG_EVENT) * no_of_events);
 
 		// Read events
-		iFResult = SDCardIF_ReadEventLog(g_pcTmpBuf,events,N_FROM_LAST,&no_of_events);
+		iFResult = SDCardIF_ReadEventLog(g_pcTmpBuf,events,N_FROM_LAST,&no_of_events,offset);
 
 		if(	(iFResult == SDCARD_IF_OP_SUCCESS) ||
 			(iFResult == SDCARD_IF_WARN_LESS_NO_Of_EVENTS_AVAIL)){
@@ -1348,8 +1350,8 @@ tCmdLineEntry g_psCmdTable[] = {
 		{ "log_event", Cmd_log_event, "Log a sample event to the log file."},
 		{ "read_last_100", Cmd_read_last_100, "Read last 100 events."},
 		{ "read_full", Cmd_read_full, "Read all events."},
-		{ "read_begining", Cmd_read_begining_n, "Read number of events from begining, \n\t\t Ex:read_begining <filename> <events>."},
-		{ "read_last", Cmd_read_last_n, "Read number of events from last, \n\t\t Ex:read_last <filename> <events>."},
+		{ "read_begining", Cmd_read_begining_n, "Read number of events from begining, \n\t\t Ex:read_begining <filename> <events> <offset>."},
+		{ "read_last", Cmd_read_last_n, "Read number of events from last, \n\t\t Ex:read_last <filename> <events> <offset>."},
 		{ "current_log", Cmd_current_log, "Get current log file"},
 		{ "read_firmware", Cmd_read_firmware, "Read firmware file to a buffer. \n\t\t Ex: read_firmware <filename> <offset> <amount>"},
 #ifdef LCD
