@@ -54,12 +54,11 @@ int SDCardIF_Initialize()
 	
 	if(SDCARD_IF_OP_SUCCESS == ret){
 		sdcardif_initialized = TRUE;
-	}
-
-	if(SDCARD_IF_OP_SUCCESS == ret){
+		
 		ret = SDCardIF_SetLogFile(DEFAULT_EVENT_LOG);
 	}
-	else{
+
+	if(SDCARD_IF_OP_SUCCESS != ret){
 		sdcardif_initialized = FALSE;
 	}
 	
@@ -376,12 +375,14 @@ int SDCardIF_LogEvent(ITSI_LOG_EVENT *event)
  * @param event[out]			Buffer to store the events
  * @param read_type[in]			Can be LAST_100, N_FROM_BEGINING, N_FROM_LAST or FULL_READ
  * @param no_of_events[inout]	No of event that can be stored in the buffer
+ * @param offset[in]			Offset used for N_FROM_LAST and N_FROM_BEGINING
  * 
  * @return 	SDCARD_IF_OP_SUCCESS					Operation success
  * @return 	SDCARD_IF_ERR_INVALID_PARAM				Invalid input parameters 
  * @return 	SDCARD_IF_ERR_FILE_NOT_AVAILABLE		File is not accessible 
  * @return 	SDCARD_IF_ERR_EVENT_COUNT				Provided @no_of_events parameter is invalid
  * @return 	SDCARD_IF_ERR_EVENT_NOT_FOUND			Error in fetching the event 
+ * @return 	SDCARD_IF_ERR_BUFFER_OFFSET				Offset used for reading is invalid
  * @return 	SDCARD_IF_WARN_LESS_NO_Of_EVENTS_AVAIL	Required no of events is more than available
  * @return	Refer to sdcard_err_codes.h
  * 
@@ -399,10 +400,11 @@ int SDCardIF_LogEvent(ITSI_LOG_EVENT *event)
  * 
  */
 
-int SDCardIF_ReadEventLog(const char* filename, ITSI_LOG_EVENT *event, READ_TYPE read_type, int *no_of_events)
+int SDCardIF_ReadEventLog(const char* filename, ITSI_LOG_EVENT *event, READ_TYPE read_type, int *no_of_events, int offset)
 {
 	int ret = SDCARD_IF_OP_SUCCESS;
 	int event_count = 0;
+	int event_count_total = 0;
 	int expected_count = 0;
 	int read_count = 0;
 	int start_line = 1;
@@ -414,18 +416,35 @@ int SDCardIF_ReadEventLog(const char* filename, ITSI_LOG_EVENT *event, READ_TYPE
 	if((NULL == filename) || (NULL == no_of_events) || (NULL == event) || \
 			((read_type < FULL_READ) || (read_type > N_FROM_LAST))){
 		ret = SDCARD_IF_ERR_INVALID_PARAM;
-	}	
-	else{
+	}else{
 		ret = FileIF_IsFileAvailable(filename);		
 	}
 		
 	if(FILEIF_OP_SUCCESS == ret){
 		
 		/* Get the available events in the file */
-		ret = FileIF_GetNoOfLines(filename, &event_count);						
+		ret = FileIF_GetNoOfLines(filename, &event_count);										
 				
 		if(FILEIF_OP_SUCCESS == ret){
+				
+			event_count_total = event_count;
 			
+			/* Handle the offset parameter */		
+			if((N_FROM_LAST == read_type) || (N_FROM_BEGINING == read_type)){
+				
+				/* For N_FROM_BEGINING and N_FROM_LAST verify bounds of offset */
+				if((offset > event_count) || (offset < 0)){
+					ret = SDCARD_IF_ERR_BUFFER_OFFSET;
+				}			
+				else{
+					/* Because of offset event_count will decrease by that amount */
+					event_count -= offset;
+				}						
+			}						
+		}
+		
+		if(FILEIF_OP_SUCCESS == ret){	
+		
 			/* If buffer is not enough, return error */
 			if(((FULL_READ == read_type) && (event_count > *no_of_events)) || \
 					((0 >= *no_of_events) && (read_type != LAST_100))){
@@ -443,7 +462,7 @@ int SDCardIF_ReadEventLog(const char* filename, ITSI_LOG_EVENT *event, READ_TYPE
 			}
 			else{
 				expected_count = *no_of_events;
-			}
+			}						
 			
 			/* Check whether required events are available */
 			if(event_count < expected_count){				
@@ -451,14 +470,18 @@ int SDCardIF_ReadEventLog(const char* filename, ITSI_LOG_EVENT *event, READ_TYPE
 				read_count 	 = event_count;			
 			}
 			else{
-				read_count = expected_count;
-				
-				if((LAST_100 == read_type) || (N_FROM_LAST == read_type)){
-					start_line = event_count - read_count + 1;					
-				}
-				else if(N_FROM_BEGINING == read_type){
-					start_line = 1;
-				}
+				read_count = expected_count;						
+			}
+			
+			/* Find the starting event */
+			if(LAST_100 == read_type){
+				start_line = event_count_total - read_count + 1;					
+			}
+			else if(N_FROM_LAST == read_type){
+				start_line = event_count_total - read_count + 1 - offset;	
+			}
+			else if(N_FROM_BEGINING == read_type){
+				start_line = 1 + offset;
 			}
 				
 			/* Copy events to the structure */		
