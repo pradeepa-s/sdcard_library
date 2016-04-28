@@ -9,6 +9,7 @@
  * If this file is not directly used by the user, make sure that proper
  * return code mapping is done to make development easier.
  *
+ * Version v1.0.0
  */
 
 #ifndef _PLAT_UBUNTU_H

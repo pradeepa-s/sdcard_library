@@ -10,7 +10,7 @@
  * The file can be easily ported to any compiler to include compiler
  * specific functions.
  *
-
+ * Version v1.0.0
  */
 
 #include <stdio.h>

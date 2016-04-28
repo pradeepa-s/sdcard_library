@@ -5,6 +5,8 @@
  * @brief File contains error codes for sdcard_interface API.
  *
  * Include this file in any place to refer to these definitions.
+ * 
+ * Version v1.0.0
  */
 
 #ifndef _SDCARD_ERR_CODES_H
