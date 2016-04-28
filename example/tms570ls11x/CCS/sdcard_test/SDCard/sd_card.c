@@ -1773,7 +1773,10 @@ int SD_Test(void) {
 #define TEST_AUDIO_FILE    "TEST_AUDIO.WAV"
     FRESULT res;                /* FatFs function common result code */
 
-    FileIF_Initialize();
+    if(FILEIF_ERR_UNINIT == FileIF_Initialize()){
+    	UARTprintf("SD CARD not found. Program will halt!!!");
+    	while(1);
+    }
     // write some info
     FIL fsrc;                /* File objects */
 
