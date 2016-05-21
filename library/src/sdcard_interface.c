@@ -15,6 +15,7 @@
  * function operations.
  *
  * Version v1.0.0
+ * Version v1.1.0	-	Added function SDCardIF_GetEventCount (21-05-2016)
  */
 
 #include "sdcard_interface.h"
@@ -368,6 +369,38 @@ int SDCardIF_LogEvent(ITSI_LOG_EVENT *event)
 }
 
 /**
+ * @brief Function to get number of events in the log file
+ * 
+ * @param filename[in] 		Filename 
+ * @param count[out] 		No of events in the file
+ * 
+ * @return 	SDCARD_IF_OP_SUCCESS				Operation success 
+ * @return 	SDCARD_IF_ERR_INVALID_PARAM			Function parameters are invalid
+ * @return 	SDCARD_IF_ERR_FILE_NOT_AVAILABLE	File cannot be found or cannot be accessed
+ * 
+ * 
+ * @warning None
+ */
+int SDCardIF_GetEventCount(const char* filename, int *count)
+{
+	int ret = SDCARD_IF_OP_SUCCESS;
+	
+	if(count == NULL){
+		ret = SDCARD_IF_ERR_INVALID_PARAM;
+	}
+	else{
+		ret = FileIF_IsFileAvailable(filename);
+	}
+	
+	if(SDCARD_IF_OP_SUCCESS == ret){
+		ret = FileIF_GetNoOfLines(filename, count);
+	}
+	
+	return ret;
+}
+
+
+/**
  * @brief Function to read event log
  * 
  * Function will read the specified event log file and provide the
@@ -376,7 +409,7 @@ int SDCardIF_LogEvent(ITSI_LOG_EVENT *event)
  * @param filename[in]			Filename of the log file
  * @param event[out]			Buffer to store the events
  * @param read_type[in]			Can be LAST_100, N_FROM_BEGINING, N_FROM_LAST or FULL_READ
- * @param no_of_events[inout]	No of event that can be stored in the buffer
+ * @param no_of_events[inout]	No of event that can be stored in the event buffer
  * @param offset[in]			Offset used for N_FROM_LAST and N_FROM_BEGINING
  * 
  * @return 	SDCARD_IF_OP_SUCCESS					Operation success
@@ -448,8 +481,8 @@ int SDCardIF_ReadEventLog(const char* filename, ITSI_LOG_EVENT *event, READ_TYPE
 		if(FILEIF_OP_SUCCESS == ret){	
 		
 			/* If buffer is not enough, return error */
-			if(((FULL_READ == read_type) && (event_count > *no_of_events)) || \
-					((0 >= *no_of_events) && (read_type != LAST_100))){
+			if(		((FULL_READ == read_type) && (event_count > *no_of_events)) || \
+					((LAST_100 != read_type )  && (*no_of_events <= 0))	){
 						
 				*no_of_events = event_count;
 				ret = SDCARD_IF_ERR_EVENT_COUNT;
@@ -466,7 +499,7 @@ int SDCardIF_ReadEventLog(const char* filename, ITSI_LOG_EVENT *event, READ_TYPE
 				expected_count = *no_of_events;
 			}						
 			
-			/* Check whether required events are available */
+			/* Check whether required number of events are available */
 			if(event_count < expected_count){				
 				ret = SDCARD_IF_WARN_LESS_NO_Of_EVENTS_AVAIL;
 				read_count 	 = event_count;			

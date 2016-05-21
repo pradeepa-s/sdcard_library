@@ -789,6 +789,10 @@ TEST(sdcard_interface, ReadEventReturnsErrorIfNoOfEventsIsZeroReturnsRequiredAmo
 	TEST_ASSERT_EQUAL(10, no_of_events);
 	
 	no_of_events = 0;
+	TEST_ASSERT_EQUAL(SDCARD_IF_ERR_EVENT_COUNT, SDCardIF_ReadEventLog("sdcard_interface/event_file_with_1000events.txt", event, read_type, &no_of_events, 0));
+	TEST_ASSERT_EQUAL(1000, no_of_events);	
+	
+	no_of_events = 0;
 	read_type = N_FROM_LAST;
 	TEST_ASSERT_EQUAL(SDCARD_IF_ERR_EVENT_COUNT, SDCardIF_ReadEventLog("sdcard_interface/event_file_with_10events.txt", event, read_type, &no_of_events, 0));
 	TEST_ASSERT_EQUAL(10, no_of_events);
@@ -1209,6 +1213,65 @@ TEST(sdcard_interface, ReadEvent_with_offset_for_N_FROM_BEGINING_copies_availabl
 	TEST_ASSERT_EQUAL_MEMORY(expected_event, event, sizeof(expected_event));
 }
 
+TEST(sdcard_interface, ReadEvent_with_offset_for_N_FROM_BEGINING_reading_100_values_at_a_time_until_the_end_of_log_is_possible)
+{
+	READ_TYPE read_type = N_FROM_BEGINING;	
+	int available_events = 0;
+	int no_of_events = 100;
+	int read_amount = 0;
+	int offset = 0;
+	ITSI_LOG_EVENT event[100];
+	int ret = 0;
+	
+	TEST_ASSERT_EQUAL(SDCARD_IF_ERR_EVENT_COUNT, SDCardIF_ReadEventLog("sdcard_interface/event_file_with_1016events.txt", event, read_type, &available_events, 0));
+	TEST_ASSERT_EQUAL(1016, available_events);
+	
+	for(offset = 0; offset < available_events; offset += 100,no_of_events = 100){
+		
+		ret = SDCardIF_ReadEventLog("sdcard_interface/event_file_with_1016events.txt", event, read_type, &no_of_events, offset);
+		
+		read_amount += no_of_events;
+		
+		if(read_amount != 1016){			
+			TEST_ASSERT_EQUAL(SDCARD_IF_OP_SUCCESS, ret);
+			TEST_ASSERT_EQUAL(100, no_of_events);
+		}
+		else{
+			TEST_ASSERT_EQUAL(SDCARD_IF_WARN_LESS_NO_Of_EVENTS_AVAIL, ret);
+			TEST_ASSERT_EQUAL(16, no_of_events);
+		}			
+	}
+}
+
+TEST(sdcard_interface,	GetEventCount_returns_error_if_filename_is_NULL)
+{
+	int count = 0;
+	TEST_ASSERT_EQUAL(SDCARD_IF_ERR_INVALID_PARAM, SDCardIF_GetEventCount(NULL, &count));
+}
+
+TEST(sdcard_interface,	GetEventCount_returns_error_if_file_is_not_available)
+{
+	int count = 0;
+	TEST_ASSERT_EQUAL(SDCARD_IF_ERR_FILE_NOT_AVAILABLE, SDCardIF_GetEventCount("not_available_file", &count));
+}
+
+TEST(sdcard_interface,	GetEventCount_returns_error_if_count_argument_is_NULL)
+{	
+	TEST_ASSERT_EQUAL(SDCARD_IF_ERR_INVALID_PARAM, SDCardIF_GetEventCount("sdcard_interface/event_file_with_1016events.txt", NULL));
+}
+
+TEST(sdcard_interface,	GetEventCount_returns_success_and_count_is_properly_updated)
+{
+	int count = 0;
+	TEST_ASSERT_EQUAL(SDCARD_IF_OP_SUCCESS, SDCardIF_GetEventCount("sdcard_interface/event_file_with_1016events.txt", &count));
+	TEST_ASSERT_EQUAL(1016, count);
+	
+	TEST_ASSERT_EQUAL(SDCARD_IF_OP_SUCCESS, SDCardIF_GetEventCount("sdcard_interface/event_file_with_10events.txt", &count));
+	TEST_ASSERT_EQUAL(10, count);
+	
+	TEST_ASSERT_EQUAL(SDCARD_IF_OP_SUCCESS, SDCardIF_GetEventCount("sdcard_interface/event_file_with_1000events.txt", &count));
+	TEST_ASSERT_EQUAL(1000, count);
+}
 
 IGNORE_TEST(sdcard_interface, GetCurrentLogFileCopiesTheLogFileNameToTheBuffer)
 {
