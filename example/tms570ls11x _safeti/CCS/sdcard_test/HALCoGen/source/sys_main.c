@@ -56,7 +56,7 @@
 #include "rti.h"
 #include "uartstdio.h"
 #include "mmc-test.h"
-#include "sl_api.h"
+#include "safeti_test_api.h"
 /* USER CODE END */
 
 /** @fn void main(void)
@@ -77,11 +77,6 @@ void main(void)
 {
 /* USER CODE BEGIN (3) */
 
-	SL_PSCON_FailInfo psconFailInfo;
-	SL_CCMR4F_FailInfo failInfoCCMR4F;
-	SL_SelfTest_Result flash_stResult;
-	boolean self_test_status = false;
-
 #if 1
     /** - Initialize LIN/SCI2 Routines to receive Command and transmit data */
     sciInit();
@@ -101,336 +96,25 @@ void main(void)
 
     mmcSelectSpi(mibspiPORT5, mibspiREG5);  // SD card is on the SPI5
 
-    self_test_status = SL_SelfTest_PSCON(PSCON_SELF_TEST, TRUE, &psconFailInfo);
-   // self_test_status = SL_SelfTest_PBIST_StopExec();
 
-    if(self_test_status & (ST_PASS == psconFailInfo.stResult)){
-    	UARTprintf("[PASS] PSCON_SELF_TEST\r\n");
-    }
-    else{
-    	UARTprintf("[FAIL] PSCON_SELF_TEST\r\n");
-    }
-
-    self_test_status = SL_SelfTest_PSCON(PSCON_ERROR_FORCING, TRUE, &psconFailInfo);
-	//self_test_status = SL_SelfTest_PBIST_StopExec();
-
-	if(self_test_status & (ST_PASS == psconFailInfo.stResult)){
-		UARTprintf("[PASS] PSCON_ERROR_FORCING\r\n");
-	}
-	else{
-		UARTprintf("[FAIL] PSCON_ERROR_FORCING\r\n");
-	}
-
-	self_test_status = SL_SelfTest_PSCON(PSCON_SELF_TEST_ERROR_FORCING, TRUE, &psconFailInfo);
-	//self_test_status = SL_SelfTest_PBIST_StopExec();
-
-	if(self_test_status & (ST_PASS == psconFailInfo.stResult)){
-		UARTprintf("[PASS] PSCON_SELF_TEST_ERROR_FORCING\r\n");
-	}
-	else{
-		UARTprintf("[FAIL] PSCON_SELF_TEST_ERROR_FORCING\r\n");
-	}
-
-	self_test_status = SL_SelfTest_PSCON(PSCON_PMA_TEST, TRUE, &psconFailInfo);
-	//self_test_status = SL_SelfTest_PBIST_StopExec();
-
-	if(!self_test_status & (ST_PASS == psconFailInfo.stResult)){
-		UARTprintf("[PASS] PSCON_PMA_TEST\r\n");
-	}
-	else{
-		UARTprintf("[FAIL] PSCON_PMA_TEST\r\n");
-	}
-
-#ifndef DEBUG_MODE
-	self_test_status = SL_SelfTest_CCMR4F(CCMR4F_SELF_TEST, TRUE, &failInfoCCMR4F);
-
-	if(self_test_status & (ST_PASS == failInfoCCMR4F.stResult)){
-		UARTprintf("[PASS] CCMR4F_SELF_TEST\r\n");
-	}
-	else{
-		UARTprintf("[FAIL] CCMR4F_SELF_TEST\r\n");
-	}
-
-	self_test_status = SL_SelfTest_CCMR4F(CCMR4F_ERROR_FORCING_TEST, TRUE, &failInfoCCMR4F);
-
-	if(self_test_status & (ST_PASS == failInfoCCMR4F.stResult)){
-		UARTprintf("[PASS] CCMR4F_ERROR_FORCING_TEST\r\n");
-	}
-	else{
-		UARTprintf("[FAIL] CCMR4F_ERROR_FORCING_TEST\r\n");
-	}
-
-	self_test_status = SL_SelfTest_CCMR4F(CCMR4F_SELF_TEST_ERROR_FORCING, TRUE, &failInfoCCMR4F);
-
-	if(self_test_status & (ST_PASS == failInfoCCMR4F.stResult)){
-		UARTprintf("[PASS] CCMR4F_SELF_TEST_ERROR_FORCING\r\n");
-	}
-	else{
-		UARTprintf("[FAIL] CCMR4F_SELF_TEST_ERROR_FORCING\r\n");
-	}
-#endif
-
-
-	self_test_status = SL_SelfTest_Flash(FLASH_ECC_ADDR_TAG_REG_MODE, TRUE, &flash_stResult);
-
-	if(self_test_status & (ST_PASS == flash_stResult)){
-		UARTprintf("[PASS] FLASH_ECC_ADDR_TAG_REG_MODE\r\n");
-	}
-	else{
-		UARTprintf("[FAIL] FLASH_ECC_ADDR_TAG_REG_MODE\r\n");
-		flash_stResult = ST_PASS;
-	}
-
-	self_test_status = SL_SelfTest_Flash(FLASH_ADDRESS_ECC_SELF_TEST, TRUE, &flash_stResult);
-
-	if(self_test_status & (ST_PASS == flash_stResult)){
-		UARTprintf("[PASS] FLASH_ADDRESS_ECC_SELF_TEST\r\n");
-	}
-	else{
-		UARTprintf("[FAIL] FLASH_ADDRESS_ECC_SELF_TEST\r\n");
-		flash_stResult = ST_PASS;
-	}
-
-	self_test_status = SL_SelfTest_Flash(FLASH_ADDRESS_ECC_FAULT_INJECT, TRUE, &flash_stResult);
-
-	if(self_test_status & (ST_PASS == flash_stResult)){
-		UARTprintf("[PASS] FLASH_ADDRESS_ECC_FAULT_INJECT\r\n");
-	}
-	else{
-		UARTprintf("[FAIL] FLASH_ADDRESS_ECC_FAULT_INJECT\r\n");
-		flash_stResult = ST_PASS;
-	}
-
-	self_test_status = SL_SelfTest_Flash(FLASH_ADDRESS_PARITY_SELF_TEST, TRUE, &flash_stResult);
-
-	if(self_test_status & (ST_PASS == flash_stResult)){
-		UARTprintf("[PASS] FLASH_ADDRESS_PARITY_SELF_TEST\r\n");
-	}
-	else{
-		UARTprintf("[FAIL] FLASH_ADDRESS_PARITY_SELF_TEST\r\n");
-		flash_stResult = ST_PASS;
-	}
-
-	self_test_status = SL_SelfTest_Flash(FLASH_ECC_TEST_MODE_1BIT, TRUE, &flash_stResult);
-
-	if(self_test_status & (ST_PASS == flash_stResult)){
-		UARTprintf("[PASS] FLASH_ECC_TEST_MODE_1BIT\r\n");
-	}
-	else{
-		UARTprintf("[FAIL] FLASH_ECC_TEST_MODE_1BIT\r\n");
-		flash_stResult = ST_PASS;
-	}
-
-	self_test_status = SL_SelfTest_Flash(FLASH_ECC_TEST_MODE_2BIT, TRUE, &flash_stResult);
-
-	if(self_test_status & (ST_PASS == flash_stResult)){
-		UARTprintf("[PASS] FLASH_ECC_TEST_MODE_2BIT\r\n");
-	}
-	else{
-		UARTprintf("[FAIL] FLASH_ECC_TEST_MODE_2BIT\r\n");
-		flash_stResult = ST_PASS;
-	}
-
-	self_test_status = SL_SelfTest_Flash(FLASH_ECC_TEST_MODE_2BIT_FAULT_INJECT, TRUE, &flash_stResult);
-
-	if(self_test_status & (ST_PASS == flash_stResult)){
-		UARTprintf("[PASS] FLASH_ECC_TEST_MODE_2BIT_FAULT_INJECT\r\n");
-	}
-	else{
-		UARTprintf("[FAIL] FLASH_ECC_TEST_MODE_2BIT_FAULT_INJECT\r\n");
-		flash_stResult = ST_PASS;
-	}
-
-	self_test_status = SL_SelfTest_FEE(FEE_ECC_DATA_CORR_MODE, TRUE, &flash_stResult);
-
-	if(self_test_status & (ST_PASS == flash_stResult)){
-		UARTprintf("[PASS] FEE_ECC_DATA_CORR_MODE\r\n");
-	}
-	else{
-		UARTprintf("[FAIL] FEE_ECC_DATA_CORR_MODE\r\n");
-		flash_stResult = ST_PASS;
-	}
-
-	self_test_status = SL_SelfTest_FEE(FEE_ECC_MALFUNCTION_MODE1, TRUE, &flash_stResult);
-
-	if(self_test_status & (ST_PASS == flash_stResult)){
-		UARTprintf("[PASS] FEE_ECC_MALFUNCTION_MODE1\r\n");
-	}
-	else{
-		UARTprintf("[FAIL] FEE_ECC_MALFUNCTION_MODE1\r\n");
-		flash_stResult = ST_PASS;
-	}
-
-	self_test_status = SL_SelfTest_FEE(FEE_ECC_MALFUNCTION_MODE2, TRUE, &flash_stResult);
-
-	if(self_test_status & (ST_PASS == flash_stResult)){
-		UARTprintf("[PASS] FEE_ECC_MALFUNCTION_MODE2\r\n");
-	}
-	else{
-		UARTprintf("[FAIL] FEE_ECC_MALFUNCTION_MODE2\r\n");
-		flash_stResult = ST_PASS;
-	}
-
-	self_test_status = SL_SelfTest_FEE(FEE_ECC_ADDR_TAG_REG_MODE, TRUE, &flash_stResult);
-
-	if(self_test_status & (ST_PASS == flash_stResult)){
-		UARTprintf("[PASS] FEE_ECC_ADDR_TAG_REG_MODE\r\n");
-	}
-	else{
-		UARTprintf("[FAIL] FEE_ECC_ADDR_TAG_REG_MODE\r\n");
-		flash_stResult = ST_PASS;
-	}
-
-	self_test_status = SL_SelfTest_FEE(FEE_ECC_TEST_MODE_1BIT, TRUE, &flash_stResult);
-
-	if(self_test_status & (ST_PASS == flash_stResult)){
-		UARTprintf("[PASS] FEE_ECC_TEST_MODE_1BIT\r\n");
-	}
-	else{
-		UARTprintf("[FAIL] FEE_ECC_TEST_MODE_1BIT\r\n");
-		flash_stResult = ST_PASS;
-	}
-
-	self_test_status = SL_SelfTest_FEE(FEE_ECC_TEST_MODE_1BIT_FAULT_INJECT, TRUE, &flash_stResult);
-
-	if(self_test_status & (ST_PASS == flash_stResult)){
-		UARTprintf("[PASS] FEE_ECC_TEST_MODE_1BIT_FAULT_INJECT\r\n");
-	}
-	else{
-		UARTprintf("[FAIL] FEE_ECC_TEST_MODE_1BIT_FAULT_INJECT\r\n");
-		flash_stResult = ST_PASS;
-	}
-
-	self_test_status = SL_SelfTest_FEE(FEE_ECC_TEST_MODE_2BIT, TRUE, &flash_stResult);
-
-	if(self_test_status & (ST_PASS == flash_stResult)){
-		UARTprintf("[PASS] FEE_ECC_TEST_MODE_2BIT\r\n");
-	}
-	else{
-		UARTprintf("[FAIL] FEE_ECC_TEST_MODE_2BIT\r\n");
-		flash_stResult = ST_PASS;
-	}
-
-	self_test_status = SL_SelfTest_FEE(FEE_ECC_TEST_MODE_2BIT_FAULT_INJECT, TRUE, &flash_stResult);
-
-	if(self_test_status & (ST_PASS == flash_stResult)){
-		UARTprintf("[PASS] FEE_ECC_TEST_MODE_2BIT_FAULT_INJECT\r\n");
-	}
-	else{
-		UARTprintf("[FAIL] FEE_ECC_TEST_MODE_2BIT_FAULT_INJECT\r\n");
-		flash_stResult = ST_PASS;
-	}
-
-	self_test_status = SL_SelfTest_SRAM(SRAM_ECC_ERROR_FORCING_1BIT, TRUE, &flash_stResult);
-
-	if(self_test_status & (ST_PASS == flash_stResult)){
-		UARTprintf("[PASS] SRAM_ECC_ERROR_FORCING_1BIT\r\n");
-	}
-	else{
-		UARTprintf("[FAIL] SRAM_ECC_ERROR_FORCING_1BIT\r\n");
-		flash_stResult = ST_PASS;
-	}
-
-	self_test_status = SL_SelfTest_SRAM(SRAM_ECC_1BIT_FAULT_INJECTION, TRUE, &flash_stResult);
-
-	if(self_test_status & (ST_PASS == flash_stResult)){
-		UARTprintf("[PASS] SRAM_ECC_1BIT_FAULT_INJECTION\r\n");
-	}
-	else{
-		UARTprintf("[FAIL] SRAM_ECC_1BIT_FAULT_INJECTION\r\n");
-		flash_stResult = ST_PASS;
-	}
-
-	self_test_status = SL_SelfTest_SRAM(SRAM_ECC_ERROR_FORCING_2BIT, TRUE, &flash_stResult);
-
-	if(self_test_status & (ST_PASS == flash_stResult)){
-		UARTprintf("[PASS] SRAM_ECC_ERROR_FORCING_2BIT\r\n");
-	}
-	else{
-		UARTprintf("[FAIL] SRAM_ECC_ERROR_FORCING_2BIT\r\n");
-		flash_stResult = ST_PASS;
-	}
-
-	self_test_status = SL_SelfTest_SRAM(SRAM_ECC_2BIT_FAULT_INJECT, TRUE, &flash_stResult);
-
-	if(self_test_status & (ST_PASS == flash_stResult)){
-		UARTprintf("[PASS] SRAM_ECC_2BIT_FAULT_INJECT\r\n");
-	}
-	else{
-		UARTprintf("[FAIL] SRAM_ECC_2BIT_FAULT_INJECT\r\n");
-		flash_stResult = ST_PASS;
-	}
-
-	self_test_status = SL_SelfTest_SRAM(SRAM_PAR_ADDR_CTRL_SELF_TEST, TRUE, &flash_stResult);
-
-	if(self_test_status & (ST_PASS == flash_stResult)){
-		UARTprintf("[PASS] SRAM_PAR_ADDR_CTRL_SELF_TEST\r\n");
-	}
-	else{
-		UARTprintf("[FAIL] SRAM_PAR_ADDR_CTRL_SELF_TEST\r\n");
-		flash_stResult = ST_PASS;
-	}
-
-	self_test_status = SL_SelfTest_SRAM(SRAM_ECC_ERROR_PROFILING, TRUE, &flash_stResult);
-
-	if(self_test_status & (ST_PASS == flash_stResult)){
-		UARTprintf("[PASS] SRAM_ECC_ERROR_PROFILING\r\n");
-	}
-	else{
-		UARTprintf("[FAIL] SRAM_ECC_ERROR_PROFILING\r\n");
-		flash_stResult = ST_PASS;
-	}
-
-	self_test_status = SL_SelfTest_SRAM(SRAM_ECC_ERROR_PROFILING_FAULT_INJECT, TRUE, &flash_stResult);
-
-	if(self_test_status & (ST_PASS == flash_stResult)){
-		UARTprintf("[PASS] SRAM_ECC_ERROR_PROFILING_FAULT_INJECT\r\n");
-	}
-	else{
-		UARTprintf("[FAIL] SRAM_ECC_ERROR_PROFILING_FAULT_INJECT\r\n");
-		flash_stResult = ST_PASS;
-	}
-
-	self_test_status = SL_SelfTest_SRAM(SRAM_RADECODE_DIAGNOSTICS, TRUE, &flash_stResult);
-
-	if(self_test_status & (ST_PASS == flash_stResult)){
-		UARTprintf("[PASS] SRAM_RADECODE_DIAGNOSTICS\r\n");
-	}
-	else{
-		UARTprintf("[FAIL] SRAM_RADECODE_DIAGNOSTICS\r\n");
-		flash_stResult = ST_PASS;
-	}
-
-/*	self_test_status = SL_SelfTestL2L3Interconnect(L2INTERCONNECT_FAULT_INJECT);
-
-	if(self_test_status & (ST_PASS == flash_stResult)){
-		UARTprintf("[PASS] L2INTERCONNECT_FAULT_INJECT\r\n");
-	}
-	else{
-		UARTprintf("[FAIL] L2INTERCONNECT_FAULT_INJECT\r\n");
-		flash_stResult = ST_PASS;
-	}*/
-
-/*	self_test_status = SL_SelfTestL2L3Interconnect(L3INTERCONNECT_FAULT_INJECT);
-
-	if(self_test_status & (ST_PASS == flash_stResult)){
-		UARTprintf("[PASS] L3INTERCONNECT_FAULT_INJECT\r\n");
-	}
-	else{
-		UARTprintf("[FAIL] L3INTERCONNECT_FAULT_INJECT\r\n");
-		flash_stResult = ST_PASS;
-	}*/
-
-	/*self_test_status = SL_SelfTest_ADC(SRAM_RADECODE_DIAGNOSTICS, TRUE, &flash_stResult);
-
-	if(self_test_status & (ST_PASS == flash_stResult)){
-		UARTprintf("[PASS] SRAM_RADECODE_DIAGNOSTICS\r\n");
-	}
-	else{
-		UARTprintf("[FAIL] SRAM_RADECODE_DIAGNOSTICS\r\n");
-		flash_stResult = ST_PASS;
-	}
-*/
+    safeti_SRAM_RADECODE_DIAGNOSTICS();
+    safeti_SRAM_ECC_ERROR_PROFILING_FAULT_INJECT();
+    safeti_SRAM_ECC_ERROR_PROFILING();
+    safeti_SRAM_PAR_ADDR_CTRL_SELF_TEST();
+    safeti_SRAM_ECC_2BIT_FAULT_INJECT();
+    safeti_SRAM_ECC_1BIT_FAULT_INJECTION();
+    safeti_SRAM_ECC_ERROR_FORCING_1BIT();
+    safeti_FEE_ECC_TEST_MODE_2BIT();
+    safeti_FEE_ECC_MALFUNCTION_MODE2();
+    safeti_FEE_ECC_MALFUNCTION_MODE1();
+    safeti_FLASH_ECC_TEST_MODE_2BIT_FAULT_INJECT();
+    safeti_FLASH_ECC_TEST_MODE_1BIT();
+    safeti_FLASH_ADDRESS_PARITY_SELF_TEST();
+    safeti_FLASH_ADDRESS_ECC_FAULT_INJECT();
+    safeti_FLASH_ECC_ADDR_TAG_REG_MODE();
+    safeti_PSCON_SELF_TEST_ERROR_FORCING();
+    safeti_PSCON_ERROR_FORCING();
+    safeti_PSCON_SELF_TEST();
 
     SD_Test();
 

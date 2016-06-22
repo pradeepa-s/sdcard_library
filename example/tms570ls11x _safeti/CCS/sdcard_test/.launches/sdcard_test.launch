@@ -5,7 +5,7 @@
 <stringAttribute key="com.ti.ccstudio.debug.debugModel.ATTR_PROGRAM.Texas Instruments XDS2xx USB Onboard Debug Probe/CortexR4" value="${build_artifact:sdcard_test}"/>
 <stringAttribute key="com.ti.ccstudio.debug.debugModel.ATTR_PROJECT.Texas Instruments XDS2xx USB Onboard Debug Probe/CortexR4" value="sdcard_test"/>
 <stringAttribute key="com.ti.ccstudio.debug.debugModel.ATTR_TARGET_CONFIG" value="${target_config_active_default:sdcard_test}"/>
-<stringAttribute key="com.ti.ccstudio.debug.debugModel.MRU_PROGRAM.Texas Instruments XDS2xx USB Onboard Debug Probe/CortexR4" value="I:/freelancer\itsi\GIT\sdcard_library\example\tms570ls11x _safeti\CCS\sdcard_test\Debug\sdcard_test.out"/>
+<stringAttribute key="com.ti.ccstudio.debug.debugModel.MRU_PROGRAM.Texas Instruments XDS2xx USB Onboard Debug Probe/CortexR4" value="G:/FL_Projects\ITSI\GIT\sdcard_library\example\tms570ls11x _safeti\CCS\sdcard_test\Debug\sdcard_test.out"/>
 <listAttribute key="org.eclipse.debug.core.MAPPED_RESOURCE_PATHS">
 <listEntry value="/sdcard_test"/>
 </listAttribute>
