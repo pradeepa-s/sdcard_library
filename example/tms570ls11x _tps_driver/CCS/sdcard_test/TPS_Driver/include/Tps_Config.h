@@ -59,7 +59,7 @@
  *
  */
 /**@{*/
-#define DEBUG_ENABLE        0U     /**< enable/disable the debug messages from TPS */
-#define ERROR_ENABLE        0U     /**< enable/disable the error messages from TPS*/
+#define DEBUG_ENABLE        1U     /**< enable/disable the debug messages from TPS */
+#define ERROR_ENABLE        1U     /**< enable/disable the error messages from TPS*/
 /**@}*/
 #endif /* __TPS_CONFIG_H__ */

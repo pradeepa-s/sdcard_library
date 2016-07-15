@@ -312,7 +312,7 @@ boolean SendandRecieveDataTPS_ERR(const uint16* const u16TransmitData,const uint
 boolean SendDebugTextTPS(const uint8 * const u8textbuf,const uint32 u32textlength)
 {
     boolean blRetVal = TRUE;
-    sciSend(scilinREG, u32textlength, (uint8*)u8textbuf);
+    sciSend(sciREG, u32textlength, (uint8*)u8textbuf);
     return blRetVal;
 }
 

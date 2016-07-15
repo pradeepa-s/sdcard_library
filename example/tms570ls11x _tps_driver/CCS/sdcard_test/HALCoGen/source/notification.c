@@ -50,6 +50,7 @@
 
 #include "esm.h"
 #include "sys_selftest.h"
+#include "adc.h"
 #include "mibspi.h"
 #include "sci.h"
 #include "spi.h"
@@ -113,6 +114,16 @@ void rtiNotification(uint32 notification)
 }
 
 /* USER CODE BEGIN (10) */
+/* USER CODE END */
+#pragma WEAK(adcNotification)
+void adcNotification(adcBASE_t *adc, uint32 group)
+{
+/*  enter user code between the USER CODE BEGIN and USER CODE END. */
+/* USER CODE BEGIN (11) */
+/* USER CODE END */
+}
+
+/* USER CODE BEGIN (12) */
 /* USER CODE END */
 #pragma WEAK(mibspiNotification)
 void mibspiNotification(mibspiBASE_t *mibspi, uint32 flags)

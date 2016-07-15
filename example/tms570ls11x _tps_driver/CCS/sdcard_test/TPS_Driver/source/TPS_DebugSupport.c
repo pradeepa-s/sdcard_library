@@ -66,8 +66,8 @@ void TPS_DebugInit(SendDebugText SendTPSDebugText)
 boolean TPS_SendDebugText(TPS_DebugSeverity severity, const uint8 * const u8buftext,
         uint32 u32value)
 {
-    //const uint8 txtCRLF2[3] = { '\r', '\n', '\0' };
-    //uint8 u8valbuf[20] = {0U};
+    const uint8 txtCRLF2[3] = { '\r', '\n', '\0' };
+    uint8 u8valbuf[20] = {0U};
     boolean blRetVal = TRUE;
 
     if (NULL == SendDebugText_TPS)
