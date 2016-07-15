@@ -45,22 +45,18 @@
 #include "adc.h"
 #include "TPS_Types.h"
 
-#if defined(_TMS570LS12x_) || defined(_TMS570LS1227CNCD_) || defined(_RM46CNCD_)
 
 #define SPI_COMPATIBILITY_MODE 1U
 
 #define RTI_TPS_DEFAULTS { 0, \
                            0, \
 						 }
-#define SPI_TPS_DEFAULTS { (mibspiBASE_t *)0xFFF7F600U, /*SPI2*/\
+#define SPI_TPS_DEFAULTS { (mibspiBASE_t *)spiREG2, /*SPI2*/\
                            0, \
 						 }
-#define ADC_TPS_DEFAULTS { (adcBASE_t *)0xFFF7C000U, /*ADC1*/\
+#define ADC_TPS_DEFAULTS { (adcBASE_t *)adcREG1, /*ADC1*/\
 						   1, \
                            0, \
-						 }
-#define GIO_TPS_DEFAULTS { gioPORTA, /*gioPORTA*/\
-						   4, \
 						 }
 
 /**<voltage limits 2.45-2.55*/
@@ -81,63 +77,5 @@
                                                            {3041,3165}}
 #define DMUX_MIN_ADC 410
 #define DMUX_MAX_ADC 3700
-#elif defined(_TMS570LS3137HITEXKIT_)|| defined(_RM48HITEXKIT_)
-/*Hitex board, 5v adc*/
-#define SPI_COMPATIBILITY_MODE 0U
 
-
-#define RTI_TPS_DEFAULTS { 0, \
-                           0, \
-						 }
-#define SPI_TPS_DEFAULTS { (mibspiBASE_t *)0xFFF7F800U, /*SPI2*/\
-                           0, \
-						 }
-#define ADC_TPS_DEFAULTS { (adcBASE_t *)0xFFF7C000U, /*ADC1*/\
-						   1, \
-                           0, \
-						 }
-/*D-DiagOut*/
-#define GIO_TPS_DEFAULTS { gioPORTA, /*gioPORTA*/\
-						   3, \
-						 }
-#define  VOLTAGE_RAIL_LIMITS                              {{2007,2088},\
-                                                           {1556,1720},\
-                                                           {655,4096},\
-                                                           {984,4096},\
-                                                           {327,3276},\
-                                                           {327,3276},\
-                                                           {2007,2089},\
-                                                           {2007,2089}};
-#define DMUX_MIN_ADC 271
-#define DMUX_MAX_ADC 2442
-#else
-/*Hitex board, 5v adc*/
-
-#define SPI_COMPATIBILITY_MODE 0U
-
-#define RTI_TPS_DEFAULTS { 0, \
-                           0, \
-                         }
-#define SPI_TPS_DEFAULTS { (mibspiBASE_t *)0xFFF7F800U, /*SPI2*/\
-                           0, \
-                         }
-#define ADC_TPS_DEFAULTS { (adcBASE_t *)0xFFF7C000U, /*ADC1*/\
-                           1, \
-                           0, \
-                         }
-/*D-DiagOut*/
-#define GIO_TPS_DEFAULTS { gioPORTA, /*gioPORTA*/\
-                           3, \
-                         }
-#define  VOLTAGE_RAIL_LIMITS                              {{2007,2088},\
-                                                           {1556,1720},\
-                                                           {655,4096},\
-                                                           {984,4096},\
-                                                           {327,3276},\
-                                                           {327,3276},\
-                                                           {2007,2089},\
-                                                           {2007,2089}};
-#define DMUX_MIN_ADC 271
-#define DMUX_MAX_ADC 2442
-#endif
 #endif

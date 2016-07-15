@@ -1,12 +1,12 @@
 /** @file mibspi.h
 *   @brief MIBSPI Driver Definition File
-*   @date 28.Aug.2015
-*   @version 04.05.01
+*   @date 02-Mar-2016
+*   @version 04.05.02
 *
 */
 
 /* 
-* Copyright (C) 2009-2015 Texas Instruments Incorporated - www.ti.com 
+* Copyright (C) 2009-2016 Texas Instruments Incorporated - www.ti.com 
 * 
 * 
 *  Redistribution and use in source and binary forms, with or without 
@@ -203,7 +203,7 @@ typedef struct mibspi_config_reg
 
 #define MIBSPI5_DELAY_CONFIGVALUE    ((uint32)((uint32)0U << 24U) | (uint32)((uint32)0U << 16U) | (uint32)((uint32)0U << 8U) | (uint32)((uint32)0U << 0U))
 
-#define MIBSPI5_FMT0_CONFIGVALUE     ((uint32)((uint32)0U << 24U) | (uint32)((uint32)0U << 23U) | (uint32)((uint32)0U << 22U) | (uint32)((uint32)0U << 21U) | (uint32)((uint32)0U << 20U) | (uint32)((uint32)1U << 17U) | (uint32)((uint32)0U << 16U) | (uint32)((uint32)179U << 8U) | (uint32)((uint32)8U << 0U))
+#define MIBSPI5_FMT0_CONFIGVALUE     ((uint32)((uint32)0U << 24U) | (uint32)((uint32)0U << 23U) | (uint32)((uint32)0U << 22U) | (uint32)((uint32)0U << 21U) | (uint32)((uint32)0U << 20U) | (uint32)((uint32)1U << 17U) | (uint32)((uint32)0U << 16U) | (uint32)((uint32)4U << 8U) | (uint32)((uint32)8U << 0U))
 #define MIBSPI5_FMT1_CONFIGVALUE     ((uint32)((uint32)0U << 24U) | (uint32)((uint32)0U << 23U) | (uint32)((uint32)0U << 22U) | (uint32)((uint32)0U << 21U) | (uint32)((uint32)0U << 20U) | (uint32)((uint32)0U << 17U) | (uint32)((uint32)0U << 16U) | (uint32)((uint32)89U << 8U) | (uint32)((uint32)16U << 0U))
 #define MIBSPI5_FMT2_CONFIGVALUE     ((uint32)((uint32)0U << 24U) | (uint32)((uint32)0U << 23U) | (uint32)((uint32)0U << 22U) | (uint32)((uint32)0U << 21U) | (uint32)((uint32)0U << 20U) | (uint32)((uint32)0U << 17U) | (uint32)((uint32)0U << 16U) | (uint32)((uint32)89U << 8U) | (uint32)((uint32)16U << 0U))
 #define MIBSPI5_FMT3_CONFIGVALUE     ((uint32)((uint32)0U << 24U) | (uint32)((uint32)0U << 23U) | (uint32)((uint32)0U << 22U) | (uint32)((uint32)0U << 21U) | (uint32)((uint32)0U << 20U) | (uint32)((uint32)0U << 17U) | (uint32)((uint32)0U << 16U) | (uint32)((uint32)89U << 8U) | (uint32)((uint32)16U << 0U))

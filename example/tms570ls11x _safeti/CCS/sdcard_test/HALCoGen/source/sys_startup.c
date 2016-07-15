@@ -189,8 +189,9 @@ void _c_int00(void)
 		/* Workaround for Errata CORTEXR4 57 */
 		_errata_CORTEXR4_57_();
 /* USER CODE END */
-#endif
+
 /* USER CODE BEGIN (14) */
+#endif
 /* USER CODE END */
 /* USER CODE BEGIN (15) */
 #ifndef SAFETI_INTEGRATE
@@ -239,11 +240,12 @@ void _c_int00(void)
 			/* Add user code here to handle watchdog violation. */
 
 /* USER CODE END */
-#endif
+
             /* Clear the Watchdog reset flag in Exception Status register */ 
             SYS_EXCEPTION = WATCHDOG_RESET;
         
 /* USER CODE BEGIN (18) */
+#endif
 /* USER CODE END */
         }
         else
@@ -251,7 +253,7 @@ void _c_int00(void)
             /* Clear the ICEPICK reset flag in Exception Status register */ 
             SYS_EXCEPTION = ICEPICK_RESET;
 /* USER CODE BEGIN (19) */
-#if 0
+#ifndef SAFETI_INTEGRATE
 /* USER CODE END */
         }
     }
@@ -506,10 +508,11 @@ void afterSTC(void)
     ccmSelfCheck();
 
 /* USER CODE BEGIN (30) */
-#endif
+
 /* USER CODE END */
 
 /* USER CODE BEGIN (31) */
+#endif
 #ifndef SAFETI_INTEGRATE
 /* USER CODE END */
 

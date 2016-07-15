@@ -189,29 +189,13 @@ boolean SendandRecieveDataTPS(const uint16* const u16TransmitData,const uint32 u
     }
     else
     {
-#if (SPI_COMPATIBILITY_MODE == 0)
-        mibspiSetData(Spi_Param_Handle->SPI_TPS,0,(uint16*)u16TransmitData);
-        mibspiTransfer(Spi_Param_Handle->SPI_TPS, 0);
-        while(mibspiIsTransferComplete(Spi_Param_Handle->SPI_TPS, 0) != 1);
-        *u32RecieveSize = 1;
-        if (0U
-                != mibspiGetData(Spi_Param_Handle->SPI_TPS, 0,
-                        (uint16*) u16RecieveData))
-        {
-            blRetVal = FALSE;
-        }
-        else
-        {
-            blRetVal = TRUE;
-        }
-#else
         (Spi_Param_Handle->SPI_TPS)->DAT1 = 0x04FE0000U | *u16TransmitData;
         while(((Spi_Param_Handle->SPI_TPS)->FLG & 0x100)!=0x100);
         *u16RecieveData = ((Spi_Param_Handle->SPI_TPS)->BUF);
         (Spi_Param_Handle->SPI_TPS)->FLG = 0x300;
         temp_read=(Spi_Param_Handle->SPI_TPS)->FLG;
         blRetVal = TRUE;
-#endif
+
     }
 
     return blRetVal;
