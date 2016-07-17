@@ -10,7 +10,7 @@ boolean sl_priv_flag_set[TESTTYPE_MAX - TESTTYPE_MIN] = {0};
 
 boolean SL_FLAG_SET(sint32 flag_id) {
     sl_priv_flag_set[flag_id-TESTTYPE_MIN] = TRUE;
-    return sl_priv_flag_set[flag_id];
+    return sl_priv_flag_set[flag_id- TESTTYPE_MIN];
 }
 
 void SL_FLAG_CLEAR(sint32 flag_id) {

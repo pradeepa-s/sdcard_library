@@ -1,12 +1,12 @@
 /** @file mibspi.c
 *   @brief MIBSPI Driver Implementation File
-*   @date 28.Aug.2015
-*   @version 04.05.01
+*   @date 02-Mar-2016
+*   @version 04.05.02
 *
 */
 
 /* 
-* Copyright (C) 2009-2015 Texas Instruments Incorporated - www.ti.com 
+* Copyright (C) 2009-2016 Texas Instruments Incorporated - www.ti.com 
 * 
 * 
 *  Redistribution and use in source and binary forms, with or without 
@@ -204,6 +204,9 @@ uint32 i ;
 
 #if (1U > 0U)
         {
+
+#if (1U > 1U)
+
             while (i < (1U-1U))
             {
                 mibspiRAM5->tx[i].control = (uint16)((uint16)4U << 13U)  /* buffer mode */
@@ -215,6 +218,7 @@ uint32 i ;
                                           | ((uint16)(~((uint16)0xFFU ^ (uint16)CS_0)) & (uint16)0x00FFU);  /* chip select */
                 i++;
             }
+#endif
             mibspiRAM5->tx[i].control = (uint16)((uint16)4U << 13U)  /* buffer mode */
                                       | (uint16)((uint16)1U << 12U) /* chip select hold must be zero for last buffer */
                                       | (uint16)((uint16)0U << 10U)  /* enable WDELAY */
@@ -229,6 +233,9 @@ uint32 i ;
 
 #if (0U > 0U)
         {
+
+#if (0U > 1U)
+
             while (i < ((1U+0U)-1U))
             {
                 mibspiRAM5->tx[i].control = (uint16)((uint16)4U << 13U)  /* buffer mode */
@@ -241,6 +248,7 @@ uint32 i ;
 
                 i++;
             }
+#endif
             mibspiRAM5->tx[i].control = (uint16)((uint16)4U << 13U)  /* buffer mode */
                                       | (uint16)((uint16)0U << 12U) /* chip select hold must be zero for last buffer */
                                       | (uint16)((uint16)0U << 10U)  /* enable WDELAY */
@@ -254,6 +262,9 @@ uint32 i ;
 
 #if (0U > 0U)
         {
+
+#if (0U > 1U)
+
             while (i < ((1U+0U+0U)-1U))
             {
                 mibspiRAM5->tx[i].control = (uint16)((uint16)4U << 13U)  /* buffer mode */
@@ -266,6 +277,7 @@ uint32 i ;
 
                 i++;
             }
+#endif
             mibspiRAM5->tx[i].control = (uint16)((uint16)4U << 13U)  /* buffer mode */
                                       | (uint16)((uint16)0U << 12U) /* chip select hold must be zero for last buffer */
                                       | (uint16)((uint16)0U << 10U)  /* enable WDELAY */
@@ -279,6 +291,9 @@ uint32 i ;
 
 #if (0U > 0U)
         {
+
+#if (0U > 1U)
+
             while (i < ((1U+0U+0U+0U)-1U))
             {
                 mibspiRAM5->tx[i].control = (uint16)((uint16)4U << 13U)  /* buffer mode */
@@ -291,6 +306,7 @@ uint32 i ;
 
                 i++;
             }
+#endif
             mibspiRAM5->tx[i].control = (uint16)((uint16)4U << 13U)  /* buffer mode */
                                       | (uint16)((uint16)0U << 12U) /* chip select hold must be zero for last buffer */
                                       | (uint16)((uint16)0U << 10U)  /* enable WDELAY */
@@ -304,6 +320,9 @@ uint32 i ;
 
 #if (0U > 0U)
         {
+
+#if (0U > 1U)
+
             while (i < ((1U+0U+0U+0U+0U)-1U))
             {
                 mibspiRAM5->tx[i].control = (uint16)((uint16)4U << 13U)  /* buffer mode */
@@ -316,6 +335,7 @@ uint32 i ;
 
                 i++;
             }
+#endif
             mibspiRAM5->tx[i].control = (uint16)((uint16)4U << 13U)  /* buffer mode */
                                       | (uint16)((uint16)0U << 12U) /* chip select hold must be zero for last buffer */
                                       | (uint16)((uint16)0U << 10U)  /* enable WDELAY */
@@ -329,6 +349,9 @@ uint32 i ;
 
 #if (0U > 0U)
         {
+
+#if (0U > 1U)
+
             while (i < ((1U+0U+0U+0U+0U+0U)-1U))
             {
                 mibspiRAM5->tx[i].control = (uint16)((uint16)4U << 13U)  /* buffer mode */
@@ -341,6 +364,7 @@ uint32 i ;
 
                 i++;
             }
+#endif
             mibspiRAM5->tx[i].control = (uint16)((uint16)4U << 13U)  /* buffer mode */
                                       | (uint16)((uint16)0U << 12U) /* chip select hold must be zero for last buffer */
                                       | (uint16)((uint16)0U << 10U)  /* enable WDELAY */
@@ -354,6 +378,9 @@ uint32 i ;
 
 #if (0U > 0U)
         {
+
+#if (0U > 1U)
+
             while (i < ((1U+0U+0U+0U+0U+0U+0U)-1U))
             {
                 mibspiRAM5->tx[i].control = (uint16)((uint16)4U << 13U)  /* buffer mode */
@@ -366,6 +393,7 @@ uint32 i ;
 
                 i++;
             }
+#endif
             mibspiRAM5->tx[i].control = (uint16)((uint16)4U << 13U)  /* buffer mode */
                                       | (uint16)((uint16)0U << 12U) /* chip select hold must be zero for last buffer */
                                       | (uint16)((uint16)0U << 10U)  /* enable WDELAY */
@@ -379,6 +407,9 @@ uint32 i ;
 
 #if (0U > 0U)
         {
+
+#if (0U > 1U)
+
             while (i < ((1U+0U+0U+0U+0U+0U+0U+0U)-1U))
             {
                 mibspiRAM5->tx[i].control = (uint16)((uint16)4U << 13U)  /* buffer mode */
@@ -391,6 +422,7 @@ uint32 i ;
 
                 i++;
             }
+#endif
             mibspiRAM5->tx[i].control = (uint16)((uint16)4U << 13U)  /* buffer mode */
                                       | (uint16)((uint16)0U << 12U) /* chip select hold must be zero for last buffer */
                                       | (uint16)((uint16)0U << 10U)  /* enable WDELAY */
