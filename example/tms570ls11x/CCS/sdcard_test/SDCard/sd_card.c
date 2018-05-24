@@ -1,24 +1,24 @@
-//*****************************************************************************
-//
-// sd_card.c - Example program for reading files from an SD card.
-//
-// Copyright (c) 2011-2014 Texas Instruments Incorporated.  All rights reserved.
-// Software License Agreement
-// 
-// Texas Instruments (TI) is supplying this software for use solely and
-// exclusively on TI's microcontroller products. The software is owned by
-// TI and/or its suppliers, and is protected under applicable copyright
-// laws. You may not combine this software with "viral" open-source
-// software in order to form a larger program.
-// 
-// THIS SOFTWARE IS PROVIDED "AS IS" AND WITH ALL FAULTS.
-// NO WARRANTIES, WHETHER EXPRESS, IMPLIED OR STATUTORY, INCLUDING, BUT
-// NOT LIMITED TO, IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-// A PARTICULAR PURPOSE APPLY TO THIS SOFTWARE. TI SHALL NOT, UNDER ANY
-// CIRCUMSTANCES, BE LIABLE FOR SPECIAL, INCIDENTAL, OR CONSEQUENTIAL
-// DAMAGES, FOR ANY REASON WHATSOEVER.
-// 
-//*****************************************************************************
+/******************************************************************************
+
+ sd_card.c - Example program for reading files from an SD card.
+
+ Copyright (c) 2011-2014 Texas Instruments Incorporated.  All rights reserved.
+ Software License Agreement
+
+ Texas Instruments (TI) is supplying this software for use solely and
+ exclusively on TI's microcontroller products. The software is owned by
+ TI and/or its suppliers, and is protected under applicable copyright
+ laws. You may not combine this software with "viral" open-source
+ software in order to form a larger program.
+
+ THIS SOFTWARE IS PROVIDED "AS IS" AND WITH ALL FAULTS.
+ NO WARRANTIES, WHETHER EXPRESS, IMPLIED OR STATUTORY, INCLUDING, BUT
+ NOT LIMITED TO, IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ A PARTICULAR PURPOSE APPLY TO THIS SOFTWARE. TI SHALL NOT, UNDER ANY
+ CIRCUMSTANCES, BE LIABLE FOR SPECIAL, INCIDENTAL, OR CONSEQUENTIAL
+ DAMAGES, FOR ANY REASON WHATSOEVER.
+
+******************************************************************************/
 
 #include <stdlib.h>
 #include <stdint.h>
@@ -37,56 +37,58 @@
 extern void disk_timerproc (void);
 
 static char g_audio_buffer[50000];
-//*****************************************************************************
-//
-//! \addtogroup example_list
-//! <h1>SD card using FAT file system (sd_card)</h1>
-//!
-//! This example application demonstrates reading a file system from an SD
-//! card.  It makes use of FatFs, a FAT file system driver.  It provides a
-//! simple command console via a serial port for issuing commands to view and
-//! navigate the file system on the SD card.
-//!
-//! The first UART, which is connected to the USB debug virtual serial port on
-//! the evaluation board, is configured for 115,200 bits per second, and 8-N-1
-//! mode.  When the program is started a message will be printed to the
-//! terminal.  Type ``help'' for command help.
-//!
-//! For additional details about FatFs, see the following site:
-//! http://elm-chan.org/fsw/ff/00index_e.html
-//
-//*****************************************************************************
+/******************************************************************************
+
+ \addtogroup example_list
+ <h1>SD card using FAT file system (sd_card)</h1>
+
+ This example application demonstrates reading a file system from an SD
+ card.  It makes use of FatFs, a FAT file system driver.  It provides a
+ simple command console via a serial port for issuing commands to view and
+ navigate the file system on the SD card.
+
+ The first UART, which is connected to the USB debug virtual serial port on
+ the evaluation board, is configured for 115,200 bits per second, and 8-N-1
+ mode.  When the program is started a message will be printed to the
+ terminal.  Type ``help'' for command help.
+
+ For additional details about FatFs, see the following site:
+ http://elm-chan.org/fsw/ff/00index_e.html
+
+******************************************************************************/
 
 #ifdef LCD
 extern int Cmd_load(int argc, char *argv[]);
 #endif
 
-//*****************************************************************************
-//
-// A structure that holds a mapping between an FRESULT numerical code, and a
-// string representation.  FRESULT codes are returned from the FatFs FAT file
-// system driver.
-//
-//*****************************************************************************
+/******************************************************************************
+
+ A structure that holds a mapping between an FRESULT numerical code, and a
+ string representation.  FRESULT codes are returned from the FatFs FAT file
+ system driver.
+
+******************************************************************************/
 typedef struct {
     FRESULT iFResult;
     char *pcResultStr;
 } tFResultString;
 
-//*****************************************************************************
-//
-// A macro to make it easy to add result codes to the table.
-//
-//*****************************************************************************
+/******************************************************************************
+
+ A macro to make it easy to add result codes to the table.
+
+******************************************************************************/
 #define FRESULT_ENTRY(f)        { (f), (#f) }
 
-//*****************************************************************************
-//
-// A table that holds a mapping between the numerical FRESULT code and it's
-// name as a string.  This is used for looking up error codes for printing to
-// the console.
-//
-//*****************************************************************************
+/*
+*****************************************************************************
+
+ A table that holds a mapping between the numerical FRESULT code and it's
+ name as a string.  This is used for looking up error codes for printing to
+ the console.
+
+*****************************************************************************
+*/
 tFResultString g_psFResultStrings[] = {
 FRESULT_ENTRY(FR_OK),
 FRESULT_ENTRY(FR_DISK_ERR),
@@ -109,21 +111,25 @@ FRESULT_ENTRY(FR_NOT_ENOUGH_CORE),
 FRESULT_ENTRY(FR_TOO_MANY_OPEN_FILES),
 FRESULT_ENTRY(FR_INVALID_PARAMETER), };
 
-//*****************************************************************************
-//
-// A macro that holds the number of result codes.
-//
-//*****************************************************************************
+/*
+*****************************************************************************
+
+ A macro that holds the number of result codes.
+
+*****************************************************************************
+*/
 #define NUM_FRESULT_CODES       (sizeof(g_psFResultStrings) /                 \
                                  sizeof(tFResultString))
 
-//*****************************************************************************
-//
-// This function returns a string representation of an error code that was
-// returned from a function call to FatFs.  It can be used for printing human
-// readable error messages.
-//
-//*****************************************************************************
+/*
+*****************************************************************************
+
+ This function returns a string representation of an error code that was
+ returned from a function call to FatFs.  It can be used for printing human
+ readable error messages.
+
+*****************************************************************************
+*/
 const char *
 StringFromFResult(FRESULT iFResult) {
     uint_fast8_t ui8Idx;
@@ -147,12 +153,14 @@ StringFromFResult(FRESULT iFResult) {
     return ("UNKNOWN ERROR CODE");
 }
 
-//*****************************************************************************
-//
-// This is the handler for this SysTick interrupt.  FatFs requires a timer tick
-// every 10 ms for internal timing purposes.
-//
-//*****************************************************************************
+/*
+*****************************************************************************
+
+ This is the handler for this SysTick interrupt.  FatFs requires a timer tick
+ every 10 ms for internal timing purposes.
+
+*****************************************************************************
+*/
 void SysTickHandler(void) {  // todo: implement
     //
     // Call the FatFs tick timer.
@@ -160,15 +168,17 @@ void SysTickHandler(void) {  // todo: implement
     disk_timerproc();
 }
 
-//*****************************************************************************
-//
-// This function implements the "ls" command.  It opens the current directory
-// and enumerates through the contents, and prints a line for each item it
-// finds.  It shows details such as file attributes, time and date, and the
-// file size, along with the name.  It shows a summary of file sizes at the end
-// along with free space.
-//
-//*****************************************************************************
+/*
+*****************************************************************************
+
+ This function implements the "ls" command.  It opens the current directory
+ and enumerates through the contents, and prints a line for each item it
+ finds.  It shows details such as file attributes, time and date, and the
+ file size, along with the name.  It shows a summary of file sizes at the end
+ along with free space.
+
+*****************************************************************************
+*/
 int Cmd_ls(int argc, char *argv[]) {
     unsigned int ui32TotalSize;
     unsigned int ui32FileCount;
@@ -292,26 +302,26 @@ int Cmd_ls(int argc, char *argv[]) {
     return (0);
 }
 
-//*****************************************************************************
-//
-// This function implements the "cd" command.  It takes an argument that
-// specifies the directory to make the current working directory.  Path
-// separators must use a forward slash "/".  The argument to cd can be one of
-// the following:
-//
-// * root ("/")
-// * a fully specified path ("/my/path/to/mydir")
-// * a single directory name that is in the current directory ("mydir")
-// * parent directory ("..")
-//
-// It does not understand relative paths, so dont try something like this:
-// ("../my/new/path")
-//
-// Once the new directory is specified, it attempts to open the directory to
-// make sure it exists.  If the new path is opened successfully, then the
-// current working directory (cwd) is changed to the new path.
-//
-//*****************************************************************************
+/******************************************************************************
+
+ This function implements the "cd" command.  It takes an argument that
+ specifies the directory to make the current working directory.  Path
+ separators must use a forward slash "/".  The argument to cd can be one of
+ the following:
+
+ * root ("/")
+ * a fully specified path ("/my/path/to/mydir")
+ * a single directory name that is in the current directory ("mydir")
+ * parent directory ("..")
+
+ It does not understand relative paths, so dont try something like this:
+ ("../my/new/path")
+
+ Once the new directory is specified, it attempts to open the directory to
+ make sure it exists.  If the new path is opened successfully, then the
+ current working directory (cwd) is changed to the new path.
+
+******************************************************************************/
 int Cmd_cd(int argc, char *argv[]) {
     uint_fast8_t ui8Idx;
     FRESULT iFResult;
@@ -435,12 +445,14 @@ int Cmd_cd(int argc, char *argv[]) {
     return (0);
 }
 
-//*****************************************************************************
-//
-// This function implements the "pwd" command.  It simply prints the current
-// working directory.
-//
-//*****************************************************************************
+/*
+*****************************************************************************
+
+ This function implements the "pwd" command.  It simply prints the current
+ working directory.
+
+*****************************************************************************
+*/
 int Cmd_pwd(int argc, char *argv[]) {
     //
     // Print the CWD to the console.
@@ -473,14 +485,16 @@ int Cmd_pwd(int argc, char *argv[]) {
 //  return ((b & 0xF8) << 8) | ((g & 0xFC) << 3) | (r >> 3);
 //}
 
-//*****************************************************************************
-//
-// This function implements the "cat" command.  It reads the contents of a file
-// and prints it to the console.  This should only be used on text files.  If
-// it is used on a binary file, then a bunch of garbage is likely to printed on
-// the console.
-//
-//*****************************************************************************
+/*
+*****************************************************************************
+
+ This function implements the "cat" command.  It reads the contents of a file
+ and prints it to the console.  This should only be used on text files.  If
+ it is used on a binary file, then a bunch of garbage is likely to printed on
+ the console.
+
+*****************************************************************************
+*/
 int Cmd_cat(int argc, char *argv[]) {
     FRESULT iFResult;
     unsigned int ui32BytesRead;
@@ -565,12 +579,14 @@ int Cmd_cat(int argc, char *argv[]) {
 }
 
 
-//*****************************************************************************
-//
-// This function implements the "del" command.  It is used to delete files
-// and folders.
-//
-//*****************************************************************************
+/*
+*****************************************************************************
+
+ This function implements the "del" command.  It is used to delete files
+ and folders.
+
+*****************************************************************************
+*/
 int Cmd_del(int argc, char *argv[]) {
     int iFResult;
     //
@@ -617,12 +633,14 @@ int Cmd_del(int argc, char *argv[]) {
 }
 
 
-//*****************************************************************************
-//
-// This function implements the "del" command.  It is used to delete files
-// and folders.
-//
-//*****************************************************************************
+/*
+*****************************************************************************
+
+ This function implements the "del" command.  It is used to delete files
+ and folders.
+
+*****************************************************************************
+*/
 int Cmd_init_sd(int argc, char *argv[]) {
     int iFResult = SDCARD_IF_OP_SUCCESS;
 
@@ -643,12 +661,14 @@ int Cmd_init_sd(int argc, char *argv[]) {
     return ((int) iFResult);
 }
 
-//*****************************************************************************
-//
-// This function implements the "play_audio" command.  It is used to copy the
-// file content to audio buffer
-//
-//*****************************************************************************
+/*
+*****************************************************************************
+
+ This function implements the "play_audio" command.  It is used to copy the
+ file content to audio buffer
+
+*****************************************************************************
+*/
 int Cmd_play_audio(int argc, char *argv[]) {
 
 	int iFResult = -1;
@@ -720,15 +740,22 @@ int Cmd_play_audio(int argc, char *argv[]) {
 }
 
 
-//*****************************************************************************
-//
-// This function implements the "read_firmware" command.  Used to read firmware
-// file to a buffer.
-//
-//*****************************************************************************
+/*
+*****************************************************************************
+
+ This function implements the "read_firmware" command.  Used to read firmware
+ file to a buffer.
+
+*****************************************************************************
+*/
 int Cmd_read_firmware(int argc, char *argv[]) {
 
 	int iFResult = -1;
+	uint32_t offset;
+	uint32_t buf_size;
+	uint32_t filename_size;
+	char *buffer;
+	int i = 0;
 
 	if(argc == 4){
 		 //
@@ -760,11 +787,11 @@ int Cmd_read_firmware(int argc, char *argv[]) {
 		strcat(g_pcTmpBuf, argv[1]);
 
 		// Configure the offset/buffer size/filename_size
-		int offset = atoi(argv[2]);
-		int buf_size = atoi(argv[3]);
-		int filename_size;
+		offset = atoi(argv[2]);
+		buf_size = atoi(argv[3]);
+		filename_size = 0;
 
-		char *buffer = (char*)malloc(buf_size);
+		buffer = (char*)malloc(buf_size);
 
 		//
 		// Read firmware data
@@ -776,7 +803,6 @@ int Cmd_read_firmware(int argc, char *argv[]) {
 			UARTprintf("Copied amount of data: %d\n",buf_size);
 			UARTprintf("Buffer content: \n");
 
-			int i = 0;
 			for(i = 0; i<buf_size; i++){
 				if(i % 16 == 0){
 					UARTprintf("\n[%d]: ",i);
@@ -803,12 +829,14 @@ int Cmd_read_firmware(int argc, char *argv[]) {
 }
 
 
-//*****************************************************************************
-//
-// This function implements the "create_fw" command.  Used to create a dummy
-// firmware file.
-//
-//*****************************************************************************
+/*
+*****************************************************************************
+
+ This function implements the "create_fw" command.  Used to create a dummy
+ firmware file.
+
+*****************************************************************************
+*/
 int Cmd_create_firmware(int argc, char *argv[]) {
 
 	int iFResult = -1;
@@ -862,12 +890,14 @@ int Cmd_create_firmware(int argc, char *argv[]) {
 }
 
 
-//*****************************************************************************
-//
-// This function implements the "delete_fw" command.  Used to delete the
-// firmware file.
-//
-//*****************************************************************************
+/*
+*****************************************************************************
+
+ This function implements the "delete_fw" command.  Used to delete the
+ firmware file.
+
+*****************************************************************************
+*/
 int Cmd_delete_firmware(int argc, char *argv[]) {
 
 	int iFResult = -1;
@@ -921,15 +951,20 @@ int Cmd_delete_firmware(int argc, char *argv[]) {
 }
 
 
-//****************************************************************************************
-//
-// This function implements the "append_fw" command.  Used to append a pre configured
-// data pattern to firmware file.
-//
-//*****************************************************************************************
+/*
+****************************************************************************************
+
+ This function implements the "append_fw" command.  Used to append a pre configured
+ data pattern to firmware file.
+
+*****************************************************************************************
+*/
 int Cmd_append_firmware(int argc, char *argv[]) {
 
 	int iFResult = -1;
+	char buffer[10];
+	int data_pattern;
+	int i;
 
 	if(argc == 3){
 		 //
@@ -960,9 +995,9 @@ int Cmd_append_firmware(int argc, char *argv[]) {
 		//
 		strcat(g_pcTmpBuf, argv[1]);
 
-		int data_pattern = atoi(argv[2]);
-		char buffer[10];
-		int i;
+		data_pattern = atoi(argv[2]);
+
+
 		for(i = 0; i < sizeof(buffer); i++){
 			buffer[i] = data_pattern;
 		}
@@ -988,15 +1023,22 @@ int Cmd_append_firmware(int argc, char *argv[]) {
 
 
 
-//****************************************************************************************
-//
-// This function implements the "append_test" command.  Used to create a new file by
-// copying the contents of another file
-//
-//*****************************************************************************************
+/*
+****************************************************************************************
+
+ This function implements the "append_test" command.  Used to create a new file by
+ copying the contents of another file
+
+*****************************************************************************************
+*/
 int Cmd_append_test(int argc, char *argv[]) {
 
 	int iFResult = -1;
+	uint32_t transfer_size;
+	char *buffer;
+	uint32_t buffer_size;
+	uint32_t file_size;
+    int i;
 
 	if(argc == 4){
 		char pcFile1[80];
@@ -1068,14 +1110,14 @@ int Cmd_append_test(int argc, char *argv[]) {
 
 		strcpy(pcFile2,g_pcTmpBuf);
 
-		int transfer_size = atoi(argv[3]);
+		transfer_size = atoi(argv[3]);
 
 		UARTprintf("Starting to copy %s to %s with each transfer size of %d. Please wait...\n",pcFile1,pcFile2,transfer_size);
 
-		char *buffer = (char*)malloc(transfer_size * sizeof(char));
-		int buffer_size = transfer_size;
-		int file_size = 0;
-		int i =0;
+		buffer = (char*)malloc(transfer_size * sizeof(char));
+		buffer_size = transfer_size;
+		file_size = 0;
+		i = 0;
 		if(buffer){
 
 			//
@@ -1136,12 +1178,14 @@ int Cmd_append_test(int argc, char *argv[]) {
 }
 
 
-//*****************************************************************************
-//
-// This function implements the "Cmd_set_log" command.  It is used to set the
-// default log file.
-//
-//*****************************************************************************
+/*
+*****************************************************************************
+
+ This function implements the "Cmd_set_log" command.  It is used to set the
+ default log file.
+
+*****************************************************************************
+*/
 int Cmd_set_log(int argc, char *argv[]) {
 
 	int iFResult = -1;
@@ -1196,12 +1240,14 @@ int Cmd_set_log(int argc, char *argv[]) {
 }
 
 
-//*****************************************************************************
-//
-// This function implements the "Cmd_log_event" command.  It is used to set the
-// write an event to the selected log file.
-//
-//*****************************************************************************
+/*
+*****************************************************************************
+
+ This function implements the "Cmd_log_event" command.  It is used to set the
+ write an event to the selected log file.
+
+*****************************************************************************
+*/
 int Cmd_log_event(int argc, char *argv[]) {
 
 	int iFResult = -1;
@@ -1244,12 +1290,14 @@ int Cmd_log_event(int argc, char *argv[]) {
 	return ((int) iFResult);
 }
 
-//*****************************************************************************
-//
-// This function implements the "set_audio" command.  It is used to set the audio
-// file buffer.
-//
-//*****************************************************************************
+/*
+*****************************************************************************
+
+ This function implements the "set_audio" command.  It is used to set the audio
+ file buffer.
+
+*****************************************************************************
+*/
 int Cmd_set_audio(int argc, char *argv[]) {
 	int iFResult = -1;
 
@@ -1280,18 +1328,20 @@ int Cmd_set_audio(int argc, char *argv[]) {
 	return ((int) iFResult);
 }
 
-//*****************************************************************************
-//
-// This function implements the "Cmd_current_log" command.  It is used to get
-// the name of current log file.
-//
-//*****************************************************************************
+/*
+*****************************************************************************
+
+ This function implements the "Cmd_current_log" command.  It is used to get
+ the name of current log file.
+
+*****************************************************************************
+*/
 int Cmd_current_log(int argc, char *argv[]) {
 	int iFResult = -1;
 
 	if(argc == 1){
 		char log_file[100];
-		int size = sizeof(log_file);
+		uint32_t size = sizeof(log_file);
 
 		// Get current log filename
 		iFResult = SDCardIF_GetCurrentLogFile(log_file,&size);
@@ -1308,15 +1358,20 @@ int Cmd_current_log(int argc, char *argv[]) {
 	return ((int) iFResult);
 }
 
-//*****************************************************************************
-//
-// This function implements the "read_last_100" command.  It is used to
-// read the last 100 events of a file
-//
-//*****************************************************************************
+/*
+*****************************************************************************
+
+ This function implements the "read_last_100" command.  It is used to
+ read the last 100 events of a file
+
+*****************************************************************************
+*/
 int Cmd_read_last_100(int argc, char *argv[]) {
 	int iFResult = -1;
 	int i;
+	ITSI_LOG_EVENT events[100];
+	uint32_t no_of_events;
+
 	if(argc == 2){
 
 		//
@@ -1348,8 +1403,7 @@ int Cmd_read_last_100(int argc, char *argv[]) {
 		strcat(g_pcTmpBuf, argv[1]);
 
 		// Buffer to store events
-		ITSI_LOG_EVENT events[100];
-		int no_of_events = 100;
+		no_of_events = 100;
 
 		// Read events (LAST_100)
 		iFResult = SDCardIF_ReadEventLog(g_pcTmpBuf,events,LAST_100,&no_of_events, 0);
@@ -1390,15 +1444,20 @@ int Cmd_read_last_100(int argc, char *argv[]) {
 }
 
 
-//*****************************************************************************
-//
-// This function implements the "read_full" command.  It is used to
-// read the total events in a file.
-//
-//*****************************************************************************
+/*
+*****************************************************************************
+
+ This function implements the "read_full" command.  It is used to
+ read the total events in a file.
+
+*****************************************************************************
+*/
 int Cmd_read_full(int argc, char *argv[]) {
 	int iFResult = -1;
 	int i;
+	ITSI_LOG_EVENT events[100];
+	uint32_t no_of_events = 100;
+
 	if(argc == 2){
 
 		//
@@ -1429,8 +1488,7 @@ int Cmd_read_full(int argc, char *argv[]) {
 		//
 		strcat(g_pcTmpBuf, argv[1]);
 
-		ITSI_LOG_EVENT events[100];
-		int no_of_events = 100;
+		no_of_events = 100;
 
 		// Read events (FULL_READ)
 		iFResult = SDCardIF_ReadEventLog(g_pcTmpBuf,events,FULL_READ,&no_of_events, 0);
@@ -1470,15 +1528,21 @@ int Cmd_read_full(int argc, char *argv[]) {
 	return ((int) iFResult);
 }
 
-//*****************************************************************************
-//
-// This function implements the "read_begining_n" command.  It is used to
-// read the N number of events from the begining.
-//
-//*****************************************************************************
+/*
+*****************************************************************************
+
+ This function implements the "read_begining_n" command.  It is used to
+ read the N number of events from the begining.
+
+*****************************************************************************
+*/
 int Cmd_read_begining_n(int argc, char *argv[]) {
 	int iFResult = -1;
 	int i;
+	ITSI_LOG_EVENT *events;
+	uint32_t no_of_events;
+	uint32_t offset;
+
 	if(argc == 4){
 
 		//
@@ -1509,9 +1573,9 @@ int Cmd_read_begining_n(int argc, char *argv[]) {
 		//
 		strcat(g_pcTmpBuf, argv[1]);
 
-		ITSI_LOG_EVENT *events = NULL;
-		int no_of_events = atoi(argv[2]);
-		int offset = atoi(argv[3]);
+		events = NULL;
+		no_of_events = atoi(argv[2]);
+		offset = atoi(argv[3]);
 
 		events = (ITSI_LOG_EVENT *)malloc(sizeof(ITSI_LOG_EVENT) * no_of_events);
 
@@ -1559,15 +1623,21 @@ int Cmd_read_begining_n(int argc, char *argv[]) {
 	return ((int) iFResult);
 }
 
-//*****************************************************************************
-//
-// This function implements the "read_last_n" command.  It is used to
-// read the N number of events from the begining.
-//
-//*****************************************************************************
+/*
+*****************************************************************************
+
+ This function implements the "read_last_n" command.  It is used to
+ read the N number of events from the begining.
+
+*****************************************************************************
+*/
 int Cmd_read_last_n(int argc, char *argv[]) {
 	int iFResult = -1;
 	int i;
+	ITSI_LOG_EVENT *events = NULL;
+	uint32_t no_of_events;
+	uint32_t offset;
+
 	if(argc == 4){
 
 		//
@@ -1598,9 +1668,10 @@ int Cmd_read_last_n(int argc, char *argv[]) {
 		//
 		strcat(g_pcTmpBuf, argv[1]);
 
-		ITSI_LOG_EVENT *events = NULL;
-		int no_of_events = atoi(argv[2]);
-		int offset = atoi(argv[3]);
+		events = NULL;
+		no_of_events = atoi(argv[2]);
+		offset = atoi(argv[3]);
+
 		events = (ITSI_LOG_EVENT *)malloc(sizeof(ITSI_LOG_EVENT) * no_of_events);
 
 		// Read events
@@ -1642,12 +1713,14 @@ int Cmd_read_last_n(int argc, char *argv[]) {
 }
 
 
-//*****************************************************************************
-//
-// This function implements the "help" command.  It prints a simple list of the
-// available commands with a brief description.
-//
-//*****************************************************************************
+/*
+*****************************************************************************
+
+ This function implements the "help" command.  It prints a simple list of the
+ available commands with a brief description.
+
+*****************************************************************************
+*/
 int Cmd_help(int argc, char *argv[]) {
     tCmdLineEntry *psEntry;
 
@@ -1684,12 +1757,14 @@ int Cmd_help(int argc, char *argv[]) {
     return (0);
 }
 
-//*****************************************************************************
-//
-// This is the table that holds the command names, implementing functions, and
-// brief description.
-//
-//*****************************************************************************
+/*
+*****************************************************************************
+
+ This is the table that holds the command names, implementing functions, and
+ brief description.
+
+*****************************************************************************
+*/
 tCmdLineEntry g_psCmdTable[] = {
         { "help", Cmd_help, "Display list of commands" },
 		{ "h", Cmd_help, "alias for help" },
@@ -1720,11 +1795,13 @@ tCmdLineEntry g_psCmdTable[] = {
 #endif
         { 0, 0, 0 } };
 
-//*****************************************************************************
-//
-// The error routine that is called if the driver library encounters an error.
-//
-//*****************************************************************************
+/*
+*****************************************************************************
+
+ The error routine that is called if the driver library encounters an error.
+
+*****************************************************************************
+*/
 #ifdef DEBUG
 void
 __error__(char *pcFilename, unsigned int ui32Line)
@@ -1757,16 +1834,18 @@ FRESULT open_append (
 }
 
 
-//*****************************************************************************
-//
-// The program main function.  It performs initialization, then runs a command
-// processing loop to read commands from the console.
-//
-//*****************************************************************************
+/*
+*****************************************************************************
+
+ The program main function.  It performs initialization, then runs a command
+ processing loop to read commands from the console.
+
+*****************************************************************************
+*/
+
 int SD_Test(void) {
     int nStatus;
-    FRESULT iFResult;
-
+    FIL fsrc;                /* File objects */
 
 
     // todo jc write soimething
@@ -1778,7 +1857,6 @@ int SD_Test(void) {
     	while(1);
     }
     // write some info
-    FIL fsrc;                /* File objects */
 
       /* Open  the file for append */
       res = open_append(&fsrc, TEST_AUDIO_FILE);
@@ -1789,12 +1867,12 @@ int SD_Test(void) {
 
       // if file empty, write header
       if (! f_size(&fsrc)) {
-          res = f_printf(&fsrc, "This string should contain 100 bytes of data.\n"
+          nStatus = f_printf(&fsrc, "This string should contain 100 bytes of data.\n"
         		  	  	  	  	  "This is created to test the audio file read function.\n"
         		  	  	  	  	  "123456789012345678901234567890123456789012345678901234567890\n"
         		  	  	  	  	  "123456789012345678901234567890123456789012345678901234567890\n"
         		  	  	  	  	  "123456789012345678901234567890123456789012345678901234567890\n");
-        if (res <0) {
+        if (nStatus < 0) {
             /* Error. Cannot write header */
             while(1);
         }

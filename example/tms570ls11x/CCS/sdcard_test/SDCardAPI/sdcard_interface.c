@@ -15,6 +15,7 @@
  * function operations.
  *
  * Version v1.0.0
+ * Version v1.1.0	-	Added function SDCardIF_GetEventCount (21-05-2016)
  */
 
 #include "sdcard_interface.h"
@@ -24,12 +25,12 @@
 
 STATIC char sdcardif_initialized = FALSE;
 
-STATIC char *audio_buffer = NULL;
-STATIC int audio_buffer_size = 0;
+STATIC char *audio_buffer = (char*)0;
+STATIC uint32_t audio_buffer_size = 0;
 
 STATIC char event_log_file[MAX_FILENAME_SIZE];
 
-static char IsNotInitialized();
+static char IsNotInitialized(void);
 static void DecodeEvents(ITSI_LOG_EVENT *event, char *line_buffer);
 
 /**
@@ -45,12 +46,12 @@ static void DecodeEvents(ITSI_LOG_EVENT *event, char *line_buffer);
  * @return	Refer to sdcard_err_codes.h
  */
 
-int SDCardIF_Initialize()
+int SDCardIF_Initialize(void)
 {
 	int ret = SDCARD_IF_OP_SUCCESS;
 		
-	audio_buffer = NULL;
-	audio_buffer_size = 0;
+	audio_buffer = (char*)0;
+	audio_buffer_size = 0U;
 	
 	ret = FileIF_Initialize();
 	
@@ -78,7 +79,7 @@ int SDCardIF_Initialize()
  * 			SDCARD_IF_ERR_INVALID_PARAM		Invalid parameters
  */
 
-int SDCardIF_SetAudioFileBuffer(char *buffer, int buf_size)
+int SDCardIF_SetAudioFileBuffer(char *buffer, uint32_t buf_size)
 {
 	int ret = SDCARD_IF_OP_SUCCESS;	
 	
@@ -88,7 +89,7 @@ int SDCardIF_SetAudioFileBuffer(char *buffer, int buf_size)
 	else if((NULL == buffer)){
 		ret = SDCARD_IF_ERR_INVALID_PARAM;
 	}
-	else if(buf_size <= 0){
+	else if(buf_size <= 0U){
 		ret = SDCARD_IF_ERR_INVALID_BUFFER_SIZE;
 	}
 	else{
@@ -109,13 +110,13 @@ int SDCardIF_SetAudioFileBuffer(char *buffer, int buf_size)
 int SDCardIF_PlayAudioFile(const char *filename)
 {
 	int ret = SDCARD_IF_OP_SUCCESS;
-	int amount_read = audio_buffer_size;
-	int file_size;
+	uint32_t amount_read = audio_buffer_size;
+	uint32_t file_size;
 	
 	if(IsNotInitialized()){
 		ret = SDCARD_IF_ERR_NOT_INITIALIZED;
 	}
-	else if((NULL == audio_buffer) || (0 == audio_buffer_size)){
+	else if(((char*)0 == audio_buffer) || (0U == audio_buffer_size)){
 		ret = SDCARD_IF_ERR_AUDIO_BUFFER_NOT_SET;
 	}
 	else{
@@ -229,17 +230,17 @@ int SDCardIF_DeleteLogFile(const char* filename)
  * 
  * @warning None
  */
-int SDCardIF_GetCurrentLogFile(char *filename, int *filename_size)
+int SDCardIF_GetCurrentLogFile(char *filename, uint32_t *filename_size)
 {
 	int ret;
 	
 	if(IsNotInitialized()){
 		ret = SDCARD_IF_ERR_NOT_INITIALIZED;
 	}
-	else if(NULL == filename){
+	else if(NULL == filename || ((uint32_t*)0) == filename_size){
 		ret = SDCARD_IF_ERR_INVALID_PARAM;
 	}
-	else if((*filename_size < strlen(event_log_file))|| (*filename_size <= 0)) {
+	else if(*filename_size < strlen(event_log_file)) {
 		ret = SDCARD_IF_ERR_INVALID_BUFFER_SIZE;
 	}
 	else{
@@ -288,7 +289,7 @@ int SDCardIF_GetCurrentLogFile(char *filename, int *filename_size)
  * 
  * @warning Do not treat warnings as errors.
  */
-int SDCardIF_ReadFirmwareFile(char *filename, int offset, char *buffer, int *buf_size, int *file_size)
+int SDCardIF_ReadFirmwareFile(char *filename, uint32_t offset, char *buffer, uint32_t *buf_size, uint32_t *file_size)
 {
 	int ret;	
 	
@@ -298,10 +299,10 @@ int SDCardIF_ReadFirmwareFile(char *filename, int offset, char *buffer, int *buf
 	if((NULL == buffer) || (NULL == buf_size)){
 		ret = SDCARD_IF_ERR_INVALID_PARAM;
 	}
-	else if(*buf_size <= 0){
+	else if(*buf_size <= 0U){
 		ret = SDCARD_IF_ERR_INVALID_BUFFER_SIZE;		
 	}
-	else if(offset < 0){
+	else if(offset < 0U){
 		ret = SDCARD_IF_ERR_BUFFER_OFFSET;
 	}
 	else{
@@ -368,6 +369,38 @@ int SDCardIF_LogEvent(ITSI_LOG_EVENT *event)
 }
 
 /**
+ * @brief Function to get number of events in the log file
+ * 
+ * @param filename[in] 		Filename 
+ * @param count[out] 		No of events in the file
+ * 
+ * @return 	SDCARD_IF_OP_SUCCESS				Operation success 
+ * @return 	SDCARD_IF_ERR_INVALID_PARAM			Function parameters are invalid
+ * @return 	SDCARD_IF_ERR_FILE_NOT_AVAILABLE	File cannot be found or cannot be accessed
+ * 
+ * 
+ * @warning None
+ */
+int SDCardIF_GetEventCount(const char* filename, uint32_t *count)
+{
+	int ret = SDCARD_IF_OP_SUCCESS;
+	
+	if(count == NULL){
+		ret = SDCARD_IF_ERR_INVALID_PARAM;
+	}
+	else{
+		ret = FileIF_IsFileAvailable(filename);
+	}
+	
+	if(SDCARD_IF_OP_SUCCESS == ret){
+		ret = FileIF_GetNoOfLines(filename, count);
+	}
+	
+	return ret;
+}
+
+
+/**
  * @brief Function to read event log
  * 
  * Function will read the specified event log file and provide the
@@ -376,7 +409,7 @@ int SDCardIF_LogEvent(ITSI_LOG_EVENT *event)
  * @param filename[in]			Filename of the log file
  * @param event[out]			Buffer to store the events
  * @param read_type[in]			Can be LAST_100, N_FROM_BEGINING, N_FROM_LAST or FULL_READ
- * @param no_of_events[inout]	No of event that can be stored in the buffer
+ * @param no_of_events[inout]	No of event that can be stored in the event buffer
  * @param offset[in]			Offset used for N_FROM_LAST and N_FROM_BEGINING
  * 
  * @return 	SDCARD_IF_OP_SUCCESS					Operation success
@@ -402,23 +435,25 @@ int SDCardIF_LogEvent(ITSI_LOG_EVENT *event)
  * 
  */
 
-int SDCardIF_ReadEventLog(const char* filename, ITSI_LOG_EVENT *event, READ_TYPE read_type, int *no_of_events, int offset)
+int SDCardIF_ReadEventLog(const char* filename, ITSI_LOG_EVENT *event, READ_TYPE read_type, uint32_t *no_of_events, uint32_t offset)
 {
 	int ret = SDCARD_IF_OP_SUCCESS;
-	int event_count = 0;
-	int event_count_total = 0;
-	int expected_count = 0;
-	int read_count = 0;
-	int start_line = 1;
+	uint32_t event_count = 0;
+	uint32_t event_count_total = 0;
+	uint32_t expected_count = 0;
+	uint32_t read_count = 0;
+	uint32_t start_line = 1;
 	int i = 0;	
 	char line_buffer[64];
-	int buffer_size = sizeof(line_buffer);
+	uint32_t buffer_size = sizeof(line_buffer);
 	
 	/* Validate parameters */
-	if((NULL == filename) || (NULL == no_of_events) || (NULL == event) || \
-			((read_type < FULL_READ) || (read_type > N_FROM_LAST))){
+	if( (NULL == filename) || (NULL == no_of_events) || (NULL == event) || ((read_type < FULL_READ) || (read_type > N_FROM_LAST)) )
+	{
 		ret = SDCARD_IF_ERR_INVALID_PARAM;
-	}else{
+	}
+	else
+	{
 		ret = FileIF_IsFileAvailable(filename);		
 	}
 		
@@ -448,8 +483,8 @@ int SDCardIF_ReadEventLog(const char* filename, ITSI_LOG_EVENT *event, READ_TYPE
 		if(FILEIF_OP_SUCCESS == ret){	
 		
 			/* If buffer is not enough, return error */
-			if(((FULL_READ == read_type) && (event_count > *no_of_events)) || \
-					((0 >= *no_of_events) && (read_type != LAST_100))){
+			if(		((FULL_READ == read_type) && (event_count > *no_of_events)) || \
+					((LAST_100 != read_type )  && (*no_of_events <= 0))	){
 						
 				*no_of_events = event_count;
 				ret = SDCARD_IF_ERR_EVENT_COUNT;
@@ -466,7 +501,7 @@ int SDCardIF_ReadEventLog(const char* filename, ITSI_LOG_EVENT *event, READ_TYPE
 				expected_count = *no_of_events;
 			}						
 			
-			/* Check whether required events are available */
+			/* Check whether required number of events are available */
 			if(event_count < expected_count){				
 				ret = SDCARD_IF_WARN_LESS_NO_Of_EVENTS_AVAIL;
 				read_count 	 = event_count;			
@@ -591,7 +626,7 @@ int SDCardIF_DeleteFirmwareFile(const char *filename)
  * 
  */
  
-int SDCardIF_AppendFirmwareData(const char *filename, char* data, int data_size)
+int SDCardIF_AppendFirmwareData(const char *filename, char* data, uint32_t data_size)
 {		
 	int ret = SDCARD_IF_OP_SUCCESS;
 	
@@ -617,7 +652,7 @@ int SDCardIF_AppendFirmwareData(const char *filename, char* data, int data_size)
  * @brief Function to reset all the static and global buffers
  * 
  */
-void SDCardIF_Reset()
+void SDCardIF_Reset(void)
 {
 	sdcardif_initialized = FALSE;
 	audio_buffer = NULL;
@@ -625,7 +660,7 @@ void SDCardIF_Reset()
 	memset(event_log_file, 0x00, sizeof(event_log_file));
 }
 
-static char IsNotInitialized()
+static char IsNotInitialized(void)
 {
 	return (FALSE == sdcardif_initialized);
 }

@@ -74,7 +74,7 @@
 /*SAFETYMCUSW 218 S MR:20.2 <APPROVED> "Functions from library" */
 extern void __TI_auto_init(void);
 /*SAFETYMCUSW 354 S MR:NA <APPROVED> " Startup code(main should be declared by the user)" */
-extern void main(void);
+extern int main(void);
 /*SAFETYMCUSW 122 S MR:20.11 <APPROVED> "Startup code(exit and abort need to be present)" */
 /*SAFETYMCUSW 354 S MR:NA <APPROVED> " Startup code(Extern declaration present in the library)" */
 extern void exit(int _status);

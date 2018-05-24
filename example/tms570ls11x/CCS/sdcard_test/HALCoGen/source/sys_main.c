@@ -55,6 +55,8 @@
 #include "mibspi.h"
 #include "rti.h"
 #include "uartstdio.h"
+#include "sys_core.h"
+#include "diskio.h"
 
 /* USER CODE END */
 
@@ -72,7 +74,8 @@ extern int SD_Test(void);
 
 /* USER CODE END */
 
-void main(void)
+int
+main(void)
 {
 /* USER CODE BEGIN (3) */
 
@@ -131,6 +134,8 @@ while(!(mibspiIsTransferComplete(mibspiREG5, 0)));
 mibspiGetData(mibspiREG5,0,&rx_buf);
 #endif
     while(1);
+
+    return 0;
 
 /* USER CODE END */
 }

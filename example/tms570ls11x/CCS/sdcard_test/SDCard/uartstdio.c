@@ -1,24 +1,26 @@
-//*****************************************************************************
-//
-// uartstdio.c - Utility driver to provide simple UART console functions.
-//
-// Copyright (c) 2007-2014 Texas Instruments Incorporated.  All rights reserved.
-// Software License Agreement
-// 
-// Texas Instruments (TI) is supplying this software for use solely and
-// exclusively on TI's microcontroller products. The software is owned by
-// TI and/or its suppliers, and is protected under applicable copyright
-// laws. You may not combine this software with "viral" open-source
-// software in order to form a larger program.
-// 
-// THIS SOFTWARE IS PROVIDED "AS IS" AND WITH ALL FAULTS.
-// NO WARRANTIES, WHETHER EXPRESS, IMPLIED OR STATUTORY, INCLUDING, BUT
-// NOT LIMITED TO, IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-// A PARTICULAR PURPOSE APPLY TO THIS SOFTWARE. TI SHALL NOT, UNDER ANY
-// CIRCUMSTANCES, BE LIABLE FOR SPECIAL, INCIDENTAL, OR CONSEQUENTIAL
-// DAMAGES, FOR ANY REASON WHATSOEVER.
-//
-//*****************************************************************************
+/*
+*****************************************************************************
+
+ uartstdio.c - Utility driver to provide simple UART console functions.
+
+ Copyright (c) 2007-2014 Texas Instruments Incorporated.  All rights reserved.
+ Software License Agreement
+
+ Texas Instruments (TI) is supplying this software for use solely and
+ exclusively on TI's microcontroller products. The software is owned by
+ TI and/or its suppliers, and is protected under applicable copyright
+ laws. You may not combine this software with "viral" open-source
+ software in order to form a larger program.
+
+ THIS SOFTWARE IS PROVIDED "AS IS" AND WITH ALL FAULTS.
+ NO WARRANTIES, WHETHER EXPRESS, IMPLIED OR STATUTORY, INCLUDING, BUT
+ NOT LIMITED TO, IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ A PARTICULAR PURPOSE APPLY TO THIS SOFTWARE. TI SHALL NOT, UNDER ANY
+ CIRCUMSTANCES, BE LIABLE FOR SPECIAL, INCIDENTAL, OR CONSEQUENTIAL
+ DAMAGES, FOR ANY REASON WHATSOEVER.
+
+*****************************************************************************
+*/
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -26,42 +28,46 @@
 #include "sci.h"
 #include "uartstdio.h"
 
-//*****************************************************************************
-//
-// A mapping from an integer between 0 and 15 to its ASCII character
-// equivalent.
-//
-//*****************************************************************************
+/*
+*****************************************************************************
+
+ A mapping from an integer between 0 and 15 to its ASCII character
+ equivalent.
+
+*****************************************************************************
+*/
+
 static const char * const g_pcHex = "0123456789abcdef";
 
 #define SCI_REG		sciREG
 
-//*****************************************************************************
-//
-//! Writes a string of characters to the UART output.
-//!
-//! \param pcBuf points to a buffer containing the string to transmit.
-//! \param ui32Len is the length of the string to transmit.
-//!
-//! This function will transmit the string to the UART output.  The number of
-//! characters transmitted is determined by the \e ui32Len parameter.  This
-//! function does no interpretation or translation of any characters.  Since
-//! the output is sent to a UART, any LF (/n) characters encountered will be
-//! replaced with a CRLF pair.
-//!
-//! Besides using the \e ui32Len parameter to stop transmitting the string, if
-//! a null character (0) is encountered, then no more characters will be
-//! transmitted and the function will return.
-//!
-//! In non-buffered mode, this function is blocking and will not return until
-//! all the characters have been written to the output FIFO.  In buffered mode,
-//! the characters are written to the UART transmit buffer and the call returns
-//! immediately.  If insufficient space remains in the transmit buffer,
-//! additional characters are discarded.
-//!
-//! \return Returns the count of characters written.
-//
-//*****************************************************************************
+/******************************************************************************
+
+ Writes a string of characters to the UART output.
+
+ \param pcBuf points to a buffer containing the string to transmit.
+ \param ui32Len is the length of the string to transmit.
+
+ This function will transmit the string to the UART output.  The number of
+ characters transmitted is determined by the \e ui32Len parameter.  This
+ function does no interpretation or translation of any characters.  Since
+ the output is sent to a UART, any LF (/n) characters encountered will be
+ replaced with a CRLF pair.
+
+ Besides using the \e ui32Len parameter to stop transmitting the string, if
+ a null character (0) is encountered, then no more characters will be
+ transmitted and the function will return.
+
+ In non-buffered mode, this function is blocking and will not return until
+ all the characters have been written to the output FIFO.  In buffered mode,
+ the characters are written to the UART transmit buffer and the call returns
+ immediately.  If insufficient space remains in the transmit buffer,
+ additional characters are discarded.
+
+ \return Returns the count of characters written.
+
+******************************************************************************/
+
 int
 UARTwrite(const char *pcBuf, unsigned int ui32Len)
 {
@@ -94,35 +100,35 @@ UARTwrite(const char *pcBuf, unsigned int ui32Len)
     return(uIdx);
 }
 
-//*****************************************************************************
-//
-//! A simple UART based get string function, with some line processing.
-//!
-//! \param pcBuf points to a buffer for the incoming string from the UART.
-//! \param ui32Len is the length of the buffer for storage of the string,
-//! including the trailing 0.
-//!
-//! This function will receive a string from the UART input and store the
-//! characters in the buffer pointed to by \e pcBuf.  The characters will
-//! continue to be stored until a termination character is received.  The
-//! termination characters are CR, LF, or ESC.  A CRLF pair is treated as a
-//! single termination character.  The termination characters are not stored in
-//! the string.  The string will be terminated with a 0 and the function will
-//! return.
-//!
-//! In both buffered and unbuffered modes, this function will block until
-//! a termination character is received.  If non-blocking operation is required
-//! in buffered mode, a call to UARTPeek() may be made to determine whether
-//! a termination character already exists in the receive buffer prior to
-//! calling UARTgets().
-//!
-//! Since the string will be null terminated, the user must ensure that the
-//! buffer is sized to allow for the additional null character.
-//!
-//! \return Returns the count of characters that were stored, not including
-//! the trailing 0.
-//
-//*****************************************************************************
+/******************************************************************************
+
+ A simple UART based get string function, with some line processing.
+
+ \param pcBuf points to a buffer for the incoming string from the UART.
+ \param ui32Len is the length of the buffer for storage of the string,
+ including the trailing 0.
+
+ This function will receive a string from the UART input and store the
+ characters in the buffer pointed to by \e pcBuf.  The characters will
+ continue to be stored until a termination character is received.  The
+ termination characters are CR, LF, or ESC.  A CRLF pair is treated as a
+ single termination character.  The termination characters are not stored in
+ the string.  The string will be terminated with a 0 and the function will
+ return.
+
+ In both buffered and unbuffered modes, this function will block until
+ a termination character is received.  If non-blocking operation is required
+ in buffered mode, a call to UARTPeek() may be made to determine whether
+ a termination character already exists in the receive buffer prior to
+ calling UARTgets().
+
+ Since the string will be null terminated, the user must ensure that the
+ buffer is sized to allow for the additional null character.
+
+ \return Returns the count of characters that were stored, not including
+ the trailing 0.
+
+******************************************************************************/
 int
 UARTgets( char *pcBuf, unsigned int ui32Len)
 {
@@ -248,21 +254,21 @@ UARTgets( char *pcBuf, unsigned int ui32Len)
 
 }
 
-//*****************************************************************************
-//
-//! Read a single character from the UART, blocking if necessary.
-//!
-//! This function will receive a single character from the UART and store it at
-//! the supplied address.
-//!
-//! In both buffered and unbuffered modes, this function will block until a
-//! character is received.  If non-blocking operation is required in buffered
-//! mode, a call to UARTRxAvail() may be made to determine whether any
-//! characters are currently available for reading.
-//!
-//! \return Returns the character read.
-//
-//*****************************************************************************
+/******************************************************************************
+
+ Read a single character from the UART, blocking if necessary.
+
+ This function will receive a single character from the UART and store it at
+ the supplied address.
+
+ In both buffered and unbuffered modes, this function will block until a
+ character is received.  If non-blocking operation is required in buffered
+ mode, a call to UARTRxAvail() may be made to determine whether any
+ characters are currently available for reading.
+
+ \return Returns the character read.
+
+******************************************************************************/
 unsigned char
 UARTgetc(void)
 {
@@ -274,44 +280,44 @@ UARTgetc(void)
     return(sciReceiveByte(SCI_REG));
 
 }
-//*****************************************************************************
-//
-//! A simple UART based vprintf function supporting \%c, \%d, \%p, \%s, \%u,
-//! \%x, and \%X.
-//!
-//! \param pcString is the format string.
-//! \param vaArgP is a variable argument list pointer whose content will depend
-//! upon the format string passed in \e pcString.
-//!
-//! This function is very similar to the C library <tt>vprintf()</tt> function.
-//! All of its output will be sent to the UART.  Only the following formatting
-//! characters are supported:
-//!
-//! - \%c to print a character
-//! - \%d or \%i to print a decimal value
-//! - \%s to print a string
-//! - \%u to print an unsigned decimal value
-//! - \%x to print a hexadecimal value using lower case letters
-//! - \%X to print a hexadecimal value using lower case letters (not upper case
-//! letters as would typically be used)
-//! - \%p to print a pointer as a hexadecimal value
-//! - \%\% to print out a \% character
-//!
-//! For \%s, \%d, \%i, \%u, \%p, \%x, and \%X, an optional number may reside
-//! between the \% and the format character, which specifies the minimum number
-//! of characters to use for that value; if preceded by a 0 then the extra
-//! characters will be filled with zeros instead of spaces.  For example,
-//! ``\%8d'' will use eight characters to print the decimal value with spaces
-//! added to reach eight; ``\%08d'' will use eight characters as well but will
-//! add zeroes instead of spaces.
-//!
-//! The type of the arguments in the variable arguments list must match the
-//! requirements of the format string.  For example, if an integer was passed
-//! where a string was expected, an error of some kind will most likely occur.
-//!
-//! \return None.
-//
-//*****************************************************************************
+/******************************************************************************
+
+ A simple UART based vprintf function supporting \%c, \%d, \%p, \%s, \%u,
+ \%x, and \%X.
+
+ \param pcString is the format string.
+ \param vaArgP is a variable argument list pointer whose content will depend
+ upon the format string passed in \e pcString.
+
+ This function is very similar to the C library <tt>vprintf()</tt> function.
+ All of its output will be sent to the UART.  Only the following formatting
+ characters are supported:
+
+ - \%c to print a character
+ - \%d or \%i to print a decimal value
+ - \%s to print a string
+ - \%u to print an unsigned decimal value
+ - \%x to print a hexadecimal value using lower case letters
+ - \%X to print a hexadecimal value using lower case letters (not upper case
+ letters as would typically be used)
+ - \%p to print a pointer as a hexadecimal value
+ - \%\% to print out a \% character
+
+ For \%s, \%d, \%i, \%u, \%p, \%x, and \%X, an optional number may reside
+ between the \% and the format character, which specifies the minimum number
+ of characters to use for that value; if preceded by a 0 then the extra
+ characters will be filled with zeros instead of spaces.  For example,
+ ``\%8d'' will use eight characters to print the decimal value with spaces
+ added to reach eight; ``\%08d'' will use eight characters as well but will
+ add zeroes instead of spaces.
+
+ The type of the arguments in the variable arguments list must match the
+ requirements of the format string.  For example, if an integer was passed
+ where a string was expected, an error of some kind will most likely occur.
+
+ \return None.
+
+******************************************************************************/
 void
 UARTvprintf(const char *pcString, va_list vaArgP)
 {
@@ -701,44 +707,44 @@ convert:
     }
 }
 
-//*****************************************************************************
-//
-//! A simple UART based printf function supporting \%c, \%d, \%p, \%s, \%u,
-//! \%x, and \%X.
-//!
-//! \param pcString is the format string.
-//! \param ... are the optional arguments, which depend on the contents of the
-//! format string.
-//!
-//! This function is very similar to the C library <tt>fprintf()</tt> function.
-//! All of its output will be sent to the UART.  Only the following formatting
-//! characters are supported:
-//!
-//! - \%c to print a character
-//! - \%d or \%i to print a decimal value
-//! - \%s to print a string
-//! - \%u to print an unsigned decimal value
-//! - \%x to print a hexadecimal value using lower case letters
-//! - \%X to print a hexadecimal value using lower case letters (not upper case
-//! letters as would typically be used)
-//! - \%p to print a pointer as a hexadecimal value
-//! - \%\% to print out a \% character
-//!
-//! For \%s, \%d, \%i, \%u, \%p, \%x, and \%X, an optional number may reside
-//! between the \% and the format character, which specifies the minimum number
-//! of characters to use for that value; if preceded by a 0 then the extra
-//! characters will be filled with zeros instead of spaces.  For example,
-//! ``\%8d'' will use eight characters to print the decimal value with spaces
-//! added to reach eight; ``\%08d'' will use eight characters as well but will
-//! add zeroes instead of spaces.
-//!
-//! The type of the arguments after \e pcString must match the requirements of
-//! the format string.  For example, if an integer was passed where a string
-//! was expected, an error of some kind will most likely occur.
-//!
-//! \return None.
-//
-//*****************************************************************************
+/******************************************************************************
+
+ A simple UART based printf function supporting \%c, \%d, \%p, \%s, \%u,
+ \%x, and \%X.
+
+ \param pcString is the format string.
+ \param ... are the optional arguments, which depend on the contents of the
+ format string.
+
+ This function is very similar to the C library <tt>fprintf()</tt> function.
+ All of its output will be sent to the UART.  Only the following formatting
+ characters are supported:
+
+ - \%c to print a character
+ - \%d or \%i to print a decimal value
+ - \%s to print a string
+ - \%u to print an unsigned decimal value
+ - \%x to print a hexadecimal value using lower case letters
+ - \%X to print a hexadecimal value using lower case letters (not upper case
+ letters as would typically be used)
+ - \%p to print a pointer as a hexadecimal value
+ - \%\% to print out a \% character
+
+ For \%s, \%d, \%i, \%u, \%p, \%x, and \%X, an optional number may reside
+ between the \% and the format character, which specifies the minimum number
+ of characters to use for that value; if preceded by a 0 then the extra
+ characters will be filled with zeros instead of spaces.  For example,
+ ``\%8d'' will use eight characters to print the decimal value with spaces
+ added to reach eight; ``\%08d'' will use eight characters as well but will
+ add zeroes instead of spaces.
+
+ The type of the arguments after \e pcString must match the requirements of
+ the format string.  For example, if an integer was passed where a string
+ was expected, an error of some kind will most likely occur.
+
+ \return None.
+
+******************************************************************************/
 void
 UARTprintf(const char *pcString, ...)
 {

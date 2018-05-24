@@ -290,10 +290,10 @@ TCHAR* f_gets (TCHAR* buff, int len, FIL* fp);						/* Get a string from the fil
 #define f_error(fp) ((fp)->err)
 #define f_tell(fp) ((fp)->fptr)
 #define f_size(fp) ((fp)->obj.objsize)
-#define f_rewind(fp) f_lseek((fp), 0)
-#define f_rewinddir(dp) f_readdir((dp), 0)
-#define f_rmdir(path) f_unlink(path)
-#define f_unmount(path) f_mount(0, path, 0)
+#define f_rewind(fp) (f_lseek((fp), 0))
+#define f_rewinddir(dp) (f_readdir((dp), 0))
+#define f_rmdir(path) (f_unlink(path))
+#define f_unmount(path) (f_mount(0, (path), 0))
 
 #ifndef EOF
 #define EOF (-1)
@@ -337,13 +337,13 @@ int ff_del_syncobj (FF_SYNC_t sobj);	/* Delete a sync object */
 
 
 /* File access mode and open method flags (3rd argument of f_open) */
-#define	FA_READ				0x01
-#define	FA_WRITE			0x02
-#define	FA_OPEN_EXISTING	0x00
-#define	FA_CREATE_NEW		0x04
-#define	FA_CREATE_ALWAYS	0x08
-#define	FA_OPEN_ALWAYS		0x10
-#define	FA_OPEN_APPEND		0x30
+#define	FA_READ				((BYTE)0x01)
+#define	FA_WRITE			((BYTE)0x02)
+#define	FA_OPEN_EXISTING	((BYTE)0x00)
+#define	FA_CREATE_NEW		((BYTE)0x04)
+#define	FA_CREATE_ALWAYS	((BYTE)0x08)
+#define	FA_OPEN_ALWAYS		((BYTE)0x10)
+#define	FA_OPEN_APPEND		((BYTE)0x30)
 
 /* Fast seek controls (2nd argument of f_lseek) */
 #define CREATE_LINKMAP	((FSIZE_t)0 - 1)
