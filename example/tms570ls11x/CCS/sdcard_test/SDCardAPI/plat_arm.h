@@ -92,8 +92,6 @@
 #define FILEIF_WARN_FF_INVALID_PARAM		(SDCARD_IF_WARN_FF_INVALID_PARAM)
 #define FILEIF_WARN_FF_UNKNOWN				(SDCARD_IF_WARN_FF_UNKNOWN)
 
-#define FILE FIL
-
 int FileIF_Initialize(void);
 int FileIF_CopyFileToBuffer(const char *filename, uint32_t offset, char *buffer, uint32_t *buf_size, uint32_t *file_size);
 int FileIF_IsFileAvailable(const char *filename);

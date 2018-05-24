@@ -20,7 +20,7 @@
 
 #include "sdcard_interface.h"
 #include "plat_arm.h"
-#include <stdio.h>
+//#include <stdio.h>
 #include <string.h>
 
 STATIC char sdcardif_initialized = FALSE;
@@ -79,21 +79,21 @@ int SDCardIF_Initialize(void)
  * 			SDCARD_IF_ERR_INVALID_PARAM		Invalid parameters
  */
 
-int SDCardIF_SetAudioFileBuffer(char *buffer, uint32_t buf_size)
+int SDCardIF_SetAudioFileBuffer(char *p_buffer, uint32_t buf_size)
 {
 	int ret = SDCARD_IF_OP_SUCCESS;	
 	
 	if(IsNotInitialized()){
 		ret = SDCARD_IF_ERR_NOT_INITIALIZED;
 	}
-	else if((NULL == buffer)){
+	else if((NULL == p_buffer)){
 		ret = SDCARD_IF_ERR_INVALID_PARAM;
 	}
 	else if(buf_size <= 0U){
 		ret = SDCARD_IF_ERR_INVALID_BUFFER_SIZE;
 	}
 	else{
-		audio_buffer = buffer;
+		audio_buffer = p_buffer;
 		audio_buffer_size = buf_size;
 	}
 	
@@ -111,7 +111,7 @@ int SDCardIF_PlayAudioFile(const char *filename)
 {
 	int ret = SDCARD_IF_OP_SUCCESS;
 	uint32_t amount_read = audio_buffer_size;
-	uint32_t file_size;
+	uint32_t file_size = 0U;
 	
 	if(IsNotInitialized()){
 		ret = SDCARD_IF_ERR_NOT_INITIALIZED;
@@ -120,7 +120,7 @@ int SDCardIF_PlayAudioFile(const char *filename)
 		ret = SDCARD_IF_ERR_AUDIO_BUFFER_NOT_SET;
 	}
 	else{
-		ret = FileIF_CopyFileToBuffer(filename, 0, audio_buffer, &amount_read, &file_size);
+		ret = FileIF_CopyFileToBuffer(filename, 0U, audio_buffer, &amount_read, &file_size);
 	}
 	
 	return ret;
@@ -146,6 +146,7 @@ int SDCardIF_PlayAudioFile(const char *filename)
 int SDCardIF_SetLogFile(const char* filename)
 {
 	int ret = SDCARD_IF_OP_SUCCESS;
+	size_t filename_size = 0;
 	
 	if(IsNotInitialized()){
 		ret = SDCARD_IF_ERR_NOT_INITIALIZED;
@@ -163,7 +164,9 @@ int SDCardIF_SetLogFile(const char* filename)
 			ret = FileIF_CreateFile(filename);
 		}
 		
-		memset(event_log_file,0x00,strlen(event_log_file));
+		filename_size = strlen(event_log_file);
+
+		memset(event_log_file, 0x00, filename_size);
 		memcpy(event_log_file, filename, strlen(filename));
 	}
 	
@@ -199,6 +202,9 @@ int SDCardIF_DeleteLogFile(const char* filename)
 	else{
 		ret = FileIF_DeleteFile(filename);
 		
+		/* MISRA-C:2004 12.4/R can be ignored because strcmp(filename, event_log_file)
+		 * have no side effects.
+		 */
 		if((FILEIF_OP_SUCCESS == ret) && (0 == strcmp(filename, event_log_file))){
 			memset(event_log_file, 0x00, sizeof(event_log_file));
 			memcpy(event_log_file, DEFAULT_EVENT_LOG, strlen(DEFAULT_EVENT_LOG));
@@ -237,7 +243,7 @@ int SDCardIF_GetCurrentLogFile(char *filename, uint32_t *filename_size)
 	if(IsNotInitialized()){
 		ret = SDCARD_IF_ERR_NOT_INITIALIZED;
 	}
-	else if(NULL == filename || ((uint32_t*)0) == filename_size){
+	else if((NULL == filename) || (((uint32_t*)0) == filename_size)){
 		ret = SDCARD_IF_ERR_INVALID_PARAM;
 	}
 	else if(*filename_size < strlen(event_log_file)) {
@@ -245,6 +251,10 @@ int SDCardIF_GetCurrentLogFile(char *filename, uint32_t *filename_size)
 	}
 	else{
 		memset(filename, 0x00, *filename_size);
+
+		/* (MISRA-C:2004 12.2/R) can be ignored because the order of execution
+		 * does not change the value of event_log_file
+		 */
 		memcpy(filename, event_log_file, strlen(event_log_file));
 		ret = SDCARD_IF_OP_SUCCESS;
 	}
@@ -335,7 +345,7 @@ int SDCardIF_ReadFirmwareFile(char *filename, uint32_t offset, char *buffer, uin
 int SDCardIF_LogEvent(ITSI_LOG_EVENT *event)
 {
 	int ret = SDCARD_IF_OP_SUCCESS;
-	char value[100];
+	char value[100] = {0};
 	
 	if(IsNotInitialized()){
 		ret = SDCARD_IF_ERR_NOT_INITIALIZED;
@@ -467,10 +477,10 @@ int SDCardIF_ReadEventLog(const char* filename, ITSI_LOG_EVENT *event, READ_TYPE
 			event_count_total = event_count;
 			
 			/* Handle the offset parameter */		
-			if((N_FROM_LAST == read_type) || (N_FROM_BEGINING == read_type)){
+			if((read_type == N_FROM_LAST) || (read_type == N_FROM_BEGINING)){
 				
 				/* For N_FROM_BEGINING and N_FROM_LAST verify bounds of offset */
-				if((offset > event_count) || (offset < 0)){
+				if((offset > event_count) || (offset < 0U)){
 					ret = SDCARD_IF_ERR_BUFFER_OFFSET;
 				}			
 				else{
@@ -483,8 +493,8 @@ int SDCardIF_ReadEventLog(const char* filename, ITSI_LOG_EVENT *event, READ_TYPE
 		if(FILEIF_OP_SUCCESS == ret){	
 		
 			/* If buffer is not enough, return error */
-			if(		((FULL_READ == read_type) && (event_count > *no_of_events)) || \
-					((LAST_100 != read_type )  && (*no_of_events <= 0))	){
+			if(		((read_type == FULL_READ) && (event_count > *no_of_events)) || \
+					((read_type != LAST_100)  && (*no_of_events <= 0U))	){
 						
 				*no_of_events = event_count;
 				ret = SDCARD_IF_ERR_EVENT_COUNT;
@@ -494,8 +504,8 @@ int SDCardIF_ReadEventLog(const char* filename, ITSI_LOG_EVENT *event, READ_TYPE
 		if(FILEIF_OP_SUCCESS == ret){				
 			
 			/* If LAST_100 is the read type we are expecting 100 events */
-			if(LAST_100 == read_type){
-				expected_count = 100;
+			if(read_type == LAST_100){
+				expected_count = 100U;
 			}
 			else{
 				expected_count = *no_of_events;
@@ -511,23 +521,29 @@ int SDCardIF_ReadEventLog(const char* filename, ITSI_LOG_EVENT *event, READ_TYPE
 			}
 			
 			/* Find the starting event */
-			if(LAST_100 == read_type){
-				start_line = event_count_total - read_count + 1;					
+			if(read_type == LAST_100){
+				start_line = event_count_total - read_count + 1U;
 			}
-			else if(N_FROM_LAST == read_type){
-				start_line = event_count_total - read_count + 1 - offset;	
+			else if(read_type == N_FROM_LAST){
+				start_line = event_count_total - read_count + 1U - offset;
 			}
-			else if(N_FROM_BEGINING == read_type){
-				start_line = 1 + offset;
+			else if(read_type == N_FROM_BEGINING){
+				start_line = 1U + offset;
+			}
+			else{
+			    /* FULL_READ */
 			}
 				
 			/* Copy events to the structure */		
-			for(i = 0; i<read_count; i++){
+			for(i = 0; i < (int32_t)read_count; i++){
 					
 				buffer_size = sizeof(line_buffer);
 				memset(line_buffer, 0x00, buffer_size);
 								
-				if(SDCARD_IF_OP_SUCCESS == FileIF_ReadLine(filename, i+start_line, line_buffer, &buffer_size)){
+				ret = FileIF_ReadLine(filename, (uint32_t)i+start_line, line_buffer, &buffer_size);
+
+				if(ret == SDCARD_IF_OP_SUCCESS){
+
 					DecodeEvents(&event[i], line_buffer);																				
 				}
 			}
@@ -632,7 +648,7 @@ int SDCardIF_AppendFirmwareData(const char *filename, char* data, uint32_t data_
 	
 	if(	(NULL == filename)	||
 		(NULL == data)	||
-		(data_size <= 0)){
+		(data_size <= 0U)){
 			ret = SDCARD_IF_ERR_INVALID_PARAM;
 	}
 	
@@ -655,19 +671,20 @@ int SDCardIF_AppendFirmwareData(const char *filename, char* data, uint32_t data_
 void SDCardIF_Reset(void)
 {
 	sdcardif_initialized = FALSE;
-	audio_buffer = NULL;
-	audio_buffer_size = 0;	
+	audio_buffer = (char*)NULL;
+	audio_buffer_size = 0U;
 	memset(event_log_file, 0x00, sizeof(event_log_file));
 }
 
 static char IsNotInitialized(void)
 {
-	return (FALSE == sdcardif_initialized);
+    char ret = (sdcardif_initialized == FALSE);
+	return ret;
 }
 
 static void DecodeEvents(ITSI_LOG_EVENT *event, char *line_buffer)
 {
-	int event_arr[13];
+	int event_arr[13] = {0};
 	/* potentially unsafe code. if string contains invalid characters */
 										
 	if(event && line_buffer){
@@ -686,18 +703,18 @@ static void DecodeEvents(ITSI_LOG_EVENT *event, char *line_buffer)
 					&event_arr[11],
 					&event_arr[12]);
 						
-		event->length = event_arr[0];
-		event->day = event_arr[1];
-		event->month = event_arr[2];
-		event->year = event_arr[3];
-		event->hour = event_arr[4];
-		event->minute = event_arr[5];
-		event->second = event_arr[6];
-		event->id3 = event_arr[7];
-		event->id2 = event_arr[8];
-		event->id1 = event_arr[9];
-		event->event_no = event_arr[10];
-		event->crc_msb = event_arr[11];
-		event->crc_lsb = event_arr[12];	
+		event->length = (unsigned char)event_arr[0];
+		event->day = (unsigned char)event_arr[1];
+		event->month = (unsigned char)event_arr[2];
+		event->year = (unsigned char)event_arr[3];
+		event->hour = (unsigned char)event_arr[4];
+		event->minute = (unsigned char)event_arr[5];
+		event->second = (unsigned char)event_arr[6];
+		event->id3 = (unsigned char)event_arr[7];
+		event->id2 = (unsigned char)event_arr[8];
+		event->id1 = (unsigned char)event_arr[9];
+		event->event_no = (unsigned char)event_arr[10];
+		event->crc_msb = (unsigned char)event_arr[11];
+		event->crc_lsb = (unsigned char)event_arr[12];
 	}
 }

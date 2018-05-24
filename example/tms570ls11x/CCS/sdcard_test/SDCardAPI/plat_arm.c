@@ -117,7 +117,7 @@ int FileIF_CopyFileToBuffer(const char *filename, uint32_t offset, char *buffer,
 	uint32_t amount_to_read = 0;
 	uint32_t uti = 0;
 	UINT f_read_size = 0;
-	FILE f = {0};
+	FIL f = {0};
 
 	/* Check whether initialization is done */
 	ret = CheckInitialization();
@@ -262,7 +262,7 @@ int FileIF_IsFileAvailable(const char *filename)
 {
     FRESULT res = FR_OK;
 	int ret;
-	FILE f = {0};
+	FIL f = {0};
 	
 	/* Check whether initialization is done */
 	ret = CheckInitialization();
@@ -312,7 +312,7 @@ int FileIF_CreateFile(const char *filename)
 {
     FRESULT res = FR_OK;
 	int ret;
-	FILE f = {0};
+	FIL f = {0};
 	unsigned int uti = 0;
 	FSIZE_t file_size = 0U;
 
@@ -422,7 +422,7 @@ int FileIF_GetFileSize(const char *filename, uint32_t *file_size)
 {
     FRESULT res;
 	int ret;
-	FILE f = {0};
+	FIL f = {0};
 
 	/* Check whether initialization is done */
 	ret = CheckInitialization();
@@ -479,7 +479,7 @@ int FileIF_AppendString(const char *filename, const char *string)
 {
     FRESULT res;
 	int ret = FILEIF_OP_SUCCESS;
-	FILE f = {0};
+	FIL f = {0};
 	unsigned int uti = 0;
 	FSIZE_t file_size;
 
@@ -549,7 +549,7 @@ int FileIF_GetNoOfLines(const char *filename,uint32_t *no_of_lines)
 {
     FRESULT res;
 	int ret;
-	FILE f = {0};
+	FIL f = {0};
 	char ch[2];
 	uint32_t line_count = 0U;
 	/* Check whether initialization is done */
@@ -620,7 +620,7 @@ int FileIF_ReadLine(const char *filename, uint32_t line_no, char *line_buffer, u
 {
     FRESULT res;
 	int ret = FILEIF_OP_SUCCESS;
-	FILE f = {0};
+	FIL f = {0};
 	uint32_t line_index = 0U;
 	uint32_t line_length = 0U;
 	int32_t temp_line_size = 0;
@@ -726,7 +726,7 @@ int FileIF_CopyBufferToFile(const char *filename, char *buffer, uint32_t buf_siz
     FRESULT res;
 	int ret = FILEIF_OP_SUCCESS;
 	
-	FILE f = {0};
+	FIL f = {0};
 	unsigned int copied_amount = 0;
     unsigned int uti = 0;
     FSIZE_t file_size = 0U;

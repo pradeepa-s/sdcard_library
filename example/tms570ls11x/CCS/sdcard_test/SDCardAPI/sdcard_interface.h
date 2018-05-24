@@ -11,7 +11,6 @@
 
 #ifndef _SDCARD_INTERFACE_H
 #define _SDCARD_INTERFACE_H
-#endif
 
 #include "sdcard_err_codes.h"
 #include <stdint.h>
@@ -31,19 +30,19 @@
 #endif
 
 typedef struct _ITSI_LOG_EVENT{
-	char length;
-	char day;
-	char month;
-	char year;
-	char hour;
-	char minute;
-	char second;
-	char id3;
-	char id2;
-	char id1;
-	char event_no;
-	char crc_msb;
-	char crc_lsb;
+	unsigned char length;
+	unsigned char day;
+	unsigned char month;
+	unsigned char year;
+	unsigned char hour;
+	unsigned char minute;
+	unsigned char second;
+	unsigned char id3;
+	unsigned char id2;
+	unsigned char id1;
+	unsigned char event_no;
+	unsigned char crc_msb;
+	unsigned char crc_lsb;
 } ITSI_LOG_EVENT;
 
 
@@ -73,3 +72,5 @@ int SDCardIF_CreateFirmwareFile(const char *filename);
 int SDCardIF_DeleteFirmwareFile(const char *filename);
 int SDCardIF_AppendFirmwareData(const char *filename, char* data, uint32_t data_size);
 void SDCardIF_Reset(void);
+
+#endif
