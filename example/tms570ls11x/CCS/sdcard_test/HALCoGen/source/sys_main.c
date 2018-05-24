@@ -55,7 +55,6 @@
 #include "mibspi.h"
 #include "rti.h"
 #include "uartstdio.h"
-#include "mmc-test.h"
 
 /* USER CODE END */
 
@@ -78,8 +77,11 @@ void main(void)
 /* USER CODE BEGIN (3) */
 
 #if 1
+    _enable_interrupt_();
+
     /** - Initialize LIN/SCI2 Routines to receive Command and transmit data */
     sciInit();
+    mibspiInit();
 
     UARTprintf("--> ITS SDCARD H/W Test V3.0<--\r\n ");
     UARTprintf("Type \'help\' for help.\r\n");
