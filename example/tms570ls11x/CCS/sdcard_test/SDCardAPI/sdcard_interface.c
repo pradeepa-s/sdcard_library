@@ -20,6 +20,7 @@
 
 #include "sdcard_interface.h"
 #include "plat_arm.h"
+#include <stdlib.h>
 //#include <stdio.h>
 #include <string.h>
 
@@ -32,6 +33,7 @@ STATIC char event_log_file[MAX_FILENAME_SIZE];
 
 static char IsNotInitialized(void);
 static void DecodeEvents(ITSI_LOG_EVENT *event, char *line_buffer);
+static void create_event_entry(ITSI_LOG_EVENT event, char *out_string, size_t out_string_size);
 
 /**
  * @brief Function initializes the sdcard API
@@ -356,8 +358,9 @@ int SDCardIF_LogEvent(ITSI_LOG_EVENT *event)
 	else{
 		memset(value, 0x00, sizeof(value));
 		
-		sprintf(value, "%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n",\
-							event->length, 
+		create_event_entry(*event, value, sizeof(value));
+/*		sprintf(value, "%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n",\
+							event->length,
 							event->day,
 							event->month,
 							event->year,
@@ -369,7 +372,7 @@ int SDCardIF_LogEvent(ITSI_LOG_EVENT *event)
 							event->id1,
 							event->event_no,
 							event->crc_msb,
-							event->crc_lsb);
+							event->crc_lsb);*/
 							
 		ret = FileIF_AppendString(event_log_file,value);
 						
@@ -717,4 +720,239 @@ static void DecodeEvents(ITSI_LOG_EVENT *event, char *line_buffer)
 		event->crc_msb = (unsigned char)event_arr[11];
 		event->crc_lsb = (unsigned char)event_arr[12];
 	}
+}
+
+static
+void create_event_entry(ITSI_LOG_EVENT event, char *out_string, size_t out_string_size)
+
+{
+    unsigned char output_string[100] = {0};
+    unsigned char *p_string = (unsigned char*)0;
+    unsigned char temp_val = 0U;
+    char temp_string[20] = {0};
+    uint32_t string_len = 0U;
+    uint32_t string_pos = 0U;
+
+    if((out_string != (char*)0) && (out_string_size > 0U)){
+
+        /* Length */
+
+        /* MISRA-C:2004 17.6/R can be ignored because p_string and output_string have same scope */
+        p_string = &output_string[string_pos];
+
+        temp_val = (unsigned char)event.length;
+        ltoa((long)temp_val, temp_string);
+        string_len = strlen(temp_string);
+
+        memcpy(p_string, temp_string, string_len);
+
+        string_pos = string_pos + string_len;
+
+        output_string[string_pos] = (unsigned char)',';
+        string_pos = string_pos + 1U;
+
+        /* Day */
+
+        /* MISRA-C:2004 17.6/R can be ignored because p_string and output_string have same scope */
+        p_string = &output_string[string_pos];
+
+        memset(temp_string, 0x00, (size_t)20);
+        temp_val = (unsigned char)event.day;
+        ltoa((long)temp_val, temp_string);
+        string_len = strlen(temp_string);
+
+        memcpy(p_string, temp_string, string_len);
+
+        string_pos = string_pos + string_len;
+
+        output_string[string_pos] = (unsigned char)',';
+        string_pos = string_pos + 1U;
+
+        /* Month */
+
+        /* MISRA-C:2004 17.6/R can be ignored because p_string and output_string have same scope */
+        p_string = &output_string[string_pos];
+
+        memset(temp_string, 0x00, (size_t)20);
+        temp_val = (unsigned char)event.month;
+        ltoa((long)temp_val, temp_string);
+        string_len = strlen(temp_string);
+
+        memcpy(p_string, temp_string, string_len);
+
+        string_pos = string_pos + string_len;
+
+        output_string[string_pos] = (unsigned char)',';
+        string_pos = string_pos + 1U;
+
+        /* Year */
+
+        /* MISRA-C:2004 17.6/R can be ignored because p_string and output_string have same scope */
+        p_string = &output_string[string_pos];
+
+        memset(temp_string, 0x00, (size_t)20);
+        temp_val = (unsigned char)event.year;
+        ltoa((long)temp_val, temp_string);
+        string_len = strlen(temp_string);
+
+        memcpy(p_string, temp_string, string_len);
+
+        string_pos = string_pos + string_len;
+
+        output_string[string_pos] = (unsigned char)',';
+        string_pos = string_pos + 1U;
+
+        /* Hour */
+
+        /* MISRA-C:2004 17.6/R can be ignored because p_string and output_string have same scope */
+        p_string = &output_string[string_pos];
+
+        memset(temp_string, 0x00, (size_t)20);
+        temp_val = (unsigned char)event.hour;
+        ltoa((long)temp_val, temp_string);
+        string_len = strlen(temp_string);
+
+        memcpy(p_string, temp_string, string_len);
+
+        string_pos = string_pos + string_len;
+
+        output_string[string_pos] = (unsigned char)',';
+        string_pos = string_pos + 1U;
+
+        /* Minute */
+
+        /* MISRA-C:2004 17.6/R can be ignored because p_string and output_string have same scope */
+        p_string = &output_string[string_pos];
+
+        memset(temp_string, 0x00, (size_t)20);
+        temp_val = (unsigned char)event.minute;
+        ltoa((long)temp_val, temp_string);
+        string_len = strlen(temp_string);
+
+        memcpy(p_string, temp_string, string_len);
+
+        string_pos = string_pos + string_len;
+
+        output_string[string_pos] = (unsigned char)',';
+        string_pos = string_pos + 1U;
+
+        /* Second */
+
+        /* MISRA-C:2004 17.6/R can be ignored because p_string and output_string have same scope */
+        p_string = &output_string[string_pos];
+
+        memset(temp_string, 0x00, (size_t)20);
+        temp_val = (unsigned char)event.second;
+        ltoa((long)temp_val, temp_string);
+        string_len = strlen(temp_string);
+
+        memcpy(p_string, temp_string, string_len);
+
+        string_pos = string_pos + string_len;
+
+        output_string[string_pos] = (unsigned char)',';
+        string_pos = string_pos + 1U;
+
+        /* id3 */
+
+        /* MISRA-C:2004 17.6/R can be ignored because p_string and output_string have same scope */
+        p_string = &output_string[string_pos];
+
+        memset(temp_string, 0x00, (size_t)20);
+        temp_val = (unsigned char)event.id3;
+        ltoa((long)temp_val, temp_string);
+        string_len = strlen(temp_string);
+
+        memcpy(p_string, temp_string, string_len);
+
+        string_pos = string_pos + string_len;
+
+        output_string[string_pos] = (unsigned char)',';
+        string_pos = string_pos + 1U;
+
+        /* id2 */
+
+        /* MISRA-C:2004 17.6/R can be ignored because p_string and output_string have same scope */
+        p_string = &output_string[string_pos];
+
+        memset(temp_string, 0x00, (size_t)20);
+        temp_val = (unsigned char)event.id2;
+        ltoa((long)temp_val, temp_string);
+        string_len = strlen(temp_string);
+
+        memcpy(p_string, temp_string, string_len);
+
+        string_pos = string_pos + string_len;
+
+        output_string[string_pos] = (unsigned char)',';
+        string_pos = string_pos + 1U;
+
+        /* id1 */
+
+        /* MISRA-C:2004 17.6/R can be ignored because p_string and output_string have same scope */
+        p_string = &output_string[string_pos];
+
+        memset(temp_string, 0x00, (size_t)20);
+        temp_val = (unsigned char)event.id1;
+        ltoa((long)temp_val, temp_string);
+        string_len = strlen(temp_string);
+
+        memcpy(p_string, temp_string, string_len);
+
+        string_pos = string_pos + string_len;
+
+        output_string[string_pos] = (unsigned char)',';
+        string_pos = string_pos + 1U;
+
+        /* event_no */
+
+        /* MISRA-C:2004 17.6/R can be ignored because p_string and output_string have same scope */
+        p_string = &output_string[string_pos];
+
+        memset(temp_string, 0x00, (size_t)20);
+        temp_val = (unsigned char)event.event_no;
+        ltoa((long)temp_val, temp_string);
+        string_len = strlen(temp_string);
+
+        memcpy(p_string, temp_string, string_len);
+
+        string_pos = string_pos + string_len;
+
+        output_string[string_pos] = (unsigned char)',';
+        string_pos = string_pos + 1U;
+
+        /* crc_msb */
+
+        /* MISRA-C:2004 17.6/R can be ignored because p_string and output_string have same scope */
+        p_string = &output_string[string_pos];
+
+        memset(temp_string, 0x00, (size_t)20);
+        temp_val = (unsigned char)event.crc_msb;
+        ltoa((long)temp_val, temp_string);
+        string_len = strlen(temp_string);
+
+        memcpy(p_string, temp_string, string_len);
+
+        string_pos = string_pos + string_len;
+
+        output_string[string_pos] = (unsigned char)',';
+        string_pos = string_pos + 1U;
+
+        /* crc_lsb */
+
+        /* MISRA-C:2004 17.6/R can be ignored because p_string and output_string have same scope */
+        p_string = &output_string[string_pos];
+
+        memset(temp_string, 0x00, (size_t)20);
+        temp_val = (unsigned char)event.crc_lsb;
+        ltoa((long)temp_val, temp_string);
+        string_len = strlen(temp_string);
+
+        memcpy(p_string, temp_string, string_len);
+
+        string_pos = string_pos + string_len;
+
+        memcpy(out_string, output_string, string_pos);
+    }
+
 }

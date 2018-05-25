@@ -1269,7 +1269,7 @@ int Cmd_log_event(int argc, char *argv[]) {
 		event.second = 10;
 		event.id3 = 1;
 		event.id2 = 2;
-		event.id3 = 3;
+		event.id1 = 3;
 		event.event_no = event_no_static++;
 		event.crc_lsb = 11;
 		event.crc_msb = 22;

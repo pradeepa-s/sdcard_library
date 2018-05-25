@@ -6500,8 +6500,6 @@ int f_printf (
 #endif /* !FF_FS_READONLY */
 #endif /* FF_USE_STRFUNC */
 
-
-
 #if FF_CODE_PAGE == 0
 /*-----------------------------------------------------------------------*/
 /* Set Active Codepage for the Path Name                                 */
