@@ -54,6 +54,7 @@ static bool rcvr_datablock (BYTE buff[], UINT btr);
 static bool xmit_datablock (const BYTE *buff, BYTE token);
 static BYTE send_cmd (BYTE cmd, DWORD arg);
 static BYTE send_cmd12 (void);
+void disk_timerproc (void);
 
 void mmcSelectSpi(gioPORT_t *port, mibspiBASE_t *reg, uint32_t tf_group) {
     _spiPORT = port;
@@ -712,126 +713,157 @@ DRESULT disk_write (
 }
 #endif /* _READONLY */
 
-    /*-----------------------------------------------------------------------*/
-    /* Miscellaneous Functions                                              */
-    /*-----------------------------------------------------------------------*/
+/*-----------------------------------------------------------------------*/
+/* Miscellaneous Functions                                              */
+/*-----------------------------------------------------------------------*/
 
 
-    DRESULT disk_ioctl (
-            BYTE drv,                               /* Physical drive nmuber (0) */
-            BYTE ctrl,                              /* Control code */
-            void *buff                              /* Buffer to send/receive control data */
-    )
-    {
-        DRESULT res;
-        BYTE n, csd[16], *ptr = buff;
-        WORD csize;
+DRESULT disk_ioctl (
+        BYTE drv,                               /* Physical drive nmuber (0) */
+        BYTE ctrl,                              /* Control code */
+        BYTE buff[]                              /* Buffer to send/receive control data */
+)
+{
+    DRESULT res;
+    BYTE n, csd[16] = {0}, *ptr = buff;
+    WORD csize;
 
-        if (drv) return RES_PARERR;
-
-
+    if (drv){
+        res = RES_PARERR;
+    }
+    else{
         res = RES_ERROR;
 
-
-        if (ctrl == CTRL_POWER) {
+        if (ctrl == (BYTE)CTRL_POWER) {
             switch (*ptr) {
-            case 0:                             /* Sub control code == 0 (POWER_OFF) */
-                if (chk_power())
+            case 0U:                             /* Sub control code == 0 (POWER_OFF) */
+                if (chk_power()){
                     power_off();                /* Power off */
+                }
+
                 res = RES_OK;
                 break;
-            case 1:                             /* Sub control code == 1 (POWER_ON) */
+            case 1U:                             /* Sub control code == 1 (POWER_ON) */
                 power_on();                     /* Power on */
                 res = RES_OK;
                 break;
-            case 2:                                     /* Sub control code == 2 (POWER_GET) */
-                *(ptr+1) = (BYTE)chk_power();
+            case 2U:                                     /* Sub control code == 2 (POWER_GET) */
+                buff[1] = (BYTE)chk_power();
                 res = RES_OK;
                 break;
             default :
                 res = RES_PARERR;
+                break;
             }
         }
         else {
-            if (Stat & STA_NOINIT) return RES_NOTRDY;
+            if (Stat & STA_NOINIT){
+                res = RES_NOTRDY;
+            }
+            else{
+                SELECT();                                   /* CS = L */
 
-            SELECT();                                   /* CS = L */
+                switch (ctrl) {
+                case GET_SECTOR_COUNT :                     /* Get number of sectors on the disk (DWORD) */
+                    if (send_cmd((BYTE)CMD9, 0U) == 0U){
+                        if(rcvr_datablock(csd, 16U)) {
+                            if ((csd[0] >> 6) == 1U) {    /* SDC ver 2.00 */
+                                csize = (WORD)csd[9] + (WORD)((WORD)csd[8] << 8) + 1U;
+                                *(DWORD*)buff = (DWORD)csize << 10;
+                            }
+                            else {                    /* MMC or SDC ver 1.XX */
+                                n = (BYTE)(csd[5] & 15U);
+                                n = n + ((BYTE)(csd[10] & 128U) >> 7);
+                                n = n + (BYTE)((csd[9] & 3U) << 1) + 2U;
 
-            switch (ctrl) {
-            case GET_SECTOR_COUNT :                     /* Get number of sectors on the disk (DWORD) */
-                if ((send_cmd(CMD9, 0) == 0) && rcvr_datablock(csd, 16)) {
-                    if ((csd[0] >> 6) == 1) {    /* SDC ver 2.00 */
-                        csize = csd[9] + ((WORD)csd[8] << 8) + 1;
-                        *(DWORD*)buff = (DWORD)csize << 10;
-                    } else {                    /* MMC or SDC ver 1.XX */
-                        n = (csd[5] & 15) + ((csd[10] & 128) >> 7) + ((csd[9] & 3) << 1) + 2;
-                        csize = (csd[8] >> 6) + ((WORD)csd[7] << 2) + ((WORD)(csd[6] & 3) << 10) + 1;
-                        *(DWORD*)buff = (DWORD)csize << (n - 9);
+                                csize = (WORD)((WORD)csd[8] >> 6);
+                                csize = csize + (WORD)((WORD)csd[7] << 2);
+                                csize = csize + (WORD)((WORD)((WORD)csd[6] & 3U) << 10) + 1U;
+
+                                *(DWORD*)buff = (DWORD)((DWORD)csize << (n - 9U));
+                            }
+                            res = RES_OK;
+                        }
                     }
+                    break;
+
+
+                case GET_SECTOR_SIZE :                  /* Get sectors on the disk (WORD) */
+                    *(WORD*)buff = 512U;
                     res = RES_OK;
+                    break;
+
+
+                case CTRL_SYNC :                        /* Make sure that data has been written */
+                    if (wait_ready() == 0xFFU){
+                        res = RES_OK;
+                    }
+                    break;
+
+
+                case MMC_GET_CSD :                  /* Receive CSD as a data block (16 bytes) */
+                    if (send_cmd((BYTE)CMD9, 0U) == 0U){    /* READ_CSD */
+                        if(rcvr_datablock(ptr, 16U)){
+                            res = RES_OK;
+                        }
+                    }
+                    break;
+
+
+                case MMC_GET_CID :                  /* Receive CID as a data block (16 bytes) */
+                    if (send_cmd((BYTE)CMD10, 0U) == 0U){        /* READ_CID */
+                        if(rcvr_datablock(ptr, 16U)){
+                            res = RES_OK;
+                        }
+                    }
+                    break;
+
+
+                case MMC_GET_OCR :                  /* Receive OCR as an R3 resp (4 bytes) */
+                    if (send_cmd((BYTE)CMD58, 0U) == 0U) {    /* READ_OCR */
+                        for (n = 0U; n < 4U; n++){
+                            buff[n] = rcvr_spi();
+                        }
+                        res = RES_OK;
+                    }
+                    else{
+                        res = RES_PARERR;
+                    }
+                    break;
+                default:
+                    res = RES_PARERR;
+                    break;
                 }
-                break;
 
-
-            case GET_SECTOR_SIZE :                  /* Get sectors on the disk (WORD) */
-                *(WORD*)buff = 512;
-                res = RES_OK;
-                break;
-
-
-            case CTRL_SYNC :                        /* Make sure that data has been written */
-                if (wait_ready() == 0xFF)
-                    res = RES_OK;
-                break;
-
-
-            case MMC_GET_CSD :                  /* Receive CSD as a data block (16 bytes) */
-                if (send_cmd(CMD9, 0) == 0        /* READ_CSD */
-                        && rcvr_datablock(ptr, 16))
-                    res = RES_OK;
-                break;
-
-
-            case MMC_GET_CID :                  /* Receive CID as a data block (16 bytes) */
-                if (send_cmd(CMD10, 0) == 0        /* READ_CID */
-                        && rcvr_datablock(ptr, 16))
-                    res = RES_OK;
-                break;
-
-
-            case MMC_GET_OCR :                  /* Receive OCR as an R3 resp (4 bytes) */
-                if (send_cmd(CMD58, 0) == 0) {    /* READ_OCR */
-                    for (n = 0; n < 4; n++)
-                        *ptr++ = rcvr_spi();
-                    res = RES_OK;
-                }
-
-            default:
-                res = RES_PARERR;
+                DESELECT();                         /* CS = H */
+                rcvr_spi();                         /* Idle (Release DO) */
             }
 
-            DESELECT();                         /* CS = H */
-            rcvr_spi();                         /* Idle (Release DO) */
+
         }
+    }
+    return res;
+}
 
-        return res;
+
+/*-----------------------------------------------------------------------*/
+/* Device Timer Interrupt Procedure  (Platform dependent)                */
+/*-----------------------------------------------------------------------*/
+/* This function must be called in period of 10ms                        */
+
+void disk_timerproc (void)
+{
+    /*    BYTE n, s; */
+    BYTE n;
+
+    n = Timer1;                        /* 100Hz decrement timer */
+    if (n){
+        Timer1 = --n;
+    }
+    n = Timer2;
+    if (n){
+        Timer2 = --n;
     }
 
-
-    /*-----------------------------------------------------------------------*/
-    /* Device Timer Interrupt Procedure  (Platform dependent)                */
-    /*-----------------------------------------------------------------------*/
-    /* This function must be called in period of 10ms                        */
-
-    void disk_timerproc (void)
-    {
-        /*    BYTE n, s; */
-        BYTE n;
-
-        n = Timer1;                        /* 100Hz decrement timer */
-        if (n) Timer1 = --n;
-        n = Timer2;
-        if (n) Timer2 = --n;
-
-    }
+}
 
