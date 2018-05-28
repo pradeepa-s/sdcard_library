@@ -13,7 +13,6 @@
 #include "gio.h"
 #include "spi.h"
 #include "diskio.h"
-//#include "mmc-test.h"
 #include <assert.h>
 
 /* Definitions for MMC/SDC command */
@@ -36,6 +35,10 @@
 gioPORT_t *_spiPORT = 0;
 mibspiBASE_t *_spiREG = 0;
 uint32_t _tf_group = 0;
+
+static void DESELECT (void);
+static void SELECT (void);
+static unsigned char SPI_send (unsigned char outb);
 
 void mmcSelectSpi(gioPORT_t *port, mibspiBASE_t *reg, uint32_t tf_group) {
     _spiPORT = port;
@@ -62,7 +65,7 @@ void SELECT (void)
 /*------------------------------------------------------------------------------
   Write and Read a byte on SPI interface
 ------------------------------------------------------------------------------*/
-unsigned char SPI_send (unsigned char outb) {
+static unsigned char SPI_send (unsigned char outb) {
 
     uint16_t data = outb;
 

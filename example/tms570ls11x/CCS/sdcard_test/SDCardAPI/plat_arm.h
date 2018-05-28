@@ -92,16 +92,16 @@
 #define FILEIF_WARN_FF_INVALID_PARAM		(SDCARD_IF_WARN_FF_INVALID_PARAM)
 #define FILEIF_WARN_FF_UNKNOWN				(SDCARD_IF_WARN_FF_UNKNOWN)
 
-int FileIF_Initialize(void);
-int FileIF_CopyFileToBuffer(const char *filename, uint32_t offset, char *buffer, uint32_t *buf_size, uint32_t *file_size);
-int FileIF_IsFileAvailable(const char *filename);
-int FileIF_CreateFile(const char *filename);
-int FileIF_DeleteFile(const char *filename);
-int FileIF_GetFileSize(const char *filename, uint32_t *file_size);
-int FileIF_AppendString(const char *filename, const char *string);
-int FileIF_GetNoOfLines(const char *filename,uint32_t *no_of_lines);
-int FileIF_ReadLine(const char *filename, uint32_t line_no, char *line_buffer, uint32_t *buf_size);
-int FileIF_CopyBufferToFile(const char *filename, char *buffer, uint32_t buf_size);
+int32_t FileIF_Initialize(void);
+int32_t FileIF_CopyFileToBuffer(const char *filename, uint32_t offset, char *buffer, uint32_t *buf_size, uint32_t *file_size);
+int32_t FileIF_IsFileAvailable(const char *filename);
+int32_t FileIF_CreateFile(const char *filename);
+int32_t FileIF_DeleteFile(const char *filename);
+int32_t FileIF_GetFileSize(const char *filename, uint32_t *file_size);
+int32_t FileIF_AppendString(const char *filename, const char *string);
+int32_t FileIF_GetNoOfLines(const char *filename,uint32_t *no_of_lines);
+int32_t FileIF_ReadLine(const char *filename, uint32_t line_no, char *line_buffer, uint32_t *buf_size);
+int32_t FileIF_CopyBufferToFile(const char *filename, char *buffer, uint32_t buf_size);
 
 void FileIF_Uninit(void);
 #endif

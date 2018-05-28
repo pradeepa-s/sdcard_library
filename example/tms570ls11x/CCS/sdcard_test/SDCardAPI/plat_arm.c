@@ -22,7 +22,6 @@
  */
 
 #include <stdint.h>
-#include <stdio.h>
 #include <string.h>
 #include "plat_arm.h"
 #include "ff.h"
@@ -43,7 +42,7 @@ static int32_t get_disk_utilization(uint32_t *utilization);
  * @return 	FILEIF_OP_SUCCESS				Operation success
  * @return 	FILEIF_ERR_UNINIT				Failed to initialize
  */
-int FileIF_Initialize(void)
+int32_t FileIF_Initialize(void)
 {
 	/*
 	 * Mount the file system, using logical disk 0.
@@ -52,16 +51,19 @@ int FileIF_Initialize(void)
 	 */
     static FATFS g_sFatFsObj;
     FRESULT res;
+    int32_t ret;
 
     res = f_mount(&g_sFatFsObj, "", (BYTE)1U);
 
 	if (res != FR_OK) {
-		return (FILEIF_ERR_UNINIT);
+		ret = FILEIF_ERR_UNINIT;
 	}
 	else{
 		initialized = INITIALIZED;
-		return FILEIF_OP_SUCCESS;
+		ret = FILEIF_OP_SUCCESS;
 	}
+
+	return ret;
 }
 
 /**
@@ -108,135 +110,133 @@ int FileIF_Initialize(void)
  * @warning Warning.
  */
 
-int FileIF_CopyFileToBuffer(const char *filename, uint32_t offset, char *buffer, uint32_t *buf_size, uint32_t *file_size)
+int32_t FileIF_CopyFileToBuffer(const char *filename, uint32_t offset, char *buffer, uint32_t *buf_size, uint32_t *file_size)
 {
     FRESULT res = FR_OK;
-	int ret = FILEIF_OP_SUCCESS;
-	int warn = FILEIF_OP_SUCCESS;
-	uint32_t f_size = 0;
-	uint32_t amount_to_read = 0;
-	uint32_t uti = 0;
-	UINT f_read_size = 0;
+	int32_t ret = FILEIF_OP_SUCCESS;
+	int32_t warn = FILEIF_OP_SUCCESS;
+	uint32_t actual_f_size = 0U;
+	uint32_t amount_to_read = 0U;
+	uint32_t uti = 0U;
+	uint32_t f_read_size = 0U;
 	FIL f = {0};
 
 	/* Check whether initialization is done */
 	ret = CheckInitialization();
 
-	if(FILEIF_OP_SUCCESS != ret){
-		return ret;
-	}
-	
-	ret = FileIF_GetFileSize(filename, file_size);
-	
-	if(FILEIF_OP_SUCCESS != ret){
-		return ret;
-	}
-	else if((NULL == buf_size) || (NULL == buffer)){
-		ret = FILEIF_ERR_INVALID_PARAM;
-	}
-	else if(*buf_size <= 0U) {
-		ret = FILEIF_ERR_BUFFER_SIZE;
-	}
-	else if(offset < 0U){
-		ret = FILEIF_ERR_FILE_OFFSET;
-	}
-	else{
-			
-		FileIF_GetFileSize(filename, &f_size);
-		*file_size = f_size;
-		
-		res = f_open(&f,
-		             filename,
-		             FA_READ);
-		
-		if(res == FR_OK){
-			
-			/* Set the buffer content to 0x00 */
-			memset(buffer, 0x00, *buf_size);
-			
-			amount_to_read = *buf_size;
-			
-			/* Check the offset */
-			if(offset > f_size){
-				ret = FILEIF_ERR_FILE_OFFSET;
-			}
-			else{
-										
-				/* Check the buf size */
-				if(f_size < *buf_size){
-					warn = FILEIF_WARN_BUFFER_SIZE_LARGE;
-					amount_to_read = f_size;			
-				}
-				else if(f_size > *buf_size){
-					warn = FILEIF_WARN_BUFFER_SIZE_SMALL;
-				}
-				else{
-				    /* Added for MISRA compliance */
-				}
-				
-				res = f_lseek(&f, (uint32_t)offset);
-				
-				if(res == FR_OK){
-#if 0				
-					ret = f_read(&f, buffer, amount_to_read, &f_read_size);
-					
-					if(FR_OK == ret){
-						*buf_size = f_read_size;
-					}
-				}
-#else	
-
-					uint32_t amount_read = 256;
-					uint32_t final_read_size = 0;
-					
-					while(1){
-						if(amount_to_read > 256U){
-							amount_read = 256U;
-						}
-						else{
-							amount_read = amount_to_read;
-						}
-
-						amount_to_read -= amount_read;
-
-						res = f_read(&f, buffer, amount_read, &f_read_size);
-
-						buffer += amount_read;
-
-						if(res == FR_OK){
-							final_read_size += f_read_size;
-						}
-
-						if((res != FR_OK) || (amount_to_read == 0U)){
-							break;
-						}
-					}
-
-					*buf_size = final_read_size;
-				}
-#endif				
-				f_close(&f);
-			}
-		}
-		
-		/* If file is not available translate  */
-		if((res == FR_NO_FILE) || (res == FR_NO_PATH)){
-			ret = FILEIF_ERR_FILE_NOT_AVAILABLE;
-		}
-		else{
-			ret = ff_return_code_translate(res);
-		}
-	}
-	
 	if(FILEIF_OP_SUCCESS == ret){
-		if(FILEIF_OP_SUCCESS == get_disk_utilization(&uti)){
-			ret = check_size(uti);
-		}
-	}
+	    ret = FileIF_GetFileSize(filename, file_size);
 
-	/* Check whether a warning is there. */
-	if((FILEIF_OP_SUCCESS == ret) && (warn != FILEIF_OP_SUCCESS)){
-		ret = warn;
+	    if(ret == FILEIF_OP_SUCCESS){
+
+	        if((NULL == buf_size) || (NULL == buffer)){
+                ret = FILEIF_ERR_INVALID_PARAM;
+            }
+            else if(*buf_size <= 0U) {
+                ret = FILEIF_ERR_BUFFER_SIZE;
+            }
+            else if(offset < 0U){
+                ret = FILEIF_ERR_FILE_OFFSET;
+            }
+            else{
+
+                FileIF_GetFileSize(filename, &actual_f_size);
+                *file_size = actual_f_size;
+
+                res = f_open(&f,
+                             filename,
+                             FA_READ);
+
+                if(res == FR_OK){
+
+                    /* Set the buffer content to 0x00 */
+                    memset(buffer, 0x00, *buf_size);
+
+                    amount_to_read = *buf_size;
+
+                    /* Check the offset */
+                    if(offset > actual_f_size){
+                        ret = FILEIF_ERR_FILE_OFFSET;
+                    }
+                    else{
+
+                        /* Check the buf size */
+                        if(actual_f_size < *buf_size){
+                            warn = FILEIF_WARN_BUFFER_SIZE_LARGE;
+                            amount_to_read = actual_f_size;
+                        }
+                        else if(actual_f_size > *buf_size){
+                            warn = FILEIF_WARN_BUFFER_SIZE_SMALL;
+                        }
+                        else{
+                            /* Added for MISRA compliance */
+                        }
+
+                        res = f_lseek(&f, (uint32_t)offset);
+
+                        if(res == FR_OK){
+#if 0
+                            ret = f_read(&f, buffer, amount_to_read, &f_read_size);
+
+                            if(FR_OK == ret){
+                                *buf_size = f_read_size;
+                            }
+                        }
+#else
+
+                            uint32_t amount_read = 256;
+                            uint32_t final_read_size = 0;
+
+                            while(1){
+                                if(amount_to_read > 256U){
+                                    amount_read = 256U;
+                                }
+                                else{
+                                    amount_read = amount_to_read;
+                                }
+
+                                amount_to_read -= amount_read;
+
+                                res = f_read(&f, buffer, amount_read, &f_read_size);
+
+                                buffer += amount_read;
+
+                                if(res == FR_OK){
+                                    final_read_size += f_read_size;
+                                }
+
+                                if((res != FR_OK) || (amount_to_read == 0U)){
+                                    break;
+                                }
+                            }
+
+                            *buf_size = final_read_size;
+                        }
+        #endif
+                        f_close(&f);
+                    }
+                }
+
+                /* If file is not available translate  */
+                if((res == FR_NO_FILE) || (res == FR_NO_PATH)){
+                    ret = FILEIF_ERR_FILE_NOT_AVAILABLE;
+                }
+                else{
+                    ret = ff_return_code_translate(res);
+                }
+            }
+	    }
+
+        if(FILEIF_OP_SUCCESS == ret){
+            if(FILEIF_OP_SUCCESS == get_disk_utilization(&uti)){
+                ret = check_size(uti);
+            }
+        }
+
+        /* Check whether a warning is there. */
+        if((FILEIF_OP_SUCCESS == ret) && (warn != FILEIF_OP_SUCCESS)){
+            ret = warn;
+        }
 	}
 
 	return ret;
@@ -258,32 +258,32 @@ int FileIF_CopyFileToBuffer(const char *filename, uint32_t offset, char *buffer,
  *
  *
  */
-int FileIF_IsFileAvailable(const char *filename)
+int32_t FileIF_IsFileAvailable(const char *filename)
 {
     FRESULT res = FR_OK;
-	int ret;
+	int32_t ret;
 	FIL f = {0};
 	
 	/* Check whether initialization is done */
 	ret = CheckInitialization();
 	
-	if(FILEIF_OP_SUCCESS != ret){
-		return ret;
-	}
-	if(NULL == filename){
-		ret = FILEIF_ERR_INVALID_PARAM;
-	}
-	else{
-		
-	    res = f_open(&f,filename,FA_READ);
-		
-		if(res == FR_OK){
-			ret = FILEIF_OP_SUCCESS;	
-			f_close(&f);
-		}
-		else{
-			ret = FILEIF_ERR_FILE_NOT_AVAILABLE;
-		}
+	if(FILEIF_OP_SUCCESS == ret){
+
+	    if(NULL == filename){
+            ret = FILEIF_ERR_INVALID_PARAM;
+        }
+        else{
+
+            res = f_open(&f,filename,FA_READ);
+
+            if(res == FR_OK){
+                ret = FILEIF_OP_SUCCESS;
+                f_close(&f);
+            }
+            else{
+                ret = FILEIF_ERR_FILE_NOT_AVAILABLE;
+            }
+        }
 	}
 	
 	return ret;
@@ -308,51 +308,50 @@ int FileIF_IsFileAvailable(const char *filename)
  * @note If the file is already available function will return success.
  */
 
-int FileIF_CreateFile(const char *filename)
+int32_t FileIF_CreateFile(const char *filename)
 {
     FRESULT res = FR_OK;
-	int ret;
+	int32_t ret;
 	FIL f = {0};
-	unsigned int uti = 0;
+	uint32_t uti = 0;
 	FSIZE_t file_size = 0U;
 
 	/* Check whether initialization is done */
 	ret = CheckInitialization();
 
-	if(FILEIF_OP_SUCCESS != ret){
-		return ret;
-	}
-	ret = FileIF_IsFileAvailable(filename);
-	
-	if(FILEIF_ERR_FILE_NOT_AVAILABLE == ret){
-	    res = f_open(&f,filename, FA_WRITE | FA_OPEN_ALWAYS);
-		
-		if(res == FR_OK){
-		    file_size = f_size(&f);
-		    res = f_lseek(&f, file_size);
-
-			if(res == FR_OK){
-				ret = FILEIF_OP_SUCCESS;
-				f_close(&f);
-			}
-		}
-		
-		/* If file is not available translate  */
-		if((res == FR_NO_FILE) || (res == FR_NO_PATH)){
-			ret = FILEIF_ERR_FILE_NOT_AVAILABLE;
-		}
-		else{
-			ret = ff_return_code_translate(res);
-		}
-
-	}
-
 	if(FILEIF_OP_SUCCESS == ret){
-		if(FILEIF_OP_SUCCESS == get_disk_utilization(&uti)){
-			ret = check_size(uti);
-		}
+	    ret = FileIF_IsFileAvailable(filename);
+
+        if(FILEIF_ERR_FILE_NOT_AVAILABLE == ret){
+            res = f_open(&f,filename, FA_WRITE | FA_OPEN_ALWAYS);
+
+            if(res == FR_OK){
+                file_size = f_size(&f);
+                res = f_lseek(&f, file_size);
+
+                if(res == FR_OK){
+                    ret = FILEIF_OP_SUCCESS;
+                    f_close(&f);
+                }
+            }
+
+            /* If file is not available translate  */
+            if((res == FR_NO_FILE) || (res == FR_NO_PATH)){
+                ret = FILEIF_ERR_FILE_NOT_AVAILABLE;
+            }
+            else{
+                ret = ff_return_code_translate(res);
+            }
+
+        }
+
+        if(FILEIF_OP_SUCCESS == ret){
+            if(FILEIF_OP_SUCCESS == get_disk_utilization(&uti)){
+                ret = check_size(uti);
+            }
+        }
 	}
-	
+
 	return ret;
 }
 
@@ -372,30 +371,28 @@ int FileIF_CreateFile(const char *filename)
  * 
  * @warning None
  */
-int FileIF_DeleteFile(const char *filename)
+int32_t FileIF_DeleteFile(const char *filename)
 {		
     FRESULT res = FR_OK;
-	int ret;
+	int32_t ret;
 
 	/* Check whether initialization is done */
 	ret = CheckInitialization();
 
-	if(FILEIF_OP_SUCCESS != ret){
-		return ret;
-	}
+	if(FILEIF_OP_SUCCESS == ret){
+	    ret = FileIF_IsFileAvailable(filename);
 
-	ret = FileIF_IsFileAvailable(filename);
-	
-	if(FILEIF_OP_SUCCESS == ret){	
-	    res = f_unlink(filename);
-		
-		/* If file is not available translate  */
-		if((res == FR_NO_FILE) || (res == FR_NO_PATH)){
-			ret = FILEIF_ERR_FILE_NOT_AVAILABLE;
-		}
-		else{
-			ret = ff_return_code_translate(res);
-		}
+        if(FILEIF_OP_SUCCESS == ret){
+            res = f_unlink(filename);
+
+            /* If file is not available translate  */
+            if((res == FR_NO_FILE) || (res == FR_NO_PATH)){
+                ret = FILEIF_ERR_FILE_NOT_AVAILABLE;
+            }
+            else{
+                ret = ff_return_code_translate(res);
+            }
+        }
 	}
 	
 	return ret;
@@ -418,41 +415,40 @@ int FileIF_DeleteFile(const char *filename)
  * 
  * @warning None
  */
-int FileIF_GetFileSize(const char *filename, uint32_t *file_size)
+int32_t FileIF_GetFileSize(const char *filename, uint32_t *file_size)
 {
     FRESULT res;
-	int ret;
+	int32_t ret;
 	FIL f = {0};
 
 	/* Check whether initialization is done */
 	ret = CheckInitialization();
 
-	if(FILEIF_OP_SUCCESS != ret){
-		return ret;
-	}
+	if(FILEIF_OP_SUCCESS == ret){
 
-	if((filename == ((char *)0)) || (file_size == ((uint32_t *)0))){
-		ret = FILEIF_ERR_INVALID_PARAM;
-	}
-	else{
+	    if((filename == ((char *)0)) || (file_size == ((uint32_t *)0))){
+	        ret = FILEIF_ERR_INVALID_PARAM;
+	    }
+	    else{
 
-	    res = f_open(&f,filename, FA_READ);
-			
-		if(res == FR_OK){
-			/* Get the file size */
-			*file_size = f_size(&f);
-			
-			ret = FILEIF_OP_SUCCESS;
-		}
-		
-		/* If file is not available translate  */
-		if((res == FR_NO_FILE) || (res == FR_NO_PATH)){
-			ret = FILEIF_ERR_FILE_NOT_AVAILABLE;
-		}
-		else{
-			ret = ff_return_code_translate(res);
-		}
-			
+	        res = f_open(&f,filename, FA_READ);
+
+	        if(res == FR_OK){
+	            /* Get the file size */
+	            *file_size = f_size(&f);
+
+	            ret = FILEIF_OP_SUCCESS;
+	        }
+
+	        /* If file is not available translate  */
+	        if((res == FR_NO_FILE) || (res == FR_NO_PATH)){
+	            ret = FILEIF_ERR_FILE_NOT_AVAILABLE;
+	        }
+	        else{
+	            ret = ff_return_code_translate(res);
+	        }
+
+	    }
 	}
 	
 	return ret;
@@ -475,53 +471,54 @@ int FileIF_GetFileSize(const char *filename, uint32_t *file_size)
  * 
  * @warning None
  */
-int FileIF_AppendString(const char *filename, const char *string)
+int32_t FileIF_AppendString(const char *filename, const char *string)
 {
     FRESULT res;
-	int ret = FILEIF_OP_SUCCESS;
+	int32_t ret = FILEIF_OP_SUCCESS;
 	FIL f = {0};
-	unsigned int uti = 0;
+	uint32_t uti = 0;
 	FSIZE_t file_size;
 
 	/* Check whether initialization is done */
 	ret = CheckInitialization();
 
-	if(FILEIF_OP_SUCCESS != ret){
-		return ret;
-	}
-	if((NULL == filename) || (NULL == string)){
-		ret = FILEIF_ERR_INVALID_PARAM;
-	}
-	else{
-		ret = FileIF_IsFileAvailable(filename);
-		
-		if(FILEIF_OP_SUCCESS == ret){
-		    res = f_open(&f, filename, FA_WRITE);
-
-			if(res == FR_OK){
-			    file_size = f_size(&f);
-				f_lseek(&f, file_size);
-				f_puts(string,&f);
-				f_close(&f);
-				ret = FILEIF_OP_SUCCESS;
-			}
-			
-			/* If file is not available translate  */
-			if((res == FR_NO_FILE)
-			        || (res == FR_NO_PATH)){
-				ret = FILEIF_ERR_FILE_NOT_AVAILABLE;
-			}
-			else{
-				ret = ff_return_code_translate(res);
-			}
-		}			
-	}
-
 	if(FILEIF_OP_SUCCESS == ret){
-		if(FILEIF_OP_SUCCESS == get_disk_utilization(&uti)){
-			ret = check_size(uti);
-		}
+
+	    if((NULL == filename) || (NULL == string)){
+	        ret = FILEIF_ERR_INVALID_PARAM;
+	    }
+	    else{
+	        ret = FileIF_IsFileAvailable(filename);
+
+	        if(FILEIF_OP_SUCCESS == ret){
+	            res = f_open(&f, filename, FA_WRITE);
+
+	            if(res == FR_OK){
+	                file_size = f_size(&f);
+	                f_lseek(&f, file_size);
+	                f_puts(string,&f);
+	                f_close(&f);
+	                ret = FILEIF_OP_SUCCESS;
+	            }
+
+	            /* If file is not available translate  */
+	            if((res == FR_NO_FILE)
+	                    || (res == FR_NO_PATH)){
+	                ret = FILEIF_ERR_FILE_NOT_AVAILABLE;
+	            }
+	            else{
+	                ret = ff_return_code_translate(res);
+	            }
+	        }
+	    }
+
+	    if(FILEIF_OP_SUCCESS == ret){
+	        if(FILEIF_OP_SUCCESS == get_disk_utilization(&uti)){
+	            ret = check_size(uti);
+	        }
+	    }
 	}
+
 	return ret;
 }
 
@@ -545,48 +542,48 @@ int FileIF_AppendString(const char *filename, const char *string)
  * 
  * @warning None
  */
-int FileIF_GetNoOfLines(const char *filename,uint32_t *no_of_lines)
+int32_t FileIF_GetNoOfLines(const char *filename,uint32_t *no_of_lines)
 {
     FRESULT res;
-	int ret;
+	int32_t ret;
 	FIL f = {0};
 	char ch[2];
 	uint32_t line_count = 0U;
 	/* Check whether initialization is done */
 	ret = CheckInitialization();
 
-	if(FILEIF_OP_SUCCESS != ret){
-		return ret;
+	if(FILEIF_OP_SUCCESS == ret){
+
+	    ret = FileIF_IsFileAvailable(filename);
+	    if(FILEIF_OP_SUCCESS == ret){
+	        if(NULL == no_of_lines){
+	            ret = FILEIF_ERR_INVALID_PARAM;
+	        }
+	        else{
+	            res = f_open(&f,filename, FA_READ);
+	            if(res == FR_OK){
+	                while(f_eof(&f) == 0){
+	                    f_gets(ch,2,&f);
+	                    if(ch[0] == '\n'){
+	                        line_count++;
+	                    }
+	                }
+
+	                f_close(&f);
+	                *no_of_lines = line_count;
+	            }
+
+	            /* If file is not available translate  */
+	            if((res == FR_NO_FILE) || (res == FR_NO_PATH)){
+	                ret = FILEIF_ERR_FILE_NOT_AVAILABLE;
+	            }
+	            else{
+	                ret = ff_return_code_translate(res);
+	            }
+	        }
+	    }
 	}
 
-	ret = FileIF_IsFileAvailable(filename);
-	if(FILEIF_OP_SUCCESS == ret){
-		if(NULL == no_of_lines){
-			ret = FILEIF_ERR_INVALID_PARAM;
-		}
-		else{
-		    res = f_open(&f,filename, FA_READ);
-			if(res == FR_OK){
-				while(!f_eof(&f)){
-					f_gets(ch,2,&f);
-					if(ch[0] == '\n'){
-						line_count++;
-					}
-				}
-				
-				f_close(&f);
-				*no_of_lines = line_count;
-			}
-			
-			/* If file is not available translate  */
-			if((res == FR_NO_FILE) || (res == FR_NO_PATH)){
-				ret = FILEIF_ERR_FILE_NOT_AVAILABLE;
-			}
-			else{
-				ret = ff_return_code_translate(res);
-			}
-		}		
-	}
 	
 	return ret;
 }
@@ -616,10 +613,10 @@ int FileIF_GetNoOfLines(const char *filename,uint32_t *no_of_lines)
  * @warning None
  */
 
-int FileIF_ReadLine(const char *filename, uint32_t line_no, char *line_buffer, uint32_t *buf_size)
+int32_t FileIF_ReadLine(const char *filename, uint32_t line_no, char *line_buffer, uint32_t *buf_size)
 {
     FRESULT res;
-	int ret = FILEIF_OP_SUCCESS;
+	int32_t ret = FILEIF_OP_SUCCESS;
 	FIL f = {0};
 	uint32_t line_index = 0U;
 	uint32_t line_length = 0U;
@@ -631,71 +628,71 @@ int FileIF_ReadLine(const char *filename, uint32_t line_no, char *line_buffer, u
 	ret = CheckInitialization();
 
 	if(FILEIF_OP_SUCCESS != ret){
-		return ret;
+
+	    /* Parameter validation */
+	    if((NULL == filename) || (NULL == line_buffer) || (NULL == buf_size)){
+	        ret = FILEIF_ERR_INVALID_PARAM;
+	    }
+	    else if(line_no <= 0U){
+	        ret = FILEIF_ERR_LINE_NO;
+	    }
+	    else{
+	        ret = FileIF_IsFileAvailable(filename);
+	    }
+
+	    if(FILEIF_OP_SUCCESS == ret){
+
+	        res = f_open(&f,filename,FA_READ);
+
+	        if(res == FR_OK){
+
+	            temp_line_size = (int32_t)sizeof(temp_line);
+
+	            /* Search for the line */
+	            while(f_gets(temp_line, temp_line_size, &f) != ((TCHAR*)0U)){
+
+	                line_index++;
+	                if(line_no == line_index){
+	                    line_found = 1U;
+	                    break;
+	                }
+	            }
+
+	            if(line_found){
+	                /* Verify line size */
+	                memset(line_buffer, 0x00, *buf_size);
+
+	                line_length = strlen(temp_line);
+
+	                if(line_length <= *buf_size){
+	                    /* Copy line content */
+	                    memcpy(line_buffer, temp_line, line_length);
+	                }
+	                else{
+	                    ret = FILEIF_ERR_BUFFER_SIZE;
+	                }
+
+	                /* Copy line size */
+	                *buf_size = line_length;
+	            }
+	            else{
+	                ret = FILEIF_ERR_LINE_NO;
+	            }
+
+	            f_close(&f);
+	        }
+
+	        /* If file is not available translate  */
+	        if((res == FR_NO_FILE) || (res == FR_NO_PATH)){
+	            ret = FILEIF_ERR_FILE_NOT_AVAILABLE;
+	        }
+	        else{
+	            ret = ff_return_code_translate(res);
+	        }
+	    }
+
 	}
 
-	/* Parameter validation */
-	if((NULL == filename) || (NULL == line_buffer) || (NULL == buf_size)){
-		ret = FILEIF_ERR_INVALID_PARAM;
-	}
-	else if(line_no <= 0U){
-		ret = FILEIF_ERR_LINE_NO;
-	}
-	else{
-		ret = FileIF_IsFileAvailable(filename);
-	}
-	
-	if(FILEIF_OP_SUCCESS == ret){
-		
-	    res = f_open(&f,filename,FA_READ);
-		
-		if(res == FR_OK){
-
-		    temp_line_size = (int32_t)sizeof(temp_line);
-
-			/* Search for the line */
-			while(f_gets(temp_line, temp_line_size, &f) != ((TCHAR*)0U)){
-				
-				line_index++;				
-				if(line_no == line_index){					
-					line_found = 1U;
-					break;
-				}				
-			}
-			
-			if(line_found){
-				/* Verify line size */
-				memset(line_buffer, 0x00, *buf_size);
-				
-				line_length = strlen(temp_line);
-				
-				if(line_length <= *buf_size){
-					/* Copy line content */					
-					memcpy(line_buffer, temp_line, line_length);
-				}
-				else{					
-					ret = FILEIF_ERR_BUFFER_SIZE;
-				}
-				
-				/* Copy line size */
-				*buf_size = line_length;
-			}
-			else{
-				ret = FILEIF_ERR_LINE_NO;
-			}			
-			
-			f_close(&f);
-		}
-		
-		/* If file is not available translate  */
-		if((res == FR_NO_FILE) || (res == FR_NO_PATH)){
-			ret = FILEIF_ERR_FILE_NOT_AVAILABLE;
-		}
-		else{
-			ret = ff_return_code_translate(res);
-		}
-	}
-	
 	return ret;
 }
 
@@ -721,67 +718,68 @@ int FileIF_ReadLine(const char *filename, uint32_t line_no, char *line_buffer, u
  * @warning None
  */
 
-int FileIF_CopyBufferToFile(const char *filename, char *buffer, uint32_t buf_size)
+int32_t FileIF_CopyBufferToFile(const char *filename, char *buffer, uint32_t buf_size)
 {
     FRESULT res;
-	int ret = FILEIF_OP_SUCCESS;
+	int32_t ret = FILEIF_OP_SUCCESS;
 	
 	FIL f = {0};
-	unsigned int copied_amount = 0;
-    unsigned int uti = 0;
+	uint32_t copied_amount = 0;
+    uint32_t uti = 0;
     FSIZE_t file_size = 0U;
 
 	/* Check whether initialization is done */
 	ret = CheckInitialization();
 
 	if(FILEIF_OP_SUCCESS != ret){
-		return ret;
-	}
-	if(	(NULL == filename)	||
-		(NULL == buffer)	||
-		(buf_size <= 0U)){
-		ret = FILEIF_ERR_INVALID_PARAM;
-	}
-	else{
-		ret = FileIF_IsFileAvailable(filename);
-	}
-	
-	if(FILEIF_OP_SUCCESS == ret){
-	    res = f_open(&f,filename,FA_READ | FA_WRITE);
-		
-		if(res == FR_OK){
-			
-		    file_size = f_size(&f);
 
-			/* Go to the end */
-		    res = f_lseek(&f, file_size);
+	    if( (NULL == filename)  ||
+	        (NULL == buffer)    ||
+	        (buf_size <= 0U)){
+	        ret = FILEIF_ERR_INVALID_PARAM;
+	    }
+	    else{
+	        ret = FileIF_IsFileAvailable(filename);
+	    }
 
-			if(res == FR_OK){
-			    res = f_write(&f, buffer, buf_size, &copied_amount);
+	    if(FILEIF_OP_SUCCESS == ret){
+	        res = f_open(&f,filename,FA_READ | FA_WRITE);
 
-				if(res == FR_OK){
-					if(copied_amount != buf_size){
-						ret = FILEIF_ERR_FILE_ACCESS;
-					}
-				}
-			}
-			
-			f_close(&f);
-		}
-		
-		/* If file is not available translate  */
-		if((res == FR_NO_FILE) || (res == FR_NO_PATH)){
-			ret = FILEIF_ERR_FILE_NOT_AVAILABLE;
-		}
-		else{
-			ret = ff_return_code_translate(res);
-		}
-	}
+	        if(res == FR_OK){
 
-	if(FILEIF_OP_SUCCESS == ret){
-		if(FILEIF_OP_SUCCESS == get_disk_utilization(&uti)){
-			ret = check_size(uti);
-		}
+	            file_size = f_size(&f);
+
+	            /* Go to the end */
+	            res = f_lseek(&f, file_size);
+
+	            if(res == FR_OK){
+	                res = f_write(&f, buffer, buf_size, &copied_amount);
+
+	                if(res == FR_OK){
+	                    if(copied_amount != buf_size){
+	                        ret = FILEIF_ERR_FILE_ACCESS;
+	                    }
+	                }
+	            }
+
+	            f_close(&f);
+	        }
+
+	        /* If file is not available translate  */
+	        if((res == FR_NO_FILE) || (res == FR_NO_PATH)){
+	            ret = FILEIF_ERR_FILE_NOT_AVAILABLE;
+	        }
+	        else{
+	            ret = ff_return_code_translate(res);
+	        }
+	    }
+
+	    if(FILEIF_OP_SUCCESS == ret){
+	        if(FILEIF_OP_SUCCESS == get_disk_utilization(&uti)){
+	            ret = check_size(uti);
+	        }
+	    }
+
 	}
 
 	return ret;
@@ -805,16 +803,12 @@ void FileIF_Uninit(void)
 
 /************************** Static functions **************************/
 
-static int CheckInitialization(void)
+static int32_t CheckInitialization(void)
 {
-	int ret = FILEIF_OP_SUCCESS;
+	int32_t ret = FILEIF_OP_SUCCESS;
 
 	if(NOT_INITIALIZED == initialized){
 		ret = FileIF_Initialize();
-
-		if(FILEIF_OP_SUCCESS != ret){
-			return ret;
-		}
 	}
 
 	return ret;
@@ -829,9 +823,9 @@ static int CheckInitialization(void)
  * @return	Translated return code
  */
 
-static int ff_return_code_translate(FRESULT return_code)
+static int32_t ff_return_code_translate(FRESULT return_code)
 {
-	int ret = FILEIF_OP_SUCCESS;
+	int32_t ret = FILEIF_OP_SUCCESS;
 	
 	switch(return_code){		
 		case FR_OK:						/* (0) Succeeded */
@@ -922,10 +916,10 @@ static int ff_return_code_translate(FRESULT return_code)
 }
 
 
-static int get_disk_utilization(unsigned int *utilization)
+static int32_t get_disk_utilization(uint32_t *utilization)
 {
     FRESULT res;
-	int ret = FILEIF_OP_SUCCESS;
+	int32_t ret = FILEIF_OP_SUCCESS;
 	FATFS *fs = 0;
 	DWORD fre_clust = 0, fre_sect, tot_sect;
 
@@ -967,12 +961,16 @@ static int get_disk_utilization(unsigned int *utilization)
 }
 
 
-static int check_size(unsigned int utilization)
+static int32_t check_size(uint32_t utilization)
 {
+    int32_t ret;
+
 	if(utilization >= 80U){
-		return FILEIF_WARN_EIGHTY_PERCENT;
+		ret = FILEIF_WARN_EIGHTY_PERCENT;
 	}
 	else{
-		return FILEIF_OP_SUCCESS;
+		ret = FILEIF_OP_SUCCESS;
 	}
+
+	return ret;
 }

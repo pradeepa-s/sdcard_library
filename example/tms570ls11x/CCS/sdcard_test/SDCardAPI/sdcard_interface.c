@@ -21,7 +21,6 @@
 #include "sdcard_interface.h"
 #include "plat_arm.h"
 #include <stdlib.h>
-//#include <stdio.h>
 #include <string.h>
 
 STATIC char sdcardif_initialized = FALSE;
@@ -34,6 +33,7 @@ STATIC char event_log_file[MAX_FILENAME_SIZE];
 static char IsNotInitialized(void);
 static void DecodeEvents(ITSI_LOG_EVENT *event, char *line_buffer);
 static void create_event_entry(ITSI_LOG_EVENT event, char *out_string, size_t out_string_size);
+static unsigned char string_to_val(char str[]);
 
 /**
  * @brief Function initializes the sdcard API
@@ -48,9 +48,9 @@ static void create_event_entry(ITSI_LOG_EVENT event, char *out_string, size_t ou
  * @return	Refer to sdcard_err_codes.h
  */
 
-int SDCardIF_Initialize(void)
+int32_t SDCardIF_Initialize(void)
 {
-	int ret = SDCARD_IF_OP_SUCCESS;
+	int32_t ret = SDCARD_IF_OP_SUCCESS;
 		
 	audio_buffer = (char*)0;
 	audio_buffer_size = 0U;
@@ -81,9 +81,9 @@ int SDCardIF_Initialize(void)
  * 			SDCARD_IF_ERR_INVALID_PARAM		Invalid parameters
  */
 
-int SDCardIF_SetAudioFileBuffer(char *p_buffer, uint32_t buf_size)
+int32_t SDCardIF_SetAudioFileBuffer(char *p_buffer, uint32_t buf_size)
 {
-	int ret = SDCARD_IF_OP_SUCCESS;	
+	int32_t ret = SDCARD_IF_OP_SUCCESS;
 	
 	if(IsNotInitialized()){
 		ret = SDCARD_IF_ERR_NOT_INITIALIZED;
@@ -109,9 +109,9 @@ int SDCardIF_SetAudioFileBuffer(char *p_buffer, uint32_t buf_size)
  * @return 	SDCARD_IF_OP_SUCCESS			Operation success 
  * @return	Refer to sdcard_err_codes.h
  */
-int SDCardIF_PlayAudioFile(const char *filename)
+int32_t SDCardIF_PlayAudioFile(const char *filename)
 {
-	int ret = SDCARD_IF_OP_SUCCESS;
+	int32_t ret = SDCARD_IF_OP_SUCCESS;
 	uint32_t amount_read = audio_buffer_size;
 	uint32_t file_size = 0U;
 	
@@ -145,9 +145,9 @@ int SDCardIF_PlayAudioFile(const char *filename)
  * @warning Maximum filename size is MAX_FILENAME_SIZE
  */
 
-int SDCardIF_SetLogFile(const char* filename)
+int32_t SDCardIF_SetLogFile(const char* filename)
 {
-	int ret = SDCARD_IF_OP_SUCCESS;
+	int32_t ret = SDCARD_IF_OP_SUCCESS;
 	size_t filename_size = 0;
 	
 	if(IsNotInitialized()){
@@ -191,9 +191,9 @@ int SDCardIF_SetLogFile(const char* filename)
  * @note No need to initialize the API to use this.
  * @warning Maximum filename size is MAX_FILENAME_SIZE
  */
-int SDCardIF_DeleteLogFile(const char* filename)
+int32_t SDCardIF_DeleteLogFile(const char* filename)
 {
-	int ret = 0;
+	int32_t ret = 0;
 	
 	if(NULL == filename){
 		ret = SDCARD_IF_ERR_INVALID_PARAM;
@@ -222,8 +222,8 @@ int SDCardIF_DeleteLogFile(const char* filename)
  * There can be multiple log files in the system. This API can be used to
  * check what is the current log file in use. 
  * 
- * @param filename[in] 				Buffer to copy the filename
- * @param filename_size[inout] 	Buffer size
+ * @param filename[out] 			Buffer to copy the filename
+ * @param filename_size[in] 	    Buffer size
  * 
  * @return 	SDCARD_IF_OP_SUCCESS				Operation success
  * @return 	SDCARD_IF_ERR_NOT_INITIALIZED		Init function was not called
@@ -238,9 +238,9 @@ int SDCardIF_DeleteLogFile(const char* filename)
  * 
  * @warning None
  */
-int SDCardIF_GetCurrentLogFile(char *filename, uint32_t *filename_size)
+int32_t SDCardIF_GetCurrentLogFile(char *filename, uint32_t *filename_size)
 {
-	int ret;
+	int32_t ret;
 	
 	if(IsNotInitialized()){
 		ret = SDCARD_IF_ERR_NOT_INITIALIZED;
@@ -257,7 +257,8 @@ int SDCardIF_GetCurrentLogFile(char *filename, uint32_t *filename_size)
 		/* (MISRA-C:2004 12.2/R) can be ignored because the order of execution
 		 * does not change the value of event_log_file
 		 */
-		memcpy(filename, event_log_file, strlen(event_log_file));
+		*filename_size = strlen(event_log_file);
+		memcpy(filename, event_log_file, *filename_size);
 		ret = SDCARD_IF_OP_SUCCESS;
 	}
 	
@@ -301,9 +302,9 @@ int SDCardIF_GetCurrentLogFile(char *filename, uint32_t *filename_size)
  * 
  * @warning Do not treat warnings as errors.
  */
-int SDCardIF_ReadFirmwareFile(char *filename, uint32_t offset, char *buffer, uint32_t *buf_size, uint32_t *file_size)
+int32_t SDCardIF_ReadFirmwareFile(const char *filename, uint32_t offset, char *buffer, uint32_t *buf_size, uint32_t *file_size)
 {
-	int ret;	
+	int32_t ret;
 	
 	/* Read file size */
 	ret = FileIF_GetFileSize(filename, file_size);
@@ -344,9 +345,9 @@ int SDCardIF_ReadFirmwareFile(char *filename, uint32_t offset, char *buffer, uin
  * @note 	@SDCardIF_Initialize function must be called prior to 
  * 			using this API.
  */
-int SDCardIF_LogEvent(ITSI_LOG_EVENT *event)
+int32_t SDCardIF_LogEvent(const ITSI_LOG_EVENT *event)
 {
-	int ret = SDCARD_IF_OP_SUCCESS;
+	int32_t ret = SDCARD_IF_OP_SUCCESS;
 	char value[100] = {0};
 	
 	if(IsNotInitialized()){
@@ -359,20 +360,6 @@ int SDCardIF_LogEvent(ITSI_LOG_EVENT *event)
 		memset(value, 0x00, sizeof(value));
 		
 		create_event_entry(*event, value, sizeof(value));
-/*		sprintf(value, "%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n",\
-							event->length,
-							event->day,
-							event->month,
-							event->year,
-							event->hour,
-							event->minute,
-							event->second,
-							event->id3,
-							event->id2,
-							event->id1,
-							event->event_no,
-							event->crc_msb,
-							event->crc_lsb);*/
 							
 		ret = FileIF_AppendString(event_log_file,value);
 						
@@ -394,9 +381,9 @@ int SDCardIF_LogEvent(ITSI_LOG_EVENT *event)
  * 
  * @warning None
  */
-int SDCardIF_GetEventCount(const char* filename, uint32_t *count)
+int32_t SDCardIF_GetEventCount(const char* filename, uint32_t *count)
 {
-	int ret = SDCARD_IF_OP_SUCCESS;
+	int32_t ret = SDCARD_IF_OP_SUCCESS;
 	
 	if(count == NULL){
 		ret = SDCARD_IF_ERR_INVALID_PARAM;
@@ -448,15 +435,15 @@ int SDCardIF_GetEventCount(const char* filename, uint32_t *count)
  * 
  */
 
-int SDCardIF_ReadEventLog(const char* filename, ITSI_LOG_EVENT *event, READ_TYPE read_type, uint32_t *no_of_events, uint32_t offset)
+int32_t SDCardIF_ReadEventLog(const char* filename, ITSI_LOG_EVENT event[], READ_TYPE read_type, uint32_t *no_of_events, uint32_t offset)
 {
-	int ret = SDCARD_IF_OP_SUCCESS;
+	int32_t ret = SDCARD_IF_OP_SUCCESS;
 	uint32_t event_count = 0;
 	uint32_t event_count_total = 0;
 	uint32_t expected_count = 0;
 	uint32_t read_count = 0;
 	uint32_t start_line = 1;
-	int i = 0;	
+	int32_t i = 0;
 	char line_buffer[64];
 	uint32_t buffer_size = sizeof(line_buffer);
 	
@@ -525,9 +512,15 @@ int SDCardIF_ReadEventLog(const char* filename, ITSI_LOG_EVENT *event, READ_TYPE
 			
 			/* Find the starting event */
 			if(read_type == LAST_100){
+			    /*
+			     * MISRA-C:2004 12.1/A can be ignored because the arithmatic operation has no effect from the operator precedence
+			     */
 				start_line = event_count_total - read_count + 1U;
 			}
 			else if(read_type == N_FROM_LAST){
+			    /*
+			     * MISRA-C:2004 12.1/A can be ignored because the arithmatic operation has no effect from the operator precedence
+			     */
 				start_line = event_count_total - read_count + 1U - offset;
 			}
 			else if(read_type == N_FROM_BEGINING){
@@ -578,9 +571,9 @@ int SDCardIF_ReadEventLog(const char* filename, ITSI_LOG_EVENT *event, READ_TYPE
  * 			ie: without calling @SDCardIF_Initialize
  */
 
-int SDCardIF_CreateFirmwareFile(const char *filename)
+int32_t SDCardIF_CreateFirmwareFile(const char *filename)
 {
-	int ret = SDCARD_IF_OP_SUCCESS;
+	int32_t ret = SDCARD_IF_OP_SUCCESS;
 	
 	if(NULL == filename){
 		ret = SDCARD_IF_ERR_INVALID_PARAM;
@@ -612,9 +605,9 @@ int SDCardIF_CreateFirmwareFile(const char *filename)
  * 			ie: without calling @SDCardIF_Initialize
  */
 
-int SDCardIF_DeleteFirmwareFile(const char *filename)
+int32_t SDCardIF_DeleteFirmwareFile(const char *filename)
 {
-	int ret = SDCARD_IF_OP_SUCCESS;
+	int32_t ret = SDCARD_IF_OP_SUCCESS;
 	
 	if(NULL == filename){
 		ret = SDCARD_IF_ERR_INVALID_PARAM;
@@ -645,9 +638,9 @@ int SDCardIF_DeleteFirmwareFile(const char *filename)
  * 
  */
  
-int SDCardIF_AppendFirmwareData(const char *filename, char* data, uint32_t data_size)
+int32_t SDCardIF_AppendFirmwareData(const char *filename, char* data, uint32_t data_size)
 {		
-	int ret = SDCARD_IF_OP_SUCCESS;
+	int32_t ret = SDCARD_IF_OP_SUCCESS;
 	
 	if(	(NULL == filename)	||
 		(NULL == data)	||
@@ -685,41 +678,88 @@ static char IsNotInitialized(void)
 	return ret;
 }
 
-static void DecodeEvents(ITSI_LOG_EVENT *event, char *line_buffer)
+static
+void DecodeEvents(ITSI_LOG_EVENT *event, char *line_buffer)
 {
-	int event_arr[13] = {0};
-	/* potentially unsafe code. if string contains invalid characters */
-										
-	if(event && line_buffer){
-		sscanf((const char*)line_buffer, "%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n",
-					&event_arr[0],
-					&event_arr[1],
-					&event_arr[2],
-					&event_arr[3],
-					&event_arr[4],
-					&event_arr[5],
-					&event_arr[6],
-					&event_arr[7],
-					&event_arr[8],
-					&event_arr[9],
-					&event_arr[10],
-					&event_arr[11],
-					&event_arr[12]);
-						
-		event->length = (unsigned char)event_arr[0];
-		event->day = (unsigned char)event_arr[1];
-		event->month = (unsigned char)event_arr[2];
-		event->year = (unsigned char)event_arr[3];
-		event->hour = (unsigned char)event_arr[4];
-		event->minute = (unsigned char)event_arr[5];
-		event->second = (unsigned char)event_arr[6];
-		event->id3 = (unsigned char)event_arr[7];
-		event->id2 = (unsigned char)event_arr[8];
-		event->id1 = (unsigned char)event_arr[9];
-		event->event_no = (unsigned char)event_arr[10];
-		event->crc_msb = (unsigned char)event_arr[11];
-		event->crc_lsb = (unsigned char)event_arr[12];
-	}
+    const char delim[2] = ",";
+    char *tokens = (char*)0;
+    int32_t val = 0;
+    unsigned char index = 0U;
+
+    if(line_buffer != (char*)0){
+
+        tokens = strtok(line_buffer, delim);
+
+        while(tokens != (char*)0){
+            val = (int32_t)string_to_val(tokens);
+
+            if(index == 0U){
+                event->length = (unsigned char)val;
+            }else if(index == 1U){
+                event->day = (unsigned char)val;
+            }else if(index == 2U){
+                event->month = (unsigned char)val;
+            }else if(index == 3U){
+                event->year = (unsigned char)val;
+            }else if(index == 4U){
+                event->hour = (unsigned char)val;
+            }else if(index == 5U){
+                event->minute = (unsigned char)val;
+            }else if(index == 6U){
+                event->second = (unsigned char)val;
+            }else if(index == 7U){
+                event->id3 = (unsigned char)val;
+            }else if(index == 8U){
+                event->id2 = (unsigned char)val;
+            }else if(index == 9U){
+                event->id1 = (unsigned char)val;
+            }else if(index == 10U){
+                event->event_no = (unsigned char)val;
+            }else if(index == 11U){
+                event->crc_msb = (unsigned char)val;
+            }else if(index == 12U){
+                event->crc_lsb = (unsigned char)val;
+            }else{
+            }
+
+            index = index + 1U;
+
+            tokens = strtok((char*)0, delim);
+        }
+    }
+}
+
+static
+unsigned char string_to_val(char str[])
+{
+    /* Maximum value is 255 */
+    size_t str_size = strlen(str);
+    const unsigned char zero_ascii = (unsigned char)'0';
+    unsigned char ones_pos = 0U;
+    unsigned char tenth_pos = 0U;
+    unsigned char hundredth_pos = 0U;
+    unsigned char final_val = 0U;
+
+    if(str != (char*)0){
+        if(str_size == 1U){
+            ones_pos = (unsigned char)str[0] - zero_ascii;
+        }
+        else if(str_size == 2U){
+            ones_pos = (unsigned char)str[1] - zero_ascii;
+            tenth_pos = (unsigned char)str[0] - zero_ascii;
+        }
+        else if(str_size == 3U){
+            ones_pos = (unsigned char)str[2] - zero_ascii;
+            tenth_pos = (unsigned char)str[1] - zero_ascii;
+            hundredth_pos = (unsigned char)str[0] - zero_ascii;
+        }
+        else{
+        }
+    }
+
+    final_val = ones_pos + (tenth_pos * 10U) + (hundredth_pos * 100U);
+
+    return final_val;
 }
 
 static
@@ -741,7 +781,7 @@ void create_event_entry(ITSI_LOG_EVENT event, char *out_string, size_t out_strin
         p_string = &output_string[string_pos];
 
         temp_val = (unsigned char)event.length;
-        ltoa((long)temp_val, temp_string);
+        ltoa((int32_t)temp_val, temp_string);
         string_len = strlen(temp_string);
 
         memcpy(p_string, temp_string, string_len);
@@ -758,7 +798,7 @@ void create_event_entry(ITSI_LOG_EVENT event, char *out_string, size_t out_strin
 
         memset(temp_string, 0x00, (size_t)20);
         temp_val = (unsigned char)event.day;
-        ltoa((long)temp_val, temp_string);
+        ltoa((int32_t)temp_val, temp_string);
         string_len = strlen(temp_string);
 
         memcpy(p_string, temp_string, string_len);
@@ -775,7 +815,7 @@ void create_event_entry(ITSI_LOG_EVENT event, char *out_string, size_t out_strin
 
         memset(temp_string, 0x00, (size_t)20);
         temp_val = (unsigned char)event.month;
-        ltoa((long)temp_val, temp_string);
+        ltoa((int32_t)temp_val, temp_string);
         string_len = strlen(temp_string);
 
         memcpy(p_string, temp_string, string_len);
@@ -792,7 +832,7 @@ void create_event_entry(ITSI_LOG_EVENT event, char *out_string, size_t out_strin
 
         memset(temp_string, 0x00, (size_t)20);
         temp_val = (unsigned char)event.year;
-        ltoa((long)temp_val, temp_string);
+        ltoa((int32_t)temp_val, temp_string);
         string_len = strlen(temp_string);
 
         memcpy(p_string, temp_string, string_len);
@@ -809,7 +849,7 @@ void create_event_entry(ITSI_LOG_EVENT event, char *out_string, size_t out_strin
 
         memset(temp_string, 0x00, (size_t)20);
         temp_val = (unsigned char)event.hour;
-        ltoa((long)temp_val, temp_string);
+        ltoa((int32_t)temp_val, temp_string);
         string_len = strlen(temp_string);
 
         memcpy(p_string, temp_string, string_len);
@@ -826,7 +866,7 @@ void create_event_entry(ITSI_LOG_EVENT event, char *out_string, size_t out_strin
 
         memset(temp_string, 0x00, (size_t)20);
         temp_val = (unsigned char)event.minute;
-        ltoa((long)temp_val, temp_string);
+        ltoa((int32_t)temp_val, temp_string);
         string_len = strlen(temp_string);
 
         memcpy(p_string, temp_string, string_len);
@@ -843,7 +883,7 @@ void create_event_entry(ITSI_LOG_EVENT event, char *out_string, size_t out_strin
 
         memset(temp_string, 0x00, (size_t)20);
         temp_val = (unsigned char)event.second;
-        ltoa((long)temp_val, temp_string);
+        ltoa((int32_t)temp_val, temp_string);
         string_len = strlen(temp_string);
 
         memcpy(p_string, temp_string, string_len);
@@ -860,7 +900,7 @@ void create_event_entry(ITSI_LOG_EVENT event, char *out_string, size_t out_strin
 
         memset(temp_string, 0x00, (size_t)20);
         temp_val = (unsigned char)event.id3;
-        ltoa((long)temp_val, temp_string);
+        ltoa((int32_t)temp_val, temp_string);
         string_len = strlen(temp_string);
 
         memcpy(p_string, temp_string, string_len);
@@ -877,7 +917,7 @@ void create_event_entry(ITSI_LOG_EVENT event, char *out_string, size_t out_strin
 
         memset(temp_string, 0x00, (size_t)20);
         temp_val = (unsigned char)event.id2;
-        ltoa((long)temp_val, temp_string);
+        ltoa((int32_t)temp_val, temp_string);
         string_len = strlen(temp_string);
 
         memcpy(p_string, temp_string, string_len);
@@ -894,7 +934,7 @@ void create_event_entry(ITSI_LOG_EVENT event, char *out_string, size_t out_strin
 
         memset(temp_string, 0x00, (size_t)20);
         temp_val = (unsigned char)event.id1;
-        ltoa((long)temp_val, temp_string);
+        ltoa((int32_t)temp_val, temp_string);
         string_len = strlen(temp_string);
 
         memcpy(p_string, temp_string, string_len);
@@ -911,7 +951,7 @@ void create_event_entry(ITSI_LOG_EVENT event, char *out_string, size_t out_strin
 
         memset(temp_string, 0x00, (size_t)20);
         temp_val = (unsigned char)event.event_no;
-        ltoa((long)temp_val, temp_string);
+        ltoa((int32_t)temp_val, temp_string);
         string_len = strlen(temp_string);
 
         memcpy(p_string, temp_string, string_len);
@@ -928,7 +968,7 @@ void create_event_entry(ITSI_LOG_EVENT event, char *out_string, size_t out_strin
 
         memset(temp_string, 0x00, (size_t)20);
         temp_val = (unsigned char)event.crc_msb;
-        ltoa((long)temp_val, temp_string);
+        ltoa((int32_t)temp_val, temp_string);
         string_len = strlen(temp_string);
 
         memcpy(p_string, temp_string, string_len);
@@ -945,7 +985,7 @@ void create_event_entry(ITSI_LOG_EVENT event, char *out_string, size_t out_strin
 
         memset(temp_string, 0x00, (size_t)20);
         temp_val = (unsigned char)event.crc_lsb;
-        ltoa((long)temp_val, temp_string);
+        ltoa((int32_t)temp_val, temp_string);
         string_len = strlen(temp_string);
 
         memcpy(p_string, temp_string, string_len);
