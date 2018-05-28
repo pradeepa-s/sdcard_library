@@ -15,6 +15,8 @@
 #include "diskio.h"
 #include <assert.h>
 
+#define _READONLY   (0)
+
 /* Definitions for MMC/SDC command */
 #define CMD0    (0x40+0)    /* GO_IDLE_STATE */
 #define CMD1    (0x40+1)    /* SEND_OP_COND */
@@ -39,6 +41,19 @@ uint32_t _tf_group = 0;
 static void DESELECT (void);
 static void SELECT (void);
 static unsigned char SPI_send (unsigned char outb);
+static void xmit_spi(BYTE dat);
+static BYTE rcvr_spi (void);
+static void rcvr_spi_m (BYTE *dst);
+static BYTE wait_ready (void);
+static void send_initial_clock_train(void);
+static void power_on (void);
+static void set_max_speed(void);
+static void power_off (void);
+static int chk_power(void);
+static bool rcvr_datablock (BYTE buff[], UINT btr);
+static bool xmit_datablock (const BYTE *buff, BYTE token);
+static BYTE send_cmd (BYTE cmd, DWORD arg);
+static BYTE send_cmd12 (void);
 
 void mmcSelectSpi(gioPORT_t *port, mibspiBASE_t *reg, uint32_t tf_group) {
     _spiPORT = port;
@@ -50,7 +65,7 @@ void mmcSelectSpi(gioPORT_t *port, mibspiBASE_t *reg, uint32_t tf_group) {
 static
 void DESELECT (void)
 {
-    _spiPORT->DSET = 0x01;        /* SCS[0] = high */
+    _spiPORT->DSET = 0x01U;        /* SCS[0] = high */
 }
 
 /* de-asserts the CS pin to the card */
@@ -59,7 +74,7 @@ void SELECT (void)
 {
     assert(_spiPORT); /* call mmcSelectSpi(gioPORT_t *port, spiBASE_t *reg) first */
     assert(_spiREG); /* call mmcSelectSpi(gioPORT_t *port, spiBASE_t *reg) first */
-    _spiPORT-> DCLR = 0x01;       /* SCS[0] = low */
+    _spiPORT-> DCLR = 0x01U;       /* SCS[0] = low */
 }
 
 /*------------------------------------------------------------------------------
@@ -69,12 +84,15 @@ static unsigned char SPI_send (unsigned char outb) {
 
     uint16_t data = outb;
 
-    while ((_spiREG->FLG & 0x0200) == 0); /* Wait until TXINTFLG is set for previous transmission */
-    /*_spiREG->DAT1 = outb | 0x100D0000;     transmit register address */
+    while ((_spiREG->FLG & (uint32_t)0x0200) == 0U){ /* Wait until TXINTFLG is set for previous transmission */
+    }
+
     mibspiSetData(_spiREG, _tf_group, &data);
     mibspiTransfer(_spiREG,_tf_group);
 
-    while(!(mibspiIsTransferComplete(_spiREG, _tf_group)));
+    while(!(mibspiIsTransferComplete(_spiREG, _tf_group))){
+
+    }
 
     /*while ((_spiREG->FLG & 0x0100) == 0);  Wait until RXINTFLG is set when new value is received */
     return((unsigned char)_spiREG->BUF);  /* Return received value */
@@ -104,17 +122,21 @@ BYTE PowerFlag = 0;                     /* indicates if "power" is on */
 static
 void xmit_spi(BYTE dat)
 {
-    unsigned int ui32RcvDat;
+    uint32_t ui32RcvDat;
     uint16_t data = 0;
 
     data = dat; /* | 0x100D0000; */
 
-    while ((_spiREG->FLG & 0x0200) == 0);           /* Wait until TXINTFLG is set for previous transmission */
+    while ((_spiREG->FLG & (uint32_t)0x0200) == 0U){           /* Wait until TXINTFLG is set for previous transmission */
+
+    }
 
     mibspiSetData(_spiREG, _tf_group, &data);
     mibspiTransfer(_spiREG,_tf_group);
 
-    while(!(mibspiIsTransferComplete(_spiREG, _tf_group)));
+    while(!(mibspiIsTransferComplete(_spiREG, _tf_group))){
+
+    }
 
     /*_spiREG->DAT1 = dat | 0x100D0000;             * transmit register address */
 
@@ -125,259 +147,298 @@ void xmit_spi(BYTE dat)
 /*
  * Receive a byte from MMC via SPI  (Platform dependent
  */
-    static
-    BYTE rcvr_spi (void)
-    {
-        uint16_t rx_data=0;
-        uint16_t tx_data = 0xffff;
+static
+BYTE rcvr_spi (void)
+{
+    uint16_t rx_data=0;
+    uint16_t tx_data = 0xffff;
 
-        while ((mibspiREG5->FLG & 0x0200) == 0);                /* Wait until TXINTFLG is set for previous transmission */
-        mibspiSetData(_spiREG, _tf_group, &tx_data);
-        mibspiTransfer(_spiREG,_tf_group);
-        /*mibspiREG5->DAT1 = 0xFF | 0x100D0000;    * transmit register address */
+    while ((mibspiREG5->FLG & (uint32_t)0x0200) == 0U){                /* Wait until TXINTFLG is set for previous transmission */
 
-        while(!(mibspiIsTransferComplete(_spiREG, _tf_group)));
-
-        mibspiGetData(_spiREG,_tf_group,&rx_data);
-
-        /*while ((mibspiREG5->FLG & 0x0100) == 0);              * Wait until RXINTFLG is set when new value is received */
-        /*return((unsigned char)mibspiREG5->BUF);               * Return received value */
-        return((unsigned char)rx_data);                         /* Return received value */
     }
 
-    static
-    void rcvr_spi_m (BYTE *dst)
-    {
-        *dst = rcvr_spi();
+    mibspiSetData(_spiREG, _tf_group, &tx_data);
+    mibspiTransfer(_spiREG,_tf_group);
+    /*mibspiREG5->DAT1 = 0xFF | 0x100D0000;    * transmit register address */
+
+    while(!(mibspiIsTransferComplete(_spiREG, _tf_group))){
+
     }
 
-    /*-----------------------------------------------------------------------*/
-    /* Wait for card ready                                                  */
-    /*-----------------------------------------------------------------------*/
+    mibspiGetData(_spiREG,_tf_group,&rx_data);
 
-    static
-    BYTE wait_ready (void)
+    /*while ((mibspiREG5->FLG & 0x0100) == 0);              * Wait until RXINTFLG is set when new value is received */
+    /*return((unsigned char)mibspiREG5->BUF);               * Return received value */
+    return((unsigned char)rx_data);                         /* Return received value */
+}
+
+static
+void rcvr_spi_m (BYTE *dst)
+{
+    *dst = rcvr_spi();
+}
+
+/*-----------------------------------------------------------------------*/
+/* Wait for card ready                                                  */
+/*-----------------------------------------------------------------------*/
+
+static
+BYTE wait_ready (void)
+{
+    BYTE res;
+    Timer2 = 50U;                /* Wait for ready in timeout of 500ms */
+    rcvr_spi();
+    do{
+        res = rcvr_spi();
+    }while ((res != 0xFFU) && Timer2);
+
+    return res;
+}
+
+/*-----------------------------------------------------------------------*/
+/* Send 80 or so clock transitions with CS and DI held high. This is     */
+/* required after card power up to get it into SPI mode                  */
+/*-----------------------------------------------------------------------*/
+static
+void send_initial_clock_train(void)
+{
+    uint32_t i;
+
+    /* Ensure CS is held high. */
+    DESELECT();
+
+    /* Send 10 bytes over the SSI. This causes the clock to wiggle the */
+    /* required number of times. */
+    for(i = 0U ; i < 10U ; i++)
     {
-        BYTE res;
-        Timer2 = 50;                /* Wait for ready in timeout of 500ms */
-        rcvr_spi();
-        do
-            res = rcvr_spi();
-        while ((res != 0xFF) && Timer2);
-
-        return res;
+        /* Write DUMMY data */
+        /* FIFO. */
+        SPI_send (0xFFU);
     }
+}
 
-    /*-----------------------------------------------------------------------*/
-    /* Send 80 or so clock transitions with CS and DI held high. This is     */
-    /* required after card power up to get it into SPI mode                  */
-    /*-----------------------------------------------------------------------*/
-    static
-    void send_initial_clock_train(void)
-    {
-        unsigned int i;
+/*-----------------------------------------------------------------------*/
+/* Power Control  (Platform dependent)                                  */
+/*-----------------------------------------------------------------------*/
+/* When the target system does not support socket power control, there  */
+/* is nothing to do in these functions and chk_power always returns 1.  */
 
+static
+void power_on (void)
+{
+    /*
+     * This doesn't really turn the power on, but initializes the
+     * SPI port and pins needed to talk to the card.
+     */
+    /*mibspiInit(); */
 
-        /* Ensure CS is held high. */
-        DESELECT();
+    /* Set DI and CS high and apply more than 74 pulses to SCLK for the card */
+    /* to be able to accept a native command. */
+    send_initial_clock_train();
 
-        /* Send 10 bytes over the SSI. This causes the clock to wiggle the */
-        /* required number of times. */
-        for(i = 0 ; i < 10 ; i++)
-        {
-            /* Write DUMMY data */
-            /* FIFO. */
-            SPI_send (0xFF);
-        }
+    PowerFlag = 1U;
+}
+
+/* set the SPI speed to the max setting */
+static
+void set_max_speed(void)
+{
+    /* todo jc 20151004 - check if this is portable between hercules controllers/clock speeds */
+    mibspiREG5->FMT0 &= 0xFFFF00FFU;                 /* mask out baudrate prescaler */
+    /* Max. 5 MBit used for Data Transfer. */
+    mibspiREG5->FMT0 |= (uint32_t)5U << 8U;                     /* baudrate prescale 10MHz / (1+1) = 5MBit */
+}
+
+static
+void power_off (void)
+{
+    PowerFlag = 0U;
+}
+
+static
+int32_t chk_power(void)                                 /* Socket power state: 0=off, 1=on */
+{
+    return (int32_t)PowerFlag;
+}
+
+/*-----------------------------------------------------------------------*/
+/* Receive a data packet from MMC                                        */
+/*-----------------------------------------------------------------------*/
+
+static
+bool rcvr_datablock (
+        BYTE buff[],                                 /* Data buffer to store received data */
+        UINT btr                                    /* Byte count (must be even number) */
+)
+{
+    bool ret = TRUE;
+    BYTE token;
+    uint32_t i = 0U;
+
+    Timer1 = 100U;
+    do {                                            /* Wait for data packet in timeout of 100ms */
+        token = rcvr_spi();
+    } while ((token == 0xFFU) && Timer1);
+
+    if(token != 0xFEU){
+        ret = (bool)FALSE;                 /* If not valid data token, retutn with error */
     }
-
-    /*-----------------------------------------------------------------------*/
-    /* Power Control  (Platform dependent)                                  */
-    /*-----------------------------------------------------------------------*/
-    /* When the target system does not support socket power control, there  */
-    /* is nothing to do in these functions and chk_power always returns 1.  */
-
-    static
-    void power_on (void)
-    {
-        /*
-         * This doesn't really turn the power on, but initializes the
-         * SPI port and pins needed to talk to the card.
-         */
-        /*mibspiInit(); */
-
-        /* Set DI and CS high and apply more than 74 pulses to SCLK for the card */
-        /* to be able to accept a native command. */
-        send_initial_clock_train();
-
-        PowerFlag = 1;
-    }
-
-    /* set the SPI speed to the max setting */
-    static
-    void set_max_speed(void)
-    {
-        /* todo jc 20151004 - check if this is portable between hercules controllers/clock speeds */
-        mibspiREG5->FMT0 &= 0xFFFF00FF;                 /* mask out baudrate prescaler */
-        /* Max. 5 MBit used for Data Transfer. */
-        mibspiREG5->FMT0 |= 5 << 8;                     /* baudrate prescale 10MHz / (1+1) = 5MBit */
-    }
-
-    static
-    void power_off (void)
-    {
-        PowerFlag = 0;
-    }
-
-    static
-    int chk_power(void)                                 /* Socket power state: 0=off, 1=on */
-    {
-        return PowerFlag;
-    }
-
-    /*-----------------------------------------------------------------------*/
-    /* Receive a data packet from MMC                                        */
-    /*-----------------------------------------------------------------------*/
-
-    static
-    bool rcvr_datablock (
-            BYTE *buff,                                 /* Data buffer to store received data */
-            UINT btr                                    /* Byte count (must be even number) */
-    )
-    {
-        BYTE token;
-
-        Timer1 = 100;
-        do {                                            /* Wait for data packet in timeout of 100ms */
-            token = rcvr_spi();
-        } while ((token == 0xFF) && Timer1);
-        if(token != 0xFE) return FALSE;                 /* If not valid data token, retutn with error */
-
+    else{
         do {                                            /* Receive the data block into buffer */
-            rcvr_spi_m(buff++);
-            rcvr_spi_m(buff++);
-        } while (btr -= 2);
+            rcvr_spi_m(&buff[i++]);
+            rcvr_spi_m(&buff[i++]);
+            btr -= 2U;
+        } while (btr != 0U);
         rcvr_spi();                                     /* Discard CRC */
         rcvr_spi();
-
-        return TRUE;                                    /* Return with success */
     }
 
-    /*-----------------------------------------------------------------------*/
-    /* Send a data packet to MMC                                            */
-    /*-----------------------------------------------------------------------*/
+    return ret;                                    /* Return with success */
+}
+
+/*-----------------------------------------------------------------------*/
+/* Send a data packet to MMC                                            */
+/*-----------------------------------------------------------------------*/
 
 #if _READONLY == 0
-    static
-    bool xmit_datablock (
-            const BYTE *buff,                       /* 512 byte data block to be transmitted */
-            BYTE token                              /* Data/Stop token */
-    )
-    {
-        BYTE resp, wc;
 
-        if (wait_ready() != 0xFF) return FALSE;
+static
+bool xmit_datablock (
+        const BYTE buff[],                       /* 512 byte data block to be transmitted */
+        BYTE token                              /* Data/Stop token */
+)
+{
+    bool ret = (bool)TRUE;
+    BYTE resp, wc;
+    uint32_t i = 0U;
 
+    if (wait_ready() != 0xFFU){
+        ret = (bool)FALSE;
+    }
+    else{
         xmit_spi(token);                            /* Xmit data token */
-        if (token != 0xFD)
+
+        if (token != 0xFDU)
         {                                           /* Is data token */
-            wc = 0;
+            wc = 0U;
+
             do {                                    /* Xmit the 512 byte data block to MMC */
-                xmit_spi(*buff++);
-                xmit_spi(*buff++);
+                xmit_spi(buff[i++]);
+                xmit_spi(buff[i++]);
             } while (--wc);
-            xmit_spi(0xFF);                         /* CRC (Dummy) */
-            xmit_spi(0xFF);
+
+            xmit_spi(0xFFU);                         /* CRC (Dummy) */
+            xmit_spi(0xFFU);
             resp = rcvr_spi();                      /* Reveive data response */
-            if ((resp & 0x1F) != 0x05)              /* If not accepted, return with error */
-                return FALSE;
-        }
-        return TRUE;
-    }
-#endif /* _READONLY */
 
-    /*-----------------------------------------------------------------------*/
-    /* Send a command packet to MMC                                          */
-    /*-----------------------------------------------------------------------*/
-
-    static
-    BYTE send_cmd (
-            BYTE cmd,                   /* Command byte */
-            DWORD arg                   /* Argument */
-    )
-    {
-        BYTE n, res;
-
-        if (wait_ready() != 0xFF) return 0xFF;
-
-        /* Send command packet */
-        xmit_spi(cmd);                          /* Command */
-        xmit_spi((BYTE)(arg >> 24));            /* Argument[31..24] */
-        xmit_spi((BYTE)(arg >> 16));            /* Argument[23..16] */
-        xmit_spi((BYTE)(arg >> 8));             /* Argument[15..8] */
-        xmit_spi((BYTE)arg);                    /* Argument[7..0] */
-        n = 0xff;
-        if (cmd == CMD0) n = 0x95;              /* CRC for CMD0(0) */
-        if (cmd == CMD8) n = 0x87;              /* CRC for CMD8(0x1AA) */
-        xmit_spi(n);
-
-        /* Receive command response */
-        if (cmd == CMD12) rcvr_spi();           /* Skip a stuff byte when stop reading */
-        n = 10;                                 /* Wait for a valid response in timeout of 10 attempts */
-        do
-            res = rcvr_spi();
-        while ((res & 0x80) && --n);
-
-
-        return res;                             /* Return with the response value */
-    }
-
-    /*-----------------------------------------------------------------------*
-     * Send the special command used to terminate a multi-sector read.
-     *
-     * This is the only command which can be sent while the SDCard is sending
-     * data. The SDCard spec indicates that the data transfer will stop 2 bytes
-     * after the 6 byte CMD12 command is sent and that the card will then send
-     * 0xFF for between 2 and 6 more bytes before the R1 response byte.  This
-     * response will be followed by another 0xFF byte.  In testing, however, it
-     * seems that some cards don't send the 2 to 6 0xFF bytes between the end of
-     * data transmission and the response code.  This function, therefore, merely
-     * reads 10 bytes and, if the last one read is 0xFF, returns the value of the
-     * latest non-0xFF byte as the response code.
-     *
-     *-----------------------------------------------------------------------*/
-
-    static
-    BYTE send_cmd12 (void)
-    {
-        BYTE n, res, val;
-
-
-        /* For CMD12, we don't wait for the card to be idle before we send
-         * the new command.
-         */
-
-        /* Send command packet - the argument for CMD12 is ignored. */
-        xmit_spi(CMD12);
-        xmit_spi(0);
-        xmit_spi(0);
-        xmit_spi(0);
-        xmit_spi(0);
-        xmit_spi(0);
-
-        /* Read up to 10 bytes from the card, remembering the value read if it's
-      not 0xFF */
-        for(n = 0; n < 10; n++)
-        {
-            val = rcvr_spi();
-            if(val != 0xFF)
-            {
-                res = val;
+            if ((resp & 0x1FU) != 0x05U){              /* If not accepted, return with error */
+                ret = (bool)FALSE;
             }
         }
-
-        return res;            /* Return with the response value */
     }
+
+    return ret;
+}
+
+#endif /* _READONLY */
+
+/*-----------------------------------------------------------------------*/
+/* Send a command packet to MMC                                          */
+/*-----------------------------------------------------------------------*/
+
+static
+BYTE send_cmd (
+        BYTE cmd,                   /* Command byte */
+        DWORD arg                   /* Argument */
+)
+{
+    BYTE n, res;
+
+    if (wait_ready() != 0xFFU){
+        res = 0xFFU;
+    }
+    else{
+        /* Send command packet */
+       xmit_spi(cmd);                          /* Command */
+       xmit_spi((BYTE)(arg >> 24));            /* Argument[31..24] */
+       xmit_spi((BYTE)(arg >> 16));            /* Argument[23..16] */
+       xmit_spi((BYTE)(arg >> 8));             /* Argument[15..8] */
+       xmit_spi((BYTE)arg);                    /* Argument[7..0] */
+
+       n = 0xffU;
+
+       if (cmd == (BYTE)CMD0){
+           n = 0x95U;              /* CRC for CMD0(0) */
+       }
+
+       if (cmd == (BYTE)CMD8){
+           n = 0x87U;              /* CRC for CMD8(0x1AA) */
+       }
+
+       xmit_spi(n);
+
+       /* Receive command response */
+       if (cmd == (BYTE)CMD12){
+           rcvr_spi();           /* Skip a stuff byte when stop reading */
+       }
+
+       n = 10U;                                 /* Wait for a valid response in timeout of 10 attempts */
+
+       do{
+           res = rcvr_spi();
+           --n;
+       }while ((res & 0x80U) && (n));
+    }
+
+    return res;                             /* Return with the response value */
+}
+
+/*-----------------------------------------------------------------------*
+ * Send the special command used to terminate a multi-sector read.
+ *
+ * This is the only command which can be sent while the SDCard is sending
+ * data. The SDCard spec indicates that the data transfer will stop 2 bytes
+ * after the 6 byte CMD12 command is sent and that the card will then send
+ * 0xFF for between 2 and 6 more bytes before the R1 response byte.  This
+ * response will be followed by another 0xFF byte.  In testing, however, it
+ * seems that some cards don't send the 2 to 6 0xFF bytes between the end of
+ * data transmission and the response code.  This function, therefore, merely
+ * reads 10 bytes and, if the last one read is 0xFF, returns the value of the
+ * latest non-0xFF byte as the response code.
+ *
+ *-----------------------------------------------------------------------*/
+
+static
+BYTE send_cmd12 (void)
+{
+    BYTE n, res, val;
+
+
+    /* For CMD12, we don't wait for the card to be idle before we send
+     * the new command.
+     */
+
+    /* Send command packet - the argument for CMD12 is ignored. */
+    xmit_spi((BYTE)CMD12);
+    xmit_spi(0U);
+    xmit_spi(0U);
+    xmit_spi(0U);
+    xmit_spi(0U);
+    xmit_spi(0U);
+
+    /* Read up to 10 bytes from the card, remembering the value read if it's
+  not 0xFF */
+    for(n = 0U; n < 10U; n++)
+    {
+        val = rcvr_spi();
+        if(val != 0xFFU)
+        {
+            res = val;
+        }
+    }
+
+    return res;            /* Return with the response value */
+}
 
 /*--------------------------------------------------------------------------
   Public Functions
