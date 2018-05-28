@@ -563,50 +563,69 @@ DSTATUS disk_initialize (
     return ret;
 }
 
-    /*-----------------------------------------------------------------------*/
-    /* Get Disk Status                                                      */
-    /*-----------------------------------------------------------------------*/
+/*-----------------------------------------------------------------------*/
+/* Get Disk Status                                                      */
+/*-----------------------------------------------------------------------*/
 
-    DSTATUS disk_status (
-            BYTE drv        /* Physical drive nmuber (0) */
-    )
-    {
-        if (drv) return STA_NOINIT;        /* Supports only single drive */
-        return Stat;
+DSTATUS disk_status (
+        BYTE drv        /* Physical drive nmuber (0) */
+)
+{
+    DSTATUS ret;
+
+    if (drv){
+        ret = STA_NOINIT;        /* Supports only single drive */
+    }
+    else{
+        ret = Stat;
     }
 
-
-    /*-----------------------------------------------------------------------*/
-    /* Read Sector(s)                                                        */
-    /*-----------------------------------------------------------------------*/
-
-    DRESULT disk_read (
-            BYTE drv,            /* Physical drive nmuber (0) */
-            BYTE *buff,            /* Pointer to the data buffer to store read data */
-            DWORD sector,        /* Start sector number (LBA) */
-            UINT count            /* Sector count (1..255) */
-    )
-    {
-        if (drv || !count) return RES_PARERR;
-        if (Stat & STA_NOINIT) return RES_NOTRDY;
+    return ret;
+}
 
 
-        if (!(CardType & 4)) sector *= 512;    /* Convert to byte address if needed */
+/*-----------------------------------------------------------------------*/
+/* Read Sector(s)                                                        */
+/*-----------------------------------------------------------------------*/
 
+DRESULT disk_read (
+        BYTE drv,            /* Physical drive nmuber (0) */
+        BYTE *buff,            /* Pointer to the data buffer to store read data */
+        DWORD sector,        /* Start sector number (LBA) */
+        UINT count            /* Sector count (1..255) */
+)
+{
+    DRESULT ret;
+
+    if ((drv) || (!count)){
+        ret = RES_PARERR;
+    }
+    else if (Stat & STA_NOINIT){
+        ret = RES_NOTRDY;
+    }
+    else{
+        if (!(CardType & 4U)){
+            sector *= 512U;    /* Convert to byte address if needed */
+        }
 
         SELECT();            /* CS = L */
 
 
-        if (count == 1) {    /* Single block read */
-            if ((send_cmd(CMD17, sector) == 0)    /* READ_SINGLE_BLOCK */
-                    && rcvr_datablock(buff, 512))
-                count = 0;
+        if (count == 1U) {    /* Single block read */
+            if ((send_cmd((BYTE)CMD17, sector) == 0U)){ /* READ_SINGLE_BLOCK */
+
+                if(rcvr_datablock(buff, 512U)){
+                    count = 0U;
+                }
+            }
         }
         else {                /* Multiple block read */
-            if (send_cmd(CMD18, sector) == 0) {    /* READ_MULTIPLE_BLOCK */
+            if (send_cmd((BYTE)CMD18, sector) == 0U) {    /* READ_MULTIPLE_BLOCK */
                 do {
-                    if (!rcvr_datablock(buff, 512)) break;
-                    buff += 512;
+                    if (!rcvr_datablock(buff, 512U)){
+                        break;
+                    }
+                    buff += 512U;
                 } while (--count);
                 send_cmd12();                /* STOP_TRANSMISSION */
             }
@@ -616,61 +635,81 @@ DSTATUS disk_initialize (
         DESELECT();            /* CS = H */
         rcvr_spi();            /* Idle (Release DO) */
 
-
-        return count ? RES_ERROR : RES_OK;
+        ret = (DRESULT)(count ? RES_ERROR : RES_OK);
     }
 
+    return ret;
+}
 
-    /*-----------------------------------------------------------------------*/
-    /* Write Sector(s)                                                      */
-    /*-----------------------------------------------------------------------*/
+
+/*-----------------------------------------------------------------------*/
+/* Write Sector(s)                                                      */
+/*-----------------------------------------------------------------------*/
 
 
 #if _READONLY == 0
-    DRESULT disk_write (
-            BYTE drv,            /* Physical drive nmuber (0) */
-            const BYTE *buff,    /* Pointer to the data to be written */
-            DWORD sector,        /* Start sector number (LBA) */
-            UINT count            /* Sector count (1..255) */
-    )
-    {
-        if (drv || !count) return RES_PARERR;
-        if (Stat & STA_NOINIT) return RES_NOTRDY;
-        if (Stat & STA_PROTECT) return RES_WRPRT;
+DRESULT disk_write (
+        BYTE drv,            /* Physical drive nmuber (0) */
+        const BYTE *buff,    /* Pointer to the data to be written */
+        DWORD sector,        /* Start sector number (LBA) */
+        UINT count            /* Sector count (1..255) */
+)
+{
+    DRESULT ret;
 
-
-        if (!(CardType & 4)) sector *= 512;    /* Convert to byte address if needed */
-
+    if (drv || (!count)){
+        ret = RES_PARERR;
+    }
+    else if (Stat & STA_NOINIT){
+        ret = RES_NOTRDY;
+    }
+    else if (Stat & STA_PROTECT){
+        ret = RES_WRPRT;
+    }
+    else{
+        if (!(CardType & 4U)){
+            sector *= 512U;    /* Convert to byte address if needed */
+        }
 
         SELECT();            /* CS = L */
 
 
-        if (count == 1) {    /* Single block write */
-            if ((send_cmd(CMD24, sector) == 0)    /* WRITE_BLOCK */
-                    && xmit_datablock(buff, 0xFE))
-                count = 0;
+        if (count == 1U) {    /* Single block write */
+
+            if (send_cmd((BYTE)CMD24, sector) == 0U){    /* WRITE_BLOCK */
+
+                if(xmit_datablock(buff, 0xFEU)){
+                    count = 0U;
+                }
+            }
         }
         else {                /* Multiple block write */
-            if (CardType & 2) {
-                send_cmd(CMD55, 0); send_cmd(CMD23, count);    /* ACMD23 */
+            if (CardType & 2U) {
+                send_cmd((BYTE)CMD55, 0U);
+                send_cmd((BYTE)CMD23, count);    /* ACMD23 */
             }
-            if (send_cmd(CMD25, sector) == 0) {    /* WRITE_MULTIPLE_BLOCK */
+
+            if (send_cmd((BYTE)CMD25, sector) == 0U) {    /* WRITE_MULTIPLE_BLOCK */
                 do {
-                    if (!xmit_datablock(buff, 0xFC)) break;
-                    buff += 512;
+                    if (!xmit_datablock(buff, 0xFCU)) {
+                        break;
+                    }
+                    buff += 512U;
                 } while (--count);
-                if (!xmit_datablock(0, 0xFD))    /* STOP_TRAN token */
-                    count = 1;
+                if (!xmit_datablock((BYTE*)0, 0xFDU)){    /* STOP_TRAN token */
+                    count = 1U;
+                }
             }
         }
-
 
         DESELECT();            /* CS = H */
         rcvr_spi();            /* Idle (Release DO) */
 
-
-        return count ? RES_ERROR : RES_OK;
+        ret = (DRESULT)(count ? RES_ERROR : RES_OK);
     }
+
+    return ret;
+}
 #endif /* _READONLY */
 
     /*-----------------------------------------------------------------------*/
