@@ -575,6 +575,9 @@ static DWORD tchar2uni (const TCHAR** str);
 static BYTE put_utf (DWORD chr, TCHAR buf[], UINT szb);
 static FRESULT sync_window (FATFS* fs);
 static FRESULT move_window (FATFS* fs, DWORD sector);
+static FRESULT sync_fs (FATFS* fs);
+static DWORD clst2sect (FATFS* fs, DWORD clst);
+static DWORD get_fat (FFOBJID* obj, DWORD clst);
 
 /*-----------------------------------------------------------------------*/
 /* Load/Store multi-byte word in the FAT structure                       */
@@ -1112,7 +1115,7 @@ static FRESULT move_window (	/* Returns FR_OK or FR_DISK_ERR */
 		if (res == FR_OK) {			/* Fill sector window with new data */
 		    /*
 		     * MISRA-C:2004 12.2/R can be ignored because evaluation order doesn't interfere with the
-		     * integrity of the internal strucutres
+		     * integrity of the internal strucutres in the following expression
 		     */
 			if (disk_read(fs->pdrv, fs->win, sector, 1U) != RES_OK) {
 				sector = 0xFFFFFFFFU;	/* Invalidate window if read data is not valid */
@@ -1128,7 +1131,7 @@ static FRESULT move_window (	/* Returns FR_OK or FR_DISK_ERR */
 
 
 #if !FF_FS_READONLY
-/*-----------------------------------------------------------------------*/
+/*---------- -------------------------------------------------------------*/
 /* Synchronize filesystem and data on the storage                        */
 /*-----------------------------------------------------------------------*/
 
@@ -1141,21 +1144,33 @@ static FRESULT sync_fs (	/* Returns FR_OK or FR_DISK_ERR */
 
 	res = sync_window(fs);
 	if (res == FR_OK) {
-		if (fs->fs_type == FS_FAT32 && fs->fsi_flag == 1) {	/* FAT32: Update FSInfo sector if needed */
+		if ((fs->fs_type == (BYTE)FS_FAT32) && (fs->fsi_flag == 1U)) {	/* FAT32: Update FSInfo sector if needed */
 			/* Create FSInfo structure */
-			mem_set(fs->win, 0, SS(fs));
-			st_word(fs->win + BS_55AA, 0xAA55);
-			st_dword(fs->win + FSI_LeadSig, 0x41615252);
-			st_dword(fs->win + FSI_StrucSig, 0x61417272);
-			st_dword(fs->win + FSI_Free_Count, fs->free_clst);
-			st_dword(fs->win + FSI_Nxt_Free, fs->last_clst);
+			mem_set(fs->win, 0U, SS(fs));
+			st_word(&fs->win[BS_55AA], 0xAA55U);
+			st_dword(&fs->win[FSI_LeadSig], 0x41615252U);
+			st_dword(&fs->win[FSI_StrucSig], 0x61417272U);
+
+			/*
+             * MISRA-C:2004 12.2/R can be ignored because evaluation order doesn't interfere with the
+             * integrity of the internal strucutres in the following expression
+             */
+			st_dword(&fs->win[FSI_Free_Count], (DWORD)fs->free_clst);
+
+			/*
+             * MISRA-C:2004 12.2/R can be ignored because evaluation order doesn't interfere with the
+             * integrity of the internal strucutres in the following expression
+             */
+			st_dword(&fs->win[FSI_Nxt_Free], (DWORD)fs->last_clst);
 			/* Write it into the FSInfo sector */
-			fs->winsect = fs->volbase + 1;
-			disk_write(fs->pdrv, fs->win, fs->winsect, 1);
-			fs->fsi_flag = 0;
+			fs->winsect = fs->volbase + 1U;
+			disk_write(fs->pdrv, fs->win, fs->winsect, 1U);
+			fs->fsi_flag = 0U;
 		}
 		/* Make sure that no pending write process in the lower layer */
-		if (disk_ioctl(fs->pdrv, CTRL_SYNC, 0) != RES_OK) res = FR_DISK_ERR;
+		if (disk_ioctl(fs->pdrv, CTRL_SYNC, (BYTE*)0U) != RES_OK) {
+		    res = FR_DISK_ERR;
+		}
 	}
 
 	return res;
@@ -1174,9 +1189,18 @@ static DWORD clst2sect (	/* !=0:Sector number, 0:Failed (invalid cluster#) */
 	DWORD clst		/* Cluster# to be converted */
 )
 {
-	clst -= 2;		/* Cluster number is origin from 2 */
-	if (clst >= fs->n_fatent - 2) return 0;		/* Is it invalid cluster number? */
-	return fs->database + fs->csize * clst;		/* Start sector number of the cluster */
+    DWORD ret = 0U;
+
+	clst -= 2U;		/* Cluster number is origin from 2 */
+	if (clst >= fs->n_fatent - 2U){
+	    ret = 0U;		/* Is it invalid cluster number? */
+
+	}
+	else{
+	    ret = fs->database + fs->csize * clst;
+	}
+
+	return ret;		/* Start sector number of the cluster */
 }
 
 
@@ -1196,31 +1220,63 @@ static DWORD get_fat (		/* 0xFFFFFFFF:Disk error, 1:Internal error, 2..0x7FFFFFF
 	FATFS *fs = obj->fs;
 
 
-	if (clst < 2 || clst >= fs->n_fatent) {	/* Check if in valid range */
-		val = 1;	/* Internal error */
+	if ((clst < 2U) || (clst >= fs->n_fatent)) {	/* Check if in valid range */
+		val = 1U;	/* Internal error */
 
 	} else {
-		val = 0xFFFFFFFF;	/* Default value falls on disk error */
+		val = 0xFFFFFFFFU;	/* Default value falls on disk error */
 
 		switch (fs->fs_type) {
-		case FS_FAT12 :
-			bc = (UINT)clst; bc += bc / 2;
-			if (move_window(fs, fs->fatbase + (bc / SS(fs))) != FR_OK) break;
+		case (BYTE)FS_FAT12 :
+			bc = (UINT)clst;
+		    bc += bc / 2U;
+
+		    /*
+             * MISRA-C:2004 12.2/R can be ignored because evaluation order doesn't interfere with the
+             * integrity of the internal strucutres in the following expression
+             */
+			if (move_window(fs, fs->fatbase + (bc / SS(fs))) != FR_OK) {
+			    break;
+			}
+
 			wc = fs->win[bc++ % SS(fs)];		/* Get 1st byte of the entry */
-			if (move_window(fs, fs->fatbase + (bc / SS(fs))) != FR_OK) break;
-			wc |= fs->win[bc % SS(fs)] << 8;	/* Merge 2nd byte of the entry */
-			val = (clst & 1) ? (wc >> 4) : (wc & 0xFFF);	/* Adjust bit position */
+
+			/*
+             * MISRA-C:2004 12.2/R can be ignored because evaluation order doesn't interfere with the
+             * integrity of the internal strucutres in the following expression
+             */
+			if (move_window(fs, fs->fatbase + (bc / SS(fs))) != FR_OK) {
+			    break;
+			}
+
+			wc = (UINT)(wc | ((UINT)fs->win[bc % SS(fs)] << 8U));	/* Merge 2nd byte of the entry */
+			val = (clst & 1U) ? (wc >> 4U) : (wc & 0xFFFU);	/* Adjust bit position */
 			break;
 
-		case FS_FAT16 :
-			if (move_window(fs, fs->fatbase + (clst / (SS(fs) / 2))) != FR_OK) break;
-			val = ld_word(fs->win + clst * 2 % SS(fs));		/* Simple WORD array */
+		case (BYTE)FS_FAT16 :
+            /*
+             * MISRA-C:2004 12.2/R can be ignored because evaluation order doesn't interfere with the
+             * integrity of the internal strucutres in the following expression
+             */
+			if (move_window(fs, fs->fatbase + (clst / (SS(fs) / 2U))) != FR_OK) {
+			    break;
+			}
+
+			val = ld_word(&fs->win[clst * 2U % SS(fs)]);		/* Simple WORD array */
 			break;
 
-		case FS_FAT32 :
-			if (move_window(fs, fs->fatbase + (clst / (SS(fs) / 4))) != FR_OK) break;
-			val = ld_dword(fs->win + clst * 4 % SS(fs)) & 0x0FFFFFFF;	/* Simple DWORD array but mask out upper 4 bits */
+		case (BYTE)FS_FAT32 :
+            /*
+             * MISRA-C:2004 12.2/R can be ignored because evaluation order doesn't interfere with the
+             * integrity of the internal strucutres in the following expression
+             */
+			if (move_window(fs, fs->fatbase + (clst / (SS(fs) / 4U))) != FR_OK){
+			    break;
+			}
+
+			val = ld_dword(&fs->win[clst * 4U % SS(fs)]) & 0x0FFFFFFFU;	/* Simple DWORD array but mask out upper 4 bits */
 			break;
+
 #if FF_FS_EXFAT
 		case FS_EXFAT :
 			if ((obj->objsize != 0 && obj->sclust != 0) || obj->stat == 0) {	/* Object except root dir must have valid data length */
@@ -1248,7 +1304,8 @@ static DWORD get_fat (		/* 0xFFFFFFFF:Disk error, 1:Internal error, 2..0x7FFFFFF
 			/* go to default */
 #endif
 		default:
-			val = 1;	/* Internal error */
+			val = 1U;	/* Internal error */
+			break;
 		}
 	}
 
