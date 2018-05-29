@@ -582,6 +582,7 @@ static FRESULT put_fat (FATFS* fs, DWORD clst, DWORD val);
 static FRESULT remove_chain (FFOBJID* obj, DWORD clst, DWORD pclst);
 static DWORD create_chain (FFOBJID* obj, DWORD clst);
 static FRESULT dir_clear (FATFS *fs, DWORD clst);
+static FRESULT dir_sdi (DIR* dp, DWORD ofs);
 
 /*-----------------------------------------------------------------------*/
 /* Load/Store multi-byte word in the FAT structure                       */
@@ -1961,40 +1962,85 @@ static FRESULT dir_sdi (	/* FR_OK(0):succeeded, !=0:error */
 	DWORD ofs		/* Offset of directory table */
 )
 {
+    FRESULT ret;
+    BYTE func_exit = 0U;
 	DWORD csz, clst;
 	FATFS *fs = dp->obj.fs;
+	DWORD temp_dw;
+	WORD temp_w;
 
-
-	if (ofs >= (DWORD)((FF_FS_EXFAT && fs->fs_type == FS_EXFAT) ? MAX_DIR_EX : MAX_DIR) || ofs % SZDIRE) {	/* Check range of offset and alignment */
-		return FR_INT_ERR;
+	if((fs->fs_type == (BYTE)FS_EXFAT) && FF_FS_EXFAT){
+	    temp_dw = (DWORD)MAX_DIR_EX;
 	}
-	dp->dptr = ofs;				/* Set current offset */
-	clst = dp->obj.sclust;		/* Table start cluster (0:root) */
-	if (clst == 0 && fs->fs_type >= FS_FAT32) {	/* Replace cluster# 0 with root cluster# */
-		clst = fs->dirbase;
-		if (FF_FS_EXFAT) dp->obj.stat = 0;	/* exFAT: Root dir has an FAT chain */
+	else{
+	    temp_dw = (DWORD)MAX_DIR;
 	}
 
-	if (clst == 0) {	/* Static table (root-directory on the FAT volume) */
-		if (ofs / SZDIRE >= fs->n_rootdir) return FR_INT_ERR;	/* Is index out of range? */
-		dp->sect = fs->dirbase;
-
-	} else {			/* Dynamic table (sub-directory or root-directory on the FAT32/exFAT volume) */
-		csz = (DWORD)fs->csize * SS(fs);	/* Bytes per cluster */
-		while (ofs >= csz) {				/* Follow cluster chain */
-			clst = get_fat(&dp->obj, clst);				/* Get next cluster */
-			if (clst == 0xFFFFFFFF) return FR_DISK_ERR;	/* Disk error */
-			if (clst < 2 || clst >= fs->n_fatent) return FR_INT_ERR;	/* Reached to end of table or internal error */
-			ofs -= csz;
-		}
-		dp->sect = clst2sect(fs, clst);
+	if ((ofs >= temp_dw) || (ofs % (DWORD)SZDIRE)) {	/* Check range of offset and alignment */
+	    func_exit = 1U;
+	    ret = FR_INT_ERR;
 	}
-	dp->clust = clst;					/* Current cluster# */
-	if (dp->sect == 0) return FR_INT_ERR;
-	dp->sect += ofs / SS(fs);			/* Sector# of the directory entry */
-	dp->dir = fs->win + (ofs % SS(fs));	/* Pointer to the entry in the win[] */
+	else{
 
-	return FR_OK;
+        dp->dptr = ofs;				/* Set current offset */
+        clst = dp->obj.sclust;		/* Table start cluster (0:root) */
+        if ((clst == 0U) && (fs->fs_type >= (BYTE)FS_FAT32)) {	/* Replace cluster# 0 with root cluster# */
+            clst = fs->dirbase;
+#if FF_FS_EXFAT
+                dp->obj.stat = 0U;	/* exFAT: Root dir has an FAT chain */
+#endif
+        }
+
+        if (clst == 0U) {	/* Static table (root-directory on the FAT volume) */
+            temp_w = (WORD)((DWORD)ofs / (DWORD)SZDIRE);
+            if (temp_w >= fs->n_rootdir){
+                func_exit = 1U;
+                ret = FR_INT_ERR;	/* Is index out of range? */
+            }
+            else{
+                dp->sect = fs->dirbase;
+            }
+
+        } else {			/* Dynamic table (sub-directory or root-directory on the FAT32/exFAT volume) */
+
+            temp_w = fs->csize;
+
+            csz = (DWORD)((DWORD)temp_w * (DWORD)SS(fs));	/* Bytes per cluster */
+            while (ofs >= csz) {				/* Follow cluster chain */
+                clst = get_fat(&dp->obj, clst);				/* Get next cluster */
+                if (clst == 0xFFFFFFFFU){
+                    func_exit = 1U;
+                    ret = FR_DISK_ERR;	/* Disk error */
+                    break;
+                }
+                if ((clst < 2U) || (clst >= fs->n_fatent)){
+                    func_exit = 1U;
+                    ret = FR_INT_ERR;	/* Reached to end of table or internal error */
+                    break;
+                }
+                ofs -= csz;
+            }
+
+            if(func_exit == 0U){
+                dp->sect = clst2sect(fs, clst);
+            }
+        }
+
+        if(func_exit == 0U){
+            dp->clust = clst;                   /* Current cluster# */
+            if (dp->sect == 0U){
+                func_exit = 1U;
+                ret = FR_INT_ERR;
+            }
+            else{
+                dp->sect += ofs / SS(fs);           /* Sector# of the directory entry */
+                dp->dir = &fs->win[(ofs % SS(fs))]; /* Pointer to the entry in the win[] */
+            }
+        }
+
+	}
+
+	return ret;
 }
 
 
