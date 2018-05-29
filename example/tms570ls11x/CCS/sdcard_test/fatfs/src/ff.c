@@ -568,10 +568,13 @@ static void st_dword (BYTE ptr[], DWORD val);
 static void mem_cpy (BYTE dst[], const BYTE src[], UINT cnt);
 static void mem_set (BYTE dst[], BYTE val, UINT cnt);
 static int mem_cmp (const BYTE dst[], const BYTE src[], UINT cnt);
-static int chk_chr (const char* str, int chr);
+static int chk_chr (const char str[], int chr);
 static int dbc_1st (BYTE c);
 static int dbc_2nd (BYTE c);
 static DWORD tchar2uni (const TCHAR** str);
+static BYTE put_utf (DWORD chr, TCHAR buf[], UINT szb);
+static FRESULT sync_window (FATFS* fs);
+static FRESULT move_window (FATFS* fs, DWORD sector);
 
 /*-----------------------------------------------------------------------*/
 /* Load/Store multi-byte word in the FAT structure                       */
@@ -697,16 +700,25 @@ static int mem_cmp (const BYTE dst[], const BYTE src[], UINT cnt)	/* ZR:same, NZ
 
 
 /* Check if chr is contained in the string */
-static int chk_chr (const char* str, int chr)	/* NZ:contained, ZR:not contained */
+static int chk_chr (const char str[], int chr)	/* NZ:contained, ZR:not contained */
 {
-	while (*str && *str != chr) str++;
-	return *str;
+    UINT index = 0U;
+    const char ch = (char)chr;
+    const BYTE *str_cmp = (const BYTE*)&str[0];
+
+	while ((*str_cmp) && (str[index] != ch)){
+	    index++;
+	    str_cmp = (const BYTE*)&str[index];
+	}
+
+	return (INT)str[index];
 }
 
 
 /* Test if the character is DBC 1st byte */
 static int dbc_1st (BYTE c)
 {
+    INT ret = 0;
 #if FF_CODE_PAGE == 0		/* Variable code page */
 	if (DbcTbl && c >= DbcTbl[0]) {
 		if (c <= DbcTbl[1]) return 1;					/* 1st byte range 1 */
@@ -718,15 +730,18 @@ static int dbc_1st (BYTE c)
 		if (c >= DbcTbl[2] && c <= DbcTbl[3]) return 1;
 	}
 #else						/* SBCS fixed code page */
-	if (c != 0) return 0;	/* Always false */
+	if (c != 0U){
+	    ret = 0;	/* Always false */
+	}
 #endif
-	return 0;
+	return ret;
 }
 
 
 /* Test if the character is DBC 2nd byte */
 static int dbc_2nd (BYTE c)
 {
+    int ret = 0;
 #if FF_CODE_PAGE == 0		/* Variable code page */
 	if (DbcTbl && c >= DbcTbl[4]) {
 		if (c <= DbcTbl[5]) return 1;					/* 2nd byte range 1 */
@@ -740,9 +755,11 @@ static int dbc_2nd (BYTE c)
 		if (c >= DbcTbl[8] && c <= DbcTbl[9]) return 1;
 	}
 #else						/* SBCS fixed code page */
-	if (c != 0) return 0;	/* Always false */
+	if (c != 0U){
+	    ret = 0;	/* Always false */
+	}
 #endif
-	return 0;
+	return ret;
 }
 
 
@@ -824,10 +841,12 @@ static DWORD tchar2uni (	/* Returns character in UTF-16 encoding (>=0x10000 on d
 /* Output a TCHAR string in defined API encoding */
 static BYTE put_utf (	/* Returns number of encoding units written (0:buffer overflow or wrong encoding) */
 	DWORD chr,	/* UTF-16 encoded character (Double encoding unit char if >=0x10000) */
-	TCHAR* buf,	/* Output buffer */
+	TCHAR buf[],	/* Output buffer */
 	UINT szb	/* Size of the buffer */
 )
 {
+    BYTE ret;
+
 #if FF_LFN_UNICODE == 1	/* UTF-16 output */
 	WCHAR hs, wc;
 
@@ -891,17 +910,25 @@ static BYTE put_utf (	/* Returns number of encoding units written (0:buffer over
 
 #else						/* ANSI/OEM output */
 	WCHAR wc;
+	UINT index = 0U;
 
-	wc = ff_uni2oem(chr, CODEPAGE);
-	if (wc >= 0x100) {	/* Is this a DBC? */
-		if (szb < 2) return 0;
-		*buf++ = (char)(wc >> 8);	/* Store DBC 1st byte */
-		*buf++ = (TCHAR)wc;			/* Store DBC 2nd byte */
-		return 2;
+	wc = ff_uni2oem(chr, (WORD)CODEPAGE);
+	if (wc >= 0x100U) {	/* Is this a DBC? */
+		if (szb < 2U) {
+		    ret = 0U;
+		}
+
+		buf[index++] = (char)(wc >> 8);	/* Store DBC 1st byte */
+		buf[index++] = (TCHAR)wc;			/* Store DBC 2nd byte */
+		ret = 2U;
 	}
-	if (wc == 0 || szb < 1) return 0;	/* Invalid char or buffer overflow? */
-	*buf++ = (TCHAR)wc;					/* Store the character */
-	return 1;
+
+	if ((wc == 0U) || (szb < 1U)){
+	    ret = 0U;	/* Invalid char or buffer overflow? */
+	}
+
+	buf[index++] = (TCHAR)wc;					/* Store the character */
+	return ret;
 #endif
 }
 #endif	/* FF_USE_LFN */
@@ -1054,10 +1081,12 @@ static FRESULT sync_window (	/* Returns FR_OK or FR_DISK_ERR */
 
 
 	if (fs->wflag) {	/* Is the disk access window dirty */
-		if (disk_write(fs->pdrv, fs->win, fs->winsect, 1) == RES_OK) {	/* Write back the window */
-			fs->wflag = 0;	/* Clear window dirty flag */
+		if (disk_write(fs->pdrv, fs->win, fs->winsect, 1U) == RES_OK) {	/* Write back the window */
+			fs->wflag = 0U;	/* Clear window dirty flag */
 			if (fs->winsect - fs->fatbase < fs->fsize) {	/* Is it in the 1st FAT? */
-				if (fs->n_fats == 2) disk_write(fs->pdrv, fs->win, fs->winsect + fs->fsize, 1);	/* Reflect it to 2nd FAT if needed */
+				if (fs->n_fats == 2U) {
+				    disk_write(fs->pdrv, fs->win, fs->winsect + fs->fsize, 1U);	/* Reflect it to 2nd FAT if needed */
+				}
 			}
 		} else {
 			res = FR_DISK_ERR;
@@ -1081,8 +1110,12 @@ static FRESULT move_window (	/* Returns FR_OK or FR_DISK_ERR */
 		res = sync_window(fs);		/* Write-back changes */
 #endif
 		if (res == FR_OK) {			/* Fill sector window with new data */
-			if (disk_read(fs->pdrv, fs->win, sector, 1) != RES_OK) {
-				sector = 0xFFFFFFFF;	/* Invalidate window if read data is not valid */
+		    /*
+		     * MISRA-C:2004 12.2/R can be ignored because evaluation order doesn't interfere with the
+		     * integrity of the internal strucutres
+		     */
+			if (disk_read(fs->pdrv, fs->win, sector, 1U) != RES_OK) {
+				sector = 0xFFFFFFFFU;	/* Invalidate window if read data is not valid */
 				res = FR_DISK_ERR;
 			}
 			fs->winsect = sector;
