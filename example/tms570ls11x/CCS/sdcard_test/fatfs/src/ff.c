@@ -580,6 +580,8 @@ static DWORD clst2sect (FATFS* fs, DWORD clst);
 static DWORD get_fat (FFOBJID* obj, DWORD clst);
 static FRESULT put_fat (FATFS* fs, DWORD clst, DWORD val);
 static FRESULT remove_chain (FFOBJID* obj, DWORD clst, DWORD pclst);
+static DWORD create_chain (FFOBJID* obj, DWORD clst);
+static FRESULT dir_clear (FATFS *fs, DWORD clst);
 
 /*-----------------------------------------------------------------------*/
 /* Load/Store multi-byte word in the FAT structure                       */
@@ -1694,92 +1696,157 @@ static DWORD create_chain (	/* 0:No free cluster, 1:Internal error, 0xFFFFFFFF:D
 	DWORD clst			/* Cluster# to stretch, 0:Create a new chain */
 )
 {
+    DWORD ret = 0U;
+    BYTE func_exit = 0U;
 	DWORD cs, ncl, scl;
 	FRESULT res;
 	FATFS *fs = obj->fs;
 
 
-	if (clst == 0) {	/* Create a new chain */
+	if (clst == 0U) {	/* Create a new chain */
 		scl = fs->last_clst;				/* Suggested cluster to start to find */
-		if (scl == 0 || scl >= fs->n_fatent) scl = 1;
+		if ((scl == 0U) || (scl >= fs->n_fatent)) {
+		    scl = 1U;
+		}
 	}
 	else {				/* Stretch a chain */
 		cs = get_fat(obj, clst);			/* Check the cluster status */
-		if (cs < 2) return 1;				/* Test for insanity */
-		if (cs == 0xFFFFFFFF) return cs;	/* Test for disk error */
-		if (cs < fs->n_fatent) return cs;	/* It is already followed by next cluster */
-		scl = clst;							/* Cluster to start to find */
+
+		if (cs < 2U) {
+		    func_exit = 1U;               /* Test for insanity */
+		    ret = 1U;
+		}
+		else if (cs == 0xFFFFFFFFU){
+		    func_exit = 1U;   /* Test for disk error */
+		    ret = cs;
+		}
+		else if (cs < fs->n_fatent){
+		    func_exit = 1U;   /* It is already followed by next cluster */
+		    ret = cs;
+		}
+		else{
+		    scl = clst;                         /* Cluster to start to find */
+		}
 	}
-	if (fs->free_clst == 0) return 0;		/* No free cluster */
+
+
+	if(func_exit == 0U){
+	    if (fs->free_clst == 0U){
+	        func_exit = 1U;       /* No free cluster */
+            ret = 0U;
+        }
+	}
+
+	if(func_exit == 0U){
 
 #if FF_FS_EXFAT
-	if (fs->fs_type == FS_EXFAT) {	/* On the exFAT volume */
-		ncl = find_bitmap(fs, scl, 1);				/* Find a free cluster */
-		if (ncl == 0 || ncl == 0xFFFFFFFF) return ncl;	/* No free cluster or hard error? */
-		res = change_bitmap(fs, ncl, 1, 1);			/* Mark the cluster 'in use' */
-		if (res == FR_INT_ERR) return 1;
-		if (res == FR_DISK_ERR) return 0xFFFFFFFF;
-		if (clst == 0) {							/* Is it a new chain? */
-			obj->stat = 2;							/* Set status 'contiguous' */
-		} else {									/* It is a stretched chain */
-			if (obj->stat == 2 && ncl != scl + 1) {	/* Is the chain got fragmented? */
-				obj->n_cont = scl - obj->sclust;	/* Set size of the contiguous part */
-				obj->stat = 3;						/* Change status 'just fragmented' */
-			}
-		}
-		if (obj->stat != 2) {	/* Is the file non-contiguous? */
-			if (ncl == clst + 1) {	/* Is the cluster next to previous one? */
-				obj->n_frag = obj->n_frag ? obj->n_frag + 1 : 2;	/* Increment size of last framgent */
-			} else {				/* New fragment */
-				if (obj->n_frag == 0) obj->n_frag = 1;
-				res = fill_last_frag(obj, clst, ncl);	/* Fill last fragment on the FAT and link it to new one */
-				if (res == FR_OK) obj->n_frag = 1;
-			}
-		}
-	} else
+        if (fs->fs_type == FS_EXFAT) {  /* On the exFAT volume */
+            ncl = find_bitmap(fs, scl, 1);              /* Find a free cluster */
+            if (ncl == 0 || ncl == 0xFFFFFFFF) return ncl;  /* No free cluster or hard error? */
+            res = change_bitmap(fs, ncl, 1, 1);         /* Mark the cluster 'in use' */
+            if (res == FR_INT_ERR) return 1;
+            if (res == FR_DISK_ERR) return 0xFFFFFFFF;
+            if (clst == 0) {                            /* Is it a new chain? */
+                obj->stat = 2;                          /* Set status 'contiguous' */
+            } else {                                    /* It is a stretched chain */
+                if (obj->stat == 2 && ncl != scl + 1) { /* Is the chain got fragmented? */
+                    obj->n_cont = scl - obj->sclust;    /* Set size of the contiguous part */
+                    obj->stat = 3;                      /* Change status 'just fragmented' */
+                }
+            }
+            if (obj->stat != 2) {   /* Is the file non-contiguous? */
+                if (ncl == clst + 1) {  /* Is the cluster next to previous one? */
+                    obj->n_frag = obj->n_frag ? obj->n_frag + 1 : 2;    /* Increment size of last framgent */
+                } else {                /* New fragment */
+                    if (obj->n_frag == 0) obj->n_frag = 1;
+                    res = fill_last_frag(obj, clst, ncl);   /* Fill last fragment on the FAT and link it to new one */
+                    if (res == FR_OK) obj->n_frag = 1;
+                }
+            }
+        } else
 #endif
-	{	/* On the FAT/FAT32 volume */
-		ncl = 0;
-		if (scl == clst) {						/* Stretching an existing chain? */
-			ncl = scl + 1;						/* Test if next cluster is free */
-			if (ncl >= fs->n_fatent) ncl = 2;
-			cs = get_fat(obj, ncl);				/* Get next cluster status */
-			if (cs == 1 || cs == 0xFFFFFFFF) return cs;	/* Test for error */
-			if (cs != 0) {						/* Not free? */
-				cs = fs->last_clst;				/* Start at suggested cluster if it is valid */
-				if (cs >= 2 && cs < fs->n_fatent) scl = cs;
-				ncl = 0;
-			}
-		}
-		if (ncl == 0) {	/* The new cluster cannot be contiguous and find another fragment */
-			ncl = scl;	/* Start cluster */
-			for (;;) {
-				ncl++;							/* Next cluster */
-				if (ncl >= fs->n_fatent) {		/* Check wrap-around */
-					ncl = 2;
-					if (ncl > scl) return 0;	/* No free cluster found? */
-				}
-				cs = get_fat(obj, ncl);			/* Get the cluster status */
-				if (cs == 0) break;				/* Found a free cluster? */
-				if (cs == 1 || cs == 0xFFFFFFFF) return cs;	/* Test for error */
-				if (ncl == scl) return 0;		/* No free cluster found? */
-			}
-		}
-		res = put_fat(fs, ncl, 0xFFFFFFFF);		/* Mark the new cluster 'EOC' */
-		if (res == FR_OK && clst != 0) {
-			res = put_fat(fs, clst, ncl);		/* Link it from the previous one if needed */
-		}
+        {   /* On the FAT/FAT32 volume */
+            ncl = 0U;
+            if (scl == clst) {                      /* Stretching an existing chain? */
+                ncl = scl + 1U;                     /* Test if next cluster is free */
+                if (ncl >= fs->n_fatent){
+                    ncl = 2U;
+                }
+
+                cs = get_fat(obj, ncl);             /* Get next cluster status */
+
+                if ((cs == 1U) || (cs == 0xFFFFFFFFU)){
+                    func_exit = 1U;           /* Test for error */
+                    ret = cs;
+                }
+
+                if ((func_exit == 0U) && (cs != 0U)) {                     /* Not free? */
+                    cs = fs->last_clst;             /* Start at suggested cluster if it is valid */
+                    if ((cs >= 2U) && (cs < fs->n_fatent)){
+                        scl = cs;
+                    }
+                    ncl = 0U;
+                }
+            }
+
+            if ((func_exit == 0U) && (ncl == 0U)) {    /* The new cluster cannot be contiguous and find another fragment */
+                ncl = scl;  /* Start cluster */
+
+                for (;;) {
+                    ncl++;                          /* Next cluster */
+                    if (ncl >= fs->n_fatent) {      /* Check wrap-around */
+                        ncl = 2U;
+                        if (ncl > scl){
+                            func_exit = 1U;       /* No free cluster found? */
+                            ret = 0U;
+                            break;
+                        }
+                    }
+
+                    cs = get_fat(obj, ncl);         /* Get the cluster status */
+
+                    if (cs == 0U){
+                        break;              /* Found a free cluster? */
+                    }
+
+                    if ((cs == 1U) || (cs == 0xFFFFFFFFU)){
+                        func_exit = 1U;           /* Test for error */
+                        ret = cs;
+                        break;  /* Test for error */
+                    }
+
+                    if (ncl == scl){
+                        func_exit = 1U;   /* No free cluster found? */
+                        ret = 0U;
+                        break;
+                    }
+                }
+            }
+
+            if(func_exit == 0U){
+                res = put_fat(fs, ncl, 0xFFFFFFFFU);        /* Mark the new cluster 'EOC' */
+                if ((res == FR_OK) && (clst != 0U)) {
+                    res = put_fat(fs, clst, ncl);       /* Link it from the previous one if needed */
+                }
+            }
+        }
+
+        if(func_exit == 0U){
+            if (res == FR_OK) {         /* Update FSINFO if function succeeded. */
+                fs->last_clst = ncl;
+                if (fs->free_clst <= fs->n_fatent - 2U){
+                    fs->free_clst--;
+                }
+                fs->fsi_flag |= 1U;
+            } else {
+                ncl = (res == FR_DISK_ERR) ? 0xFFFFFFFFU : 1U;  /* Failed. Generate error status */
+            }
+
+            ret = ncl;
+        }
 	}
 
-	if (res == FR_OK) {			/* Update FSINFO if function succeeded. */
-		fs->last_clst = ncl;
-		if (fs->free_clst <= fs->n_fatent - 2) fs->free_clst--;
-		fs->fsi_flag |= 1;
-	} else {
-		ncl = (res == FR_DISK_ERR) ? 0xFFFFFFFF : 1;	/* Failed. Generate error status */
-	}
-
-	return ncl;		/* Return new cluster number or error status */
+	return ret;		/* Return new cluster number or error status */
 }
 
 #endif /* !FF_FS_READONLY */
@@ -1830,27 +1897,55 @@ static FRESULT dir_clear (	/* Returns FR_OK or FR_DISK_ERR */
 	DWORD sect;
 	UINT n, szb;
 	BYTE *ibuf;
+	FRESULT res = FR_OK;
+	WORD clus_size = 0U;
 
-
-	if (sync_window(fs) != FR_OK) return FR_DISK_ERR;	/* Flush disk access window */
-	sect = clst2sect(fs, clst);		/* Top of the cluster */
-	fs->winsect = sect;				/* Set window to top of the cluster */
-	mem_set(fs->win, 0, SS(fs));	/* Clear window buffer */
-#if FF_USE_LFN == 3		/* Quick table clear by using multi-secter write */
-	/* Allocate a temporary buffer */
-	for (szb = ((DWORD)fs->csize * SS(fs) >= MAX_MALLOC) ? MAX_MALLOC : fs->csize * SS(fs), ibuf = 0; szb > SS(fs) && (ibuf = ff_memalloc(szb)) == 0; szb /= 2) ;
-	if (szb > SS(fs)) {		/* Buffer allocated? */
-		mem_set(ibuf, 0, szb);
-		szb /= SS(fs);		/* Bytes -> Sectors */
-		for (n = 0; n < fs->csize && disk_write(fs->pdrv, ibuf, sect + n, szb) == RES_OK; n += szb) ;	/* Fill the cluster with 0 */
-		ff_memfree(ibuf);
-	} else
-#endif
-	{
-		ibuf = fs->win; szb = 1;	/* Use window buffer (many single-sector writes may take a time) */
-		for (n = 0; n < fs->csize && disk_write(fs->pdrv, ibuf, sect + n, szb) == RES_OK; n += szb) ;	/* Fill the cluster with 0 */
+	if (sync_window(fs) != FR_OK) {
+	    res = FR_DISK_ERR;	/* Flush disk access window */
 	}
-	return (n == fs->csize) ? FR_OK : FR_DISK_ERR;
+
+	if(res == FR_OK){
+
+	    sect = clst2sect(fs, clst);     /* Top of the cluster */
+	    fs->winsect = sect;             /* Set window to top of the cluster */
+
+	    mem_set(fs->win, 0U, SS(fs));   /* Clear window buffer */
+
+#if FF_USE_LFN == 3     /* Quick table clear by using multi-secter write */
+	    /* Allocate a temporary buffer */
+	    for (szb = ((DWORD)fs->csize * SS(fs) >= MAX_MALLOC) ? MAX_MALLOC : fs->csize * SS(fs), ibuf = 0; szb > SS(fs) && (ibuf = ff_memalloc(szb)) == 0; szb /= 2) ;
+	    if (szb > SS(fs)) {     /* Buffer allocated? */
+	        mem_set(ibuf, 0, szb);
+	        szb /= SS(fs);      /* Bytes -> Sectors */
+	        for (n = 0; n < fs->csize && disk_write(fs->pdrv, ibuf, sect + n, szb) == RES_OK; n += szb) ;   /* Fill the cluster with 0 */
+	        ff_memfree(ibuf);
+	    } else
+#endif
+
+	    {
+	        ibuf = fs->win;
+	        szb = 1U;   /* Use window buffer (many single-sector writes may take a time) */
+
+	        clus_size = fs->csize;
+	        for (n = 0U; (n < (UINT)clus_size); n += szb) {   /* Fill the cluster with 0 */
+	            if(disk_write(fs->pdrv, ibuf, sect + n, szb) != RES_OK){
+	                break;
+	            }
+	        }
+
+	    }
+
+	    clus_size = fs->csize;
+	    if(n == (UINT)clus_size){
+	        res = FR_OK;
+	    }
+	    else{
+	        res = FR_DISK_ERR;
+	    }
+	}
+
+
+	return res;
 }
 #endif	/* !FF_FS_READONLY */
 
