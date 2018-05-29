@@ -579,6 +579,7 @@ static FRESULT sync_fs (FATFS* fs);
 static DWORD clst2sect (FATFS* fs, DWORD clst);
 static DWORD get_fat (FFOBJID* obj, DWORD clst);
 static FRESULT put_fat (FATFS* fs, DWORD clst, DWORD val);
+static FRESULT remove_chain (FFOBJID* obj, DWORD clst, DWORD pclst);
 
 /*-----------------------------------------------------------------------*/
 /* Load/Store multi-byte word in the FAT structure                       */
@@ -1568,6 +1569,7 @@ static FRESULT remove_chain (	/* FR_OK(0):succeeded, !=0:error */
 )
 {
 	FRESULT res = FR_OK;
+	BYTE func_return = 0U;
 	DWORD nxt;
 	FATFS *fs = obj->fs;
 #if FF_FS_EXFAT || FF_USE_TRIM
@@ -1577,75 +1579,106 @@ static FRESULT remove_chain (	/* FR_OK(0):succeeded, !=0:error */
 	DWORD rt[2];
 #endif
 
-	if (clst < 2 || clst >= fs->n_fatent) return FR_INT_ERR;	/* Check if in valid range */
-
-	/* Mark the previous cluster 'EOC' on the FAT if it exists */
-	if (pclst != 0 && (!FF_FS_EXFAT || fs->fs_type != FS_EXFAT || obj->stat != 2)) {
-		res = put_fat(fs, pclst, 0xFFFFFFFF);
-		if (res != FR_OK) return res;
+	if ((clst < 2U) || (clst >= fs->n_fatent)){ /* Check if in valid range */
+	    res = FR_INT_ERR;
 	}
+	else{
+	    /* Mark the previous cluster 'EOC' on the FAT if it exists */
+        if ((pclst != 0U) && (!FF_FS_EXFAT || (fs->fs_type != (BYTE)FS_EXFAT) || (obj->stat != 2U))) {
+            res = put_fat(fs, pclst, 0xFFFFFFFFU);
+        }
 
-	/* Remove the chain */
-	do {
-		nxt = get_fat(obj, clst);			/* Get cluster status */
-		if (nxt == 0) break;				/* Empty cluster? */
-		if (nxt == 1) return FR_INT_ERR;	/* Internal error? */
-		if (nxt == 0xFFFFFFFF) return FR_DISK_ERR;	/* Disk error? */
-		if (!FF_FS_EXFAT || fs->fs_type != FS_EXFAT) {
-			res = put_fat(fs, clst, 0);		/* Mark the cluster 'free' on the FAT */
-			if (res != FR_OK) return res;
-		}
-		if (fs->free_clst < fs->n_fatent - 2) {	/* Update FSINFO */
-			fs->free_clst++;
-			fs->fsi_flag |= 1;
-		}
+        if (res == FR_OK){
+            /* Remove the chain */
+            do {
+                nxt = get_fat(obj, clst);           /* Get cluster status */
+                if (nxt == 0U){
+                    break;                /* Empty cluster? */
+                }
+
+                if (nxt == 1U){
+                    res = FR_INT_ERR;   /* Internal error? */
+                    func_return = 1U;
+                    break;
+                }
+
+                if (nxt == 0xFFFFFFFFU){
+                    res = FR_DISK_ERR;  /* Disk error? */
+                    func_return = 1U;
+                    break;
+                }
+
+                if (!FF_FS_EXFAT || (fs->fs_type != (BYTE)FS_EXFAT)) {
+                    res = put_fat(fs, clst, 0U);     /* Mark the cluster 'free' on the FAT */
+
+                    if (res != FR_OK){
+                        func_return = 1U;
+                        break;
+                    }
+                }
+
+                if (fs->free_clst < fs->n_fatent - 2U) { /* Update FSINFO */
+                    fs->free_clst++;
+                    fs->fsi_flag |= 1U;
+                }
+
 #if FF_FS_EXFAT || FF_USE_TRIM
-		if (ecl + 1 == nxt) {	/* Is next cluster contiguous? */
-			ecl = nxt;
-		} else {				/* End of contiguous cluster block */
+                if (ecl + 1 == nxt) {   /* Is next cluster contiguous? */
+                    ecl = nxt;
+                } else {                /* End of contiguous cluster block */
 #if FF_FS_EXFAT
-			if (fs->fs_type == FS_EXFAT) {
-				res = change_bitmap(fs, scl, ecl - scl + 1, 0);	/* Mark the cluster block 'free' on the bitmap */
-				if (res != FR_OK) return res;
-			}
+                    if (fs->fs_type == FS_EXFAT) {
+                        res = change_bitmap(fs, scl, ecl - scl + 1, 0); /* Mark the cluster block 'free' on the bitmap */
+                        if (res != FR_OK) return res;
+                    }
 #endif
 #if FF_USE_TRIM
-			rt[0] = clst2sect(fs, scl);					/* Start of data area freed */
-			rt[1] = clst2sect(fs, ecl) + fs->csize - 1;	/* End of data area freed */
-			disk_ioctl(fs->pdrv, CTRL_TRIM, rt);		/* Inform device the data in the block is no longer needed */
+                    rt[0] = clst2sect(fs, scl);                 /* Start of data area freed */
+                    rt[1] = clst2sect(fs, ecl) + fs->csize - 1; /* End of data area freed */
+                    disk_ioctl(fs->pdrv, CTRL_TRIM, rt);        /* Inform device the data in the block is no longer needed */
 #endif
-			scl = ecl = nxt;
-		}
+                    scl = ecl = nxt;
+                }
 #endif
-		clst = nxt;					/* Next cluster */
-	} while (clst < fs->n_fatent);	/* Repeat while not the last link */
+                clst = nxt;                 /* Next cluster */
+            } while (clst < fs->n_fatent);  /* Repeat while not the last link */
 
+            if(0U == func_return){
+                /* Came out from the loop due to an error */
 #if FF_FS_EXFAT
-	/* Some post processes for chain status */
-	if (fs->fs_type == FS_EXFAT) {
-		if (pclst == 0) {	/* Has the entire chain been removed? */
-			obj->stat = 0;		/* Change the chain status 'initial' */
-		} else {
-			if (obj->stat == 0) {	/* Is it a fragmented chain from the beginning of this session? */
-				clst = obj->sclust;		/* Follow the chain to check if it gets contiguous */
-				while (clst != pclst) {
-					nxt = get_fat(obj, clst);
-					if (nxt < 2) return FR_INT_ERR;
-					if (nxt == 0xFFFFFFFF) return FR_DISK_ERR;
-					if (nxt != clst + 1) break;	/* Not contiguous? */
-					clst++;
-				}
-				if (clst == pclst) {	/* Has the chain got contiguous again? */
-					obj->stat = 2;		/* Change the chain status 'contiguous' */
-				}
-			} else {
-				if (obj->stat == 3 && pclst >= obj->sclust && pclst <= obj->sclust + obj->n_cont) {	/* Was the chain fragmented in this session and got contiguous again? */
-					obj->stat = 2;	/* Change the chain status 'contiguous' */
-				}
-			}
-		}
-	}
+                /* Some post processes for chain status */
+                if (fs->fs_type == FS_EXFAT) {
+                    if (pclst == 0) {   /* Has the entire chain been removed? */
+                        obj->stat = 0;      /* Change the chain status 'initial' */
+                    } else {
+                        if (obj->stat == 0) {   /* Is it a fragmented chain from the beginning of this session? */
+                            clst = obj->sclust;     /* Follow the chain to check if it gets contiguous */
+                            while (clst != pclst) {
+                                nxt = get_fat(obj, clst);
+                                if (nxt < 2) return FR_INT_ERR;
+                                if (nxt == 0xFFFFFFFF) return FR_DISK_ERR;
+                                if (nxt != clst + 1) break; /* Not contiguous? */
+                                clst++;
+                            }
+                            if (clst == pclst) {    /* Has the chain got contiguous again? */
+                                obj->stat = 2;      /* Change the chain status 'contiguous' */
+                            }
+                        } else {
+                            if (obj->stat == 3 && pclst >= obj->sclust && pclst <= obj->sclust + obj->n_cont) { /* Was the chain fragmented in this session and got contiguous again? */
+                                obj->stat = 2;  /* Change the chain status 'contiguous' */
+                            }
+                        }
+                    }
+                }
 #endif
+            }
+
+        }
+
+
+	}
+
+
 	return FR_OK;
 }
 
