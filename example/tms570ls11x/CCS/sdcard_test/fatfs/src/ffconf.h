@@ -1,3 +1,6 @@
+#ifndef _FFCONF_H
+#define _FFCONF_H
+
 /*---------------------------------------------------------------------------/
 /  FatFs - Configuration file
 /---------------------------------------------------------------------------*/
@@ -168,7 +171,7 @@
 
 
 #define FF_STR_VOLUME_ID	0
-#define FF_VOLUME_STRS		"RAM","NAND","CF","SD","SD2","USB","USB2","USB3"
+#define FF_VOLUME_STRS		{"RAM","NAND","CF","SD","SD2","USB","USB2","USB3"}
 /* FF_STR_VOLUME_ID switches support for volume ID in arbitrary strings.
 /  When FF_STR_VOLUME_ID is set to 1 or 2, arbitrary strings can be used as drive
 /  number in the path name. FF_VOLUME_STRS defines the volume ID strings for each
@@ -264,7 +267,7 @@
 
 #define FF_FS_REENTRANT	0
 #define FF_FS_TIMEOUT	1000
-#define FF_SYNC_t		HANDLE
+#define FF_SYNC_t		(HANDLE)
 /* The option FF_FS_REENTRANT switches the re-entrancy (thread safe) of the FatFs
 /  module itself. Note that regardless of this option, file access to different
 /  volume is always re-entrant and volume control functions, f_mount(), f_mkfs()
@@ -287,3 +290,5 @@
 
 
 /*--- End of configuration options ---*/
+#endif
+

@@ -197,7 +197,7 @@
 
 
 /* Post process on fatal error in the file operations */
-#define ABORT(fs, res)		{ fp->err = (BYTE)(res); LEAVE_FF(fs, res); }
+#define ABORT(fs, res)		do { fp->err = (BYTE)(res); LEAVE_FF((fs), (res)); } while(0)
 
 
 /* Re-entrancy related */
@@ -207,7 +207,7 @@
 #endif
 #define LEAVE_FF(fs, res)	{ unlock_fs(fs, res); return res; }
 #else
-#define LEAVE_FF(fs, res)	return res
+#define LEAVE_FF(fs, res)	do { return (res); } while(0)
 #endif
 
 
@@ -216,7 +216,7 @@
 #define LD2PD(vol) VolToPart[vol].pd	/* Get physical drive number */
 #define LD2PT(vol) VolToPart[vol].pt	/* Get partition index */
 #else
-#define LD2PD(vol) (BYTE)(vol)	/* Each logical drive is bound to the same physical drive number */
+#define LD2PD(vol) ((BYTE)(vol))	/* Each logical drive is bound to the same physical drive number */
 #define LD2PT(vol) 0			/* Find first valid partition or in SFD */
 #endif
 
@@ -427,7 +427,7 @@ typedef struct {
 #error Wrong FF_VOLUMES setting
 #endif
 static FATFS* FatFs[FF_VOLUMES];	/* Pointer to the filesystem objects (logical drives) */
-static WORD Fsid;					/* Filesystem mount ID */
+
 
 #if FF_FS_RPATH != 0
 static BYTE CurrVol;				/* Current drive */
@@ -468,17 +468,17 @@ static const char* const VolumeStr[FF_VOLUMES] = {FF_VOLUME_STRS};	/* Pre-define
 #error Wrong setting of FF_LFN_UNICODE
 #endif
 static const BYTE LfnOfs[] = {1,3,5,7,9,14,16,18,20,22,24,28,30};	/* FAT: Offset of LFN characters in the directory entry */
-#define MAXDIRB(nc)	((nc + 44U) / 15 * SZDIRE)	/* exFAT: Size of directory entry block scratchpad buffer needed for the name length */
+#define MAXDIRB(nc)	(((nc) + 44U) / 15 * SZDIRE)	/* exFAT: Size of directory entry block scratchpad buffer needed for the name length */
 
 #if FF_USE_LFN == 1		/* LFN enabled with static working buffer */
 #if FF_FS_EXFAT
 static BYTE	DirBuf[MAXDIRB(FF_MAX_LFN)];	/* Directory entry block scratchpad buffer */
 #endif
-static WCHAR LfnBuf[FF_MAX_LFN + 1];		/* LFN working buffer */
+/*static WCHAR LfnBuf[FF_MAX_LFN + 1];        /* LFN working buffer */
 #define DEF_NAMBUF
 #define INIT_NAMBUF(fs)
 #define FREE_NAMBUF()
-#define LEAVE_MKFS(res)	return res
+#define LEAVE_MKFS(res)	do { return res; } while(0)
 
 #elif FF_USE_LFN == 2 	/* LFN enabled with dynamic working buffer on the stack */
 #if FF_FS_EXFAT
@@ -544,7 +544,7 @@ static const BYTE Dc949[] = TBL_DC949;
 static const BYTE Dc950[] = TBL_DC950;
 
 #elif FF_CODE_PAGE < 900	/* Static code page configuration (SBCS) */
-#define CODEPAGE FF_CODE_PAGE
+#define CODEPAGE (FF_CODE_PAGE)
 static const BYTE ExCvt[] = MKCVTBL(TBL_CT, FF_CODE_PAGE);
 
 #else					/* Static code page configuration (DBCS) */
@@ -561,29 +561,39 @@ static const BYTE DbcTbl[] = MKCVTBL(TBL_DC, FF_CODE_PAGE);
    Module Private Functions
 
 ---------------------------------------------------------------------------*/
-
+static WORD ld_word (const BYTE ptr[]);
+static DWORD ld_dword (const BYTE ptr[]);
+static void st_word (BYTE ptr[], WORD val);
+static void st_dword (BYTE ptr[], DWORD val);
+static void mem_cpy (BYTE dst[], const BYTE src[], UINT cnt);
+static void mem_set (BYTE dst[], BYTE val, UINT cnt);
+static int mem_cmp (const BYTE dst[], const BYTE src[], UINT cnt);
+static int chk_chr (const char* str, int chr);
+static int dbc_1st (BYTE c);
+static int dbc_2nd (BYTE c);
+static DWORD tchar2uni (const TCHAR** str);
 
 /*-----------------------------------------------------------------------*/
 /* Load/Store multi-byte word in the FAT structure                       */
 /*-----------------------------------------------------------------------*/
 
-static WORD ld_word (const BYTE* ptr)	/*	 Load a 2-byte little-endian word */
+static WORD ld_word (const BYTE ptr[])	/*	 Load a 2-byte little-endian word */
 {
 	WORD rv;
 
 	rv = ptr[1];
-	rv = rv << 8 | ptr[0];
+	rv = (WORD)(rv << 8) | (WORD)ptr[0];
 	return rv;
 }
 
-static DWORD ld_dword (const BYTE* ptr)	/* Load a 4-byte little-endian word */
+static DWORD ld_dword (const BYTE ptr[])	/* Load a 4-byte little-endian word */
 {
 	DWORD rv;
 
 	rv = ptr[3];
-	rv = rv << 8 | ptr[2];
-	rv = rv << 8 | ptr[1];
-	rv = rv << 8 | ptr[0];
+	rv = (DWORD)(rv << 8) | (DWORD)ptr[2];
+	rv = (DWORD)(rv << 8) | (DWORD)ptr[1];
+	rv = (DWORD)(rv << 8) | (DWORD)ptr[0];
 	return rv;
 }
 
@@ -605,18 +615,19 @@ static QWORD ld_qword (const BYTE* ptr)	/* Load an 8-byte little-endian word */
 #endif
 
 #if !FF_FS_READONLY
-static void st_word (BYTE* ptr, WORD val)	/* Store a 2-byte word in little-endian */
+static void st_word (BYTE ptr[], WORD val)	/* Store a 2-byte word in little-endian */
 {
-	*ptr++ = (BYTE)val; val >>= 8;
-	*ptr++ = (BYTE)val;
+	ptr[0] = (BYTE)val;
+	val >>= 8;
+	ptr[1] = (BYTE)val;
 }
 
-static void st_dword (BYTE* ptr, DWORD val)	/* Store a 4-byte word in little-endian */
+static void st_dword (BYTE ptr[], DWORD val)	/* Store a 4-byte word in little-endian */
 {
-	*ptr++ = (BYTE)val; val >>= 8;
-	*ptr++ = (BYTE)val; val >>= 8;
-	*ptr++ = (BYTE)val; val >>= 8;
-	*ptr++ = (BYTE)val;
+	ptr[0] = (BYTE)val; val >>= 8;
+	ptr[1] = (BYTE)val; val >>= 8;
+	ptr[2] = (BYTE)val; val >>= 8;
+	ptr[3] = (BYTE)val;
 }
 
 #if FF_FS_EXFAT
@@ -641,39 +652,45 @@ static void st_qword (BYTE* ptr, QWORD val)	/* Store an 8-byte word in little-en
 /*-----------------------------------------------------------------------*/
 
 /* Copy memory to memory */
-static void mem_cpy (void* dst, const void* src, UINT cnt)
+static void mem_cpy (BYTE dst[], const BYTE src[], UINT cnt)
 {
 	BYTE *d = (BYTE*)dst;
-	const BYTE *s = (const BYTE*)src;
+	UINT index = 0U;
 
-	if (cnt != 0) {
+	if (cnt != 0U) {
 		do {
-			*d++ = *s++;
+		    d = &dst[index];
+			*d = src[index];
+			index++;
 		} while (--cnt);
 	}
 }
 
 
 /* Fill memory block */
-static void mem_set (void* dst, int val, UINT cnt)
+static void mem_set (BYTE dst[], BYTE val, UINT cnt)
 {
-	BYTE *d = (BYTE*)dst;
+	BYTE *d = (BYTE*)0;
+	UINT index = 0U;
 
 	do {
-		*d++ = (BYTE)val;
+	    d = &dst[index];
+	    index++;
+		*d = (BYTE)val;
 	} while (--cnt);
 }
 
 
 /* Compare memory block */
-static int mem_cmp (const void* dst, const void* src, UINT cnt)	/* ZR:same, NZ:different */
+static int mem_cmp (const BYTE dst[], const BYTE src[], UINT cnt)	/* ZR:same, NZ:different */
 {
-	const BYTE *d = (const BYTE *)dst, *s = (const BYTE *)src;
+	UINT index = 0U;
 	int r = 0;
 
 	do {
-		r = *d++ - *s++;
-	} while (--cnt && r == 0);
+		r = (INT)((INT)dst[index] - (INT)src[index]);
+		index++;
+	} while ((--cnt) && (r == 0));
 
 	return r;
 }
@@ -3185,8 +3202,8 @@ static BYTE check_fs (	/* 0:FAT, 1:exFAT, 2:Valid BS but not FAT, 3:Not a BS, 4:
 	if (!mem_cmp(fs->win + BS_JmpBoot, "\xEB\x76\x90" "EXFAT   ", 11)) return 1;	/* Check if exFAT VBR */
 #endif
 	if (fs->win[BS_JmpBoot] == 0xE9 || fs->win[BS_JmpBoot] == 0xEB || fs->win[BS_JmpBoot] == 0xE8) {	/* Valid JumpBoot code? */
-		if (!mem_cmp(fs->win + BS_FilSysType, "FAT", 3)) return 0;		/* Is it an FAT VBR? */
-		if (!mem_cmp(fs->win + BS_FilSysType32, "FAT32", 5)) return 0;	/* Is it an FAT32 VBR? */
+		if (!mem_cmp(fs->win + BS_FilSysType, (const BYTE*)"FAT", 3)) return 0;		/* Is it an FAT VBR? */
+		if (!mem_cmp(fs->win + BS_FilSysType32, (const BYTE*)"FAT32", 5)) return 0;	/* Is it an FAT32 VBR? */
 	}
 	return 2;	/* Valid BS but not FAT */
 }
@@ -3204,6 +3221,8 @@ static FRESULT find_volume (	/* FR_OK(0): successful, !=0: an error occurred */
 	BYTE mode					/* !=0: Check write protection for write access */
 )
 {
+    static WORD Fsid;                   /* Filesystem mount ID */
+    static WCHAR LfnBuf[FF_MAX_LFN + 1];        /* LFN working buffer */
 	BYTE fmt, *pt;
 	int vol;
 	DSTATUS stat;
@@ -4976,7 +4995,7 @@ FRESULT f_rename (
 #endif
 			{	/* At FAT/FAT32 volume */
 				mem_cpy(buf, djo.dir, SZDIRE);			/* Save directory entry of the object */
-				mem_cpy(&djn, &djo, sizeof (DIR));		/* Duplicate the directory object */
+				mem_cpy((BYTE*)&djn, (const BYTE*)&djo, sizeof (DIR));		/* Duplicate the directory object */
 				res = follow_path(&djn, path_new);		/* Make sure if new object name is not in use */
 				if (res == FR_OK) {						/* Is new name already in use by any other object? */
 					res = (djn.obj.sclust == djo.obj.sclust && djn.dptr == djo.dptr) ? FR_NO_FILE : FR_EXIST;
@@ -6343,7 +6362,7 @@ void putc_init (		/* Initialize write buffer */
 	FIL* fp
 )
 {
-	mem_set(pb, 0, sizeof (putbuff));
+	mem_set((BYTE*)pb, (BYTE)0, sizeof (putbuff));
 	pb->fp = fp;
 }
 
