@@ -578,6 +578,7 @@ static FRESULT move_window (FATFS* fs, DWORD sector);
 static FRESULT sync_fs (FATFS* fs);
 static DWORD clst2sect (FATFS* fs, DWORD clst);
 static DWORD get_fat (FFOBJID* obj, DWORD clst);
+static FRESULT put_fat (FATFS* fs, DWORD clst, DWORD val);
 
 /*-----------------------------------------------------------------------*/
 /* Load/Store multi-byte word in the FAT structure                       */
@@ -1331,41 +1332,91 @@ static FRESULT put_fat (	/* FR_OK(0):succeeded, !=0:error */
 	FRESULT res = FR_INT_ERR;
 
 
-	if (clst >= 2 && clst < fs->n_fatent) {	/* Check if in valid range */
+	if ((clst >= 2U) && (clst < fs->n_fatent)) {	/* Check if in valid range */
 		switch (fs->fs_type) {
-		case FS_FAT12 :
-			bc = (UINT)clst; bc += bc / 2;	/* bc: byte offset of the entry */
+		case (BYTE)FS_FAT12 :
+			bc = (UINT)clst;
+		    bc += bc / 2U;	/* bc: byte offset of the entry */
+
+            /*
+             * MISRA-C:2004 12.2/R can be ignored because evaluation order doesn't interfere with the
+             * integrity of the internal strucutres in the following expression
+             */
 			res = move_window(fs, fs->fatbase + (bc / SS(fs)));
-			if (res != FR_OK) break;
-			p = fs->win + bc++ % SS(fs);
-			*p = (clst & 1) ? ((*p & 0x0F) | ((BYTE)val << 4)) : (BYTE)val;		/* Put 1st byte */
-			fs->wflag = 1;
+
+			if (res != FR_OK){
+			    break;
+			}
+
+			p = &fs->win[bc++ % SS(fs)];
+
+			if(clst & 1U){ /* Put 1st byte */
+			    *p = (BYTE)((*p & 0x0FU) | (BYTE)((BYTE)val << 4));
+			}
+			else{
+			    *p = (BYTE)val;
+			}
+
+			fs->wflag = 1U;
+
+            /*
+             * MISRA-C:2004 12.2/R can be ignored because evaluation order doesn't interfere with the
+             * integrity of the internal strucutres in the following expression
+             */
 			res = move_window(fs, fs->fatbase + (bc / SS(fs)));
-			if (res != FR_OK) break;
-			p = fs->win + bc % SS(fs);
-			*p = (clst & 1) ? (BYTE)(val >> 4) : ((*p & 0xF0) | ((BYTE)(val >> 8) & 0x0F));	/* Put 2nd byte */
-			fs->wflag = 1;
+			if (res != FR_OK){
+			    break;
+			}
+
+			p = &fs->win[bc % SS(fs)];
+
+			if(clst & 1U){ /* Put 2nd byte */
+			    *p = (BYTE)(val >> 4);
+			}
+			else{
+			    *p = (BYTE)((*p & 0xF0U) | (BYTE)((BYTE)(val >> 8) & 0x0FU));
+			}
+
+			fs->wflag = 1U;
 			break;
 
-		case FS_FAT16 :
-			res = move_window(fs, fs->fatbase + (clst / (SS(fs) / 2)));
-			if (res != FR_OK) break;
-			st_word(fs->win + clst * 2 % SS(fs), (WORD)val);	/* Simple WORD array */
-			fs->wflag = 1;
+		case (BYTE)FS_FAT16 :
+            /*
+             * MISRA-C:2004 12.2/R can be ignored because evaluation order doesn't interfere with the
+             * integrity of the internal strucutres in the following expression
+             */
+			res = move_window(fs, fs->fatbase + (clst / (SS(fs) / 2U)));
+
+			if (res != FR_OK){
+			    break;
+			}
+
+			st_word(&fs->win[clst * 2U % SS(fs)], (WORD)val);	/* Simple WORD array */
+			fs->wflag = 1U;
 			break;
 
-		case FS_FAT32 :
+		case (BYTE)FS_FAT32 :
 #if FF_FS_EXFAT
 		case FS_EXFAT :
 #endif
-			res = move_window(fs, fs->fatbase + (clst / (SS(fs) / 4)));
-			if (res != FR_OK) break;
-			if (!FF_FS_EXFAT || fs->fs_type != FS_EXFAT) {
-				val = (val & 0x0FFFFFFF) | (ld_dword(fs->win + clst * 4 % SS(fs)) & 0xF0000000);
+            /*
+             * MISRA-C:2004 12.2/R can be ignored because evaluation order doesn't interfere with the
+             * integrity of the internal strucutres in the following expression
+             */
+			res = move_window(fs, fs->fatbase + (clst / (SS(fs) / 4U)));
+
+			if (res != FR_OK){
+			    break;
 			}
-			st_dword(fs->win + clst * 4 % SS(fs), val);
-			fs->wflag = 1;
+
+			if ((!FF_FS_EXFAT) || (fs->fs_type != (BYTE)FS_EXFAT)) {
+				val = (val & 0x0FFFFFFFU) | (ld_dword(&fs->win[clst * 4U % SS(fs)]) & 0xF0000000U);
+			}
+			st_dword(&fs->win[clst * 4U % SS(fs)], val);
+			fs->wflag = 1U;
 			break;
+		default:
+		    break;
 		}
 	}
 	return res;
