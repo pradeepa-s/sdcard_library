@@ -583,6 +583,7 @@ static FRESULT remove_chain (FFOBJID* obj, DWORD clst, DWORD pclst);
 static DWORD create_chain (FFOBJID* obj, DWORD clst);
 static FRESULT dir_clear (FATFS *fs, DWORD clst);
 static FRESULT dir_sdi (DIR* dp, DWORD ofs);
+static FRESULT dir_next (DIR* dp, int stretch);
 
 /*-----------------------------------------------------------------------*/
 /* Load/Store multi-byte word in the FAT structure                       */
@@ -2055,51 +2056,129 @@ static FRESULT dir_next (	/* FR_OK(0):succeeded, FR_NO_FILE:End of table, FR_DEN
 	int stretch				/* 0: Do not stretch table, 1: Stretch table if needed */
 )
 {
+    FRESULT ret;
+    BYTE func_exit = 0U;
 	DWORD ofs, clst;
 	FATFS *fs = dp->obj.fs;
+	DWORD temp_dw;
+    WORD temp_w;
+
+    if((fs->fs_type == (BYTE)FS_EXFAT) && FF_FS_EXFAT){
+        temp_dw = (DWORD)MAX_DIR_EX;
+    }
+    else{
+        temp_dw = (DWORD)MAX_DIR;
+    }
 
 
-	ofs = dp->dptr + SZDIRE;	/* Next entry */
-	if (dp->sect == 0 || ofs >= (DWORD)((FF_FS_EXFAT && fs->fs_type == FS_EXFAT) ? MAX_DIR_EX : MAX_DIR)) return FR_NO_FILE;	/* Report EOT when offset has reached max value */
-
-	if (ofs % SS(fs) == 0) {	/* Sector changed? */
-		dp->sect++;				/* Next sector */
-
-		if (dp->clust == 0) {	/* Static table */
-			if (ofs / SZDIRE >= fs->n_rootdir) {	/* Report EOT if it reached end of static table */
-				dp->sect = 0; return FR_NO_FILE;
-			}
-		}
-		else {					/* Dynamic table */
-			if ((ofs / SS(fs) & (fs->csize - 1)) == 0) {	/* Cluster changed? */
-				clst = get_fat(&dp->obj, dp->clust);		/* Get next cluster */
-				if (clst <= 1) return FR_INT_ERR;			/* Internal error */
-				if (clst == 0xFFFFFFFF) return FR_DISK_ERR;	/* Disk error */
-				if (clst >= fs->n_fatent) {					/* It reached end of dynamic table */
-#if !FF_FS_READONLY
-					if (!stretch) {								/* If no stretch, report EOT */
-						dp->sect = 0; return FR_NO_FILE;
-					}
-					clst = create_chain(&dp->obj, dp->clust);	/* Allocate a cluster */
-					if (clst == 0) return FR_DENIED;			/* No free cluster */
-					if (clst == 1) return FR_INT_ERR;			/* Internal error */
-					if (clst == 0xFFFFFFFF) return FR_DISK_ERR;	/* Disk error */
-					if (dir_clear(fs, clst) != FR_OK) return FR_DISK_ERR;	/* Clean up the stretched table */
-					if (FF_FS_EXFAT) dp->obj.stat |= 4;			/* exFAT: The directory has been stretched */
-#else
-					if (!stretch) dp->sect = 0;					/* (this line is to suppress compiler warning) */
-					dp->sect = 0; return FR_NO_FILE;			/* Report EOT */
-#endif
-				}
-				dp->clust = clst;		/* Initialize data for new cluster */
-				dp->sect = clst2sect(fs, clst);
-			}
-		}
+	ofs = dp->dptr + (DWORD)SZDIRE;	/* Next entry */
+	if ((dp->sect == 0U) || (ofs >= (DWORD)(temp_dw))){
+	    ret = FR_NO_FILE;   /* Report EOT when offset has reached max value */
+	    func_exit = 1U;
 	}
-	dp->dptr = ofs;						/* Current entry */
-	dp->dir = fs->win + ofs % SS(fs);	/* Pointer to the entry in the win[] */
+	else{
 
-	return FR_OK;
+        if (ofs % SS(fs) == 0U) {	/* Sector changed? */
+            dp->sect++;				/* Next sector */
+
+            if (dp->clust == 0U) {	/* Static table */
+
+                temp_w = (WORD)((DWORD)ofs / (DWORD)SZDIRE);
+
+                if (temp_w >= fs->n_rootdir) {	/* Report EOT if it reached end of static table */
+                    dp->sect = 0U;
+                    func_exit = 1U;
+                    ret = FR_NO_FILE;
+                }
+            }
+            else {					/* Dynamic table */
+
+                temp_w = (WORD)(ofs / SS(fs));
+
+                if ((temp_w & (fs->csize - 1U)) == 0U) {	/* Cluster changed? */
+
+                    /*
+                     * MISRA-C:2004 12.2/R can be ignored because evaluation order doesn't interfere with the
+                     * integrity of the internal strucutres in the following expression
+                     */
+                    clst = get_fat(&dp->obj, dp->clust);		/* Get next cluster */
+
+                    if (clst <= 1U){
+                        func_exit = 1U;             /* Internal error */
+                        ret = FR_INT_ERR;
+                    }else if (clst == 0xFFFFFFFFU){
+                        func_exit = 1U;             /* Disk error */
+                        ret = FR_DISK_ERR;
+                    }else if (clst >= fs->n_fatent) {					/* It reached end of dynamic table */
+
+#if !FF_FS_READONLY
+                        if (!stretch) {								/* If no stretch, report EOT */
+                            dp->sect = 0U;
+                            func_exit = 1U;
+                            ret = FR_NO_FILE;
+                        }
+                        else{
+
+                            /*
+                             * MISRA-C:2004 12.2/R can be ignored because evaluation order doesn't interfere with the
+                             * integrity of the internal strucutres in the following expression
+                             */
+                            clst = create_chain(&dp->obj, dp->clust);	/* Allocate a cluster */
+
+                            if (clst == 0U){
+                                func_exit = 1U;             /* No free cluster */
+                                ret = FR_DENIED;
+                            }
+                            else  if (clst == 1U){
+                                func_exit = 1U;             /* Internal error */
+                                ret = FR_INT_ERR;
+                            }
+                            else if (clst == 0xFFFFFFFFU){
+                                func_exit = 1U;             /* Disk error */
+                                ret = FR_DISK_ERR;
+                            }
+                            else if (dir_clear(fs, clst) != FR_OK){
+                                func_exit = 1U;             /* Clean up the stretched table */
+                                ret = FR_DISK_ERR;
+                            }
+                            else{
+                                /*
+                                 * MISRA-C:2004 14.10/R compliance requirement.
+                                 */
+                            }
+
+
+#if FF_FS_EXFAT
+                                dp->obj.stat |= 4U;			/* exFAT: The directory has been stretched */
+#endif
+
+#else
+                            if (!stretch) dp->sect = 0;					/* (this line is to suppress compiler warning) */
+                            dp->sect = 0; return FR_NO_FILE;			/* Report EOT */
+#endif
+                        }
+                    }
+                    else{
+                        /*
+                         * MISRA-C:2004 14.10/R compliance requirement.
+                         */
+                    }
+
+                    if(func_exit == 0U){
+                        dp->clust = clst;       /* Initialize data for new cluster */
+                        dp->sect = clst2sect(fs, clst);
+                    }
+                }
+            }
+        }
+
+        if(func_exit == 0U){
+            dp->dptr = ofs;						/* Current entry */
+            dp->dir = &fs->win[ofs % SS(fs)];	/* Pointer to the entry in the win[] */
+        }
+	}
+
+	return ret;
 }
 
 
