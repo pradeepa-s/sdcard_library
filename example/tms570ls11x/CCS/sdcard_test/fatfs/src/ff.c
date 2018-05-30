@@ -44,156 +44,156 @@
 
 
 /* Additional file attribute bits for internal use */
-#define AM_VOL		0x08	/* Volume label */
-#define AM_LFN		0x0F	/* LFN entry */
-#define AM_MASK		0x3F	/* Mask of defined bits */
+#define AM_VOL		0x08U	/* Volume label */
+#define AM_LFN		0x0FU	/* LFN entry */
+#define AM_MASK		0x3FU	/* Mask of defined bits */
 
 
 /* Additional file access control and file status flags for internal use */
-#define FA_SEEKEND	0x20	/* Seek to end of the file on file open */
-#define FA_MODIFIED	0x40	/* File has been modified */
-#define FA_DIRTY	0x80	/* FIL.buf[] needs to be written-back */
+#define FA_SEEKEND	0x20U	/* Seek to end of the file on file open */
+#define FA_MODIFIED	0x40U	/* File has been modified */
+#define FA_DIRTY	0x80U	/* FIL.buf[] needs to be written-back */
 
 
 /* Name status flags in fn[11] */
-#define NSFLAG		11		/* Index of the name status byte */
-#define NS_LOSS		0x01	/* Out of 8.3 format */
-#define NS_LFN		0x02	/* Force to create LFN entry */
-#define NS_LAST		0x04	/* Last segment */
-#define NS_BODY		0x08	/* Lower case flag (body) */
-#define NS_EXT		0x10	/* Lower case flag (ext) */
-#define NS_DOT		0x20	/* Dot entry */
-#define NS_NOLFN	0x40	/* Do not find LFN */
-#define NS_NONAME	0x80	/* Not followed */
+#define NSFLAG		11U 	/* Index of the name status byte */
+#define NS_LOSS		0x01U	/* Out of 8.3 format */
+#define NS_LFN		0x02U	/* Force to create LFN entry */
+#define NS_LAST		0x04U	/* Last segment */
+#define NS_BODY		0x08U	/* Lower case flag (body) */
+#define NS_EXT		0x10U	/* Lower case flag (ext) */
+#define NS_DOT		0x20U	/* Dot entry */
+#define NS_NOLFN	0x40U	/* Do not find LFN */
+#define NS_NONAME	0x80U	/* Not followed */
 
 
 /* Limits and boundaries */
-#define MAX_DIR		0x200000		/* Max size of FAT directory */
-#define MAX_DIR_EX	0x10000000		/* Max size of exFAT directory */
-#define MAX_FAT12	0xFF5			/* Max FAT12 clusters (differs from specs, but right for real DOS/Windows behavior) */
-#define MAX_FAT16	0xFFF5			/* Max FAT16 clusters (differs from specs, but right for real DOS/Windows behavior) */
-#define MAX_FAT32	0x0FFFFFF5		/* Max FAT32 clusters (not specified, practical limit) */
-#define MAX_EXFAT	0x7FFFFFFD		/* Max exFAT clusters (differs from specs, implementation limit) */
+#define MAX_DIR		0x200000U		/* Max size of FAT directory */
+#define MAX_DIR_EX	0x10000000U		/* Max size of exFAT directory */
+#define MAX_FAT12	0xFF5U			/* Max FAT12 clusters (differs from specs, but right for real DOS/Windows behavior) */
+#define MAX_FAT16	0xFFF5U			/* Max FAT16 clusters (differs from specs, but right for real DOS/Windows behavior) */
+#define MAX_FAT32	0x0FFFFFF5U		/* Max FAT32 clusters (not specified, practical limit) */
+#define MAX_EXFAT	0x7FFFFFFDU		/* Max exFAT clusters (differs from specs, implementation limit) */
 
 
 /* FatFs refers the FAT structure as simple byte array instead of structure member
 / because the C structure is not binary compatible between different platforms */
 
-#define BS_JmpBoot			0		/* x86 jump instruction (3-byte) */
-#define BS_OEMName			3		/* OEM name (8-byte) */
-#define BPB_BytsPerSec		11		/* Sector size [byte] (WORD) */
-#define BPB_SecPerClus		13		/* Cluster size [sector] (BYTE) */
-#define BPB_RsvdSecCnt		14		/* Size of reserved area [sector] (WORD) */
-#define BPB_NumFATs			16		/* Number of FATs (BYTE) */
-#define BPB_RootEntCnt		17		/* Size of root directory area for FAT [entry] (WORD) */
-#define BPB_TotSec16		19		/* Volume size (16-bit) [sector] (WORD) */
-#define BPB_Media			21		/* Media descriptor byte (BYTE) */
-#define BPB_FATSz16			22		/* FAT size (16-bit) [sector] (WORD) */
-#define BPB_SecPerTrk		24		/* Number of sectors per track for int13h [sector] (WORD) */
-#define BPB_NumHeads		26		/* Number of heads for int13h (WORD) */
-#define BPB_HiddSec			28		/* Volume offset from top of the drive (DWORD) */
-#define BPB_TotSec32		32		/* Volume size (32-bit) [sector] (DWORD) */
-#define BS_DrvNum			36		/* Physical drive number for int13h (BYTE) */
-#define BS_NTres			37		/* WindowsNT error flag (BYTE) */
-#define BS_BootSig			38		/* Extended boot signature (BYTE) */
-#define BS_VolID			39		/* Volume serial number (DWORD) */
-#define BS_VolLab			43		/* Volume label string (8-byte) */
-#define BS_FilSysType		54		/* Filesystem type string (8-byte) */
-#define BS_BootCode			62		/* Boot code (448-byte) */
-#define BS_55AA				510		/* Signature word (WORD) */
+#define BS_JmpBoot			0U		/* x86 jump instruction (3-byte) */
+#define BS_OEMName			3U		/* OEM name (8-byte) */
+#define BPB_BytsPerSec		11U		/* Sector size [byte] (WORD) */
+#define BPB_SecPerClus		13U		/* Cluster size [sector] (BYTE) */
+#define BPB_RsvdSecCnt		14U		/* Size of reserved area [sector] (WORD) */
+#define BPB_NumFATs			16U		/* Number of FATs (BYTE) */
+#define BPB_RootEntCnt		17U		/* Size of root directory area for FAT [entry] (WORD) */
+#define BPB_TotSec16		19U		/* Volume size (16-bit) [sector] (WORD) */
+#define BPB_Media			21U		/* Media descriptor byte (BYTE) */
+#define BPB_FATSz16			22U		/* FAT size (16-bit) [sector] (WORD) */
+#define BPB_SecPerTrk		24U		/* Number of sectors per track for int13h [sector] (WORD) */
+#define BPB_NumHeads		26U		/* Number of heads for int13h (WORD) */
+#define BPB_HiddSec			28U		/* Volume offset from top of the drive (DWORD) */
+#define BPB_TotSec32		32U		/* Volume size (32-bit) [sector] (DWORD) */
+#define BS_DrvNum			36U		/* Physical drive number for int13h (BYTE) */
+#define BS_NTres			37U		/* WindowsNT error flag (BYTE) */
+#define BS_BootSig			38U		/* Extended boot signature (BYTE) */
+#define BS_VolID			39U		/* Volume serial number (DWORD) */
+#define BS_VolLab			43U		/* Volume label string (8-byte) */
+#define BS_FilSysType		54U		/* Filesystem type string (8-byte) */
+#define BS_BootCode			62U		/* Boot code (448-byte) */
+#define BS_55AA				510U		/* Signature word (WORD) */
 
-#define BPB_FATSz32			36		/* FAT32: FAT size [sector] (DWORD) */
-#define BPB_ExtFlags32		40		/* FAT32: Extended flags (WORD) */
-#define BPB_FSVer32			42		/* FAT32: Filesystem version (WORD) */
-#define BPB_RootClus32		44		/* FAT32: Root directory cluster (DWORD) */
-#define BPB_FSInfo32		48		/* FAT32: Offset of FSINFO sector (WORD) */
-#define BPB_BkBootSec32		50		/* FAT32: Offset of backup boot sector (WORD) */
-#define BS_DrvNum32			64		/* FAT32: Physical drive number for int13h (BYTE) */
-#define BS_NTres32			65		/* FAT32: Error flag (BYTE) */
-#define BS_BootSig32		66		/* FAT32: Extended boot signature (BYTE) */
-#define BS_VolID32			67		/* FAT32: Volume serial number (DWORD) */
-#define BS_VolLab32			71		/* FAT32: Volume label string (8-byte) */
-#define BS_FilSysType32		82		/* FAT32: Filesystem type string (8-byte) */
-#define BS_BootCode32		90		/* FAT32: Boot code (420-byte) */
+#define BPB_FATSz32			36U		/* FAT32: FAT size [sector] (DWORD) */
+#define BPB_ExtFlags32		40U		/* FAT32: Extended flags (WORD) */
+#define BPB_FSVer32			42U		/* FAT32: Filesystem version (WORD) */
+#define BPB_RootClus32		44U		/* FAT32: Root directory cluster (DWORD) */
+#define BPB_FSInfo32		48U		/* FAT32: Offset of FSINFO sector (WORD) */
+#define BPB_BkBootSec32		50U		/* FAT32: Offset of backup boot sector (WORD) */
+#define BS_DrvNum32			64U		/* FAT32: Physical drive number for int13h (BYTE) */
+#define BS_NTres32			65U		/* FAT32: Error flag (BYTE) */
+#define BS_BootSig32		66U		/* FAT32: Extended boot signature (BYTE) */
+#define BS_VolID32			67U		/* FAT32: Volume serial number (DWORD) */
+#define BS_VolLab32			71U		/* FAT32: Volume label string (8-byte) */
+#define BS_FilSysType32		82U		/* FAT32: Filesystem type string (8-byte) */
+#define BS_BootCode32		90U		/* FAT32: Boot code (420-byte) */
 
-#define BPB_ZeroedEx		11		/* exFAT: MBZ field (53-byte) */
-#define BPB_VolOfsEx		64		/* exFAT: Volume offset from top of the drive [sector] (QWORD) */
-#define BPB_TotSecEx		72		/* exFAT: Volume size [sector] (QWORD) */
-#define BPB_FatOfsEx		80		/* exFAT: FAT offset from top of the volume [sector] (DWORD) */
-#define BPB_FatSzEx			84		/* exFAT: FAT size [sector] (DWORD) */
-#define BPB_DataOfsEx		88		/* exFAT: Data offset from top of the volume [sector] (DWORD) */
-#define BPB_NumClusEx		92		/* exFAT: Number of clusters (DWORD) */
-#define BPB_RootClusEx		96		/* exFAT: Root directory start cluster (DWORD) */
-#define BPB_VolIDEx			100		/* exFAT: Volume serial number (DWORD) */
-#define BPB_FSVerEx			104		/* exFAT: Filesystem version (WORD) */
-#define BPB_VolFlagEx		106		/* exFAT: Volume flags (WORD) */
-#define BPB_BytsPerSecEx	108		/* exFAT: Log2 of sector size in unit of byte (BYTE) */
-#define BPB_SecPerClusEx	109		/* exFAT: Log2 of cluster size in unit of sector (BYTE) */
-#define BPB_NumFATsEx		110		/* exFAT: Number of FATs (BYTE) */
-#define BPB_DrvNumEx		111		/* exFAT: Physical drive number for int13h (BYTE) */
-#define BPB_PercInUseEx		112		/* exFAT: Percent in use (BYTE) */
-#define BPB_RsvdEx			113		/* exFAT: Reserved (7-byte) */
+#define BPB_ZeroedEx		11U		/* exFAT: MBZ field (53-byte) */
+#define BPB_VolOfsEx		64U		/* exFAT: Volume offset from top of the drive [sector] (QWORD) */
+#define BPB_TotSecEx		72U		/* exFAT: Volume size [sector] (QWORD) */
+#define BPB_FatOfsEx		80U		/* exFAT: FAT offset from top of the volume [sector] (DWORD) */
+#define BPB_FatSzEx			84U		/* exFAT: FAT size [sector] (DWORD) */
+#define BPB_DataOfsEx		88U		/* exFAT: Data offset from top of the volume [sector] (DWORD) */
+#define BPB_NumClusEx		92U		/* exFAT: Number of clusters (DWORD) */
+#define BPB_RootClusEx		96U		/* exFAT: Root directory start cluster (DWORD) */
+#define BPB_VolIDEx			100U		/* exFAT: Volume serial number (DWORD) */
+#define BPB_FSVerEx			104U		/* exFAT: Filesystem version (WORD) */
+#define BPB_VolFlagEx		106U		/* exFAT: Volume flags (WORD) */
+#define BPB_BytsPerSecEx	108U		/* exFAT: Log2 of sector size in unit of byte (BYTE) */
+#define BPB_SecPerClusEx	109U		/* exFAT: Log2 of cluster size in unit of sector (BYTE) */
+#define BPB_NumFATsEx		110U		/* exFAT: Number of FATs (BYTE) */
+#define BPB_DrvNumEx		111U		/* exFAT: Physical drive number for int13h (BYTE) */
+#define BPB_PercInUseEx		112U		/* exFAT: Percent in use (BYTE) */
+#define BPB_RsvdEx			113U		/* exFAT: Reserved (7-byte) */
 #define BS_BootCodeEx		120		/* exFAT: Boot code (390-byte) */
 
-#define DIR_Name			0		/* Short file name (11-byte) */
-#define DIR_Attr			11		/* Attribute (BYTE) */
-#define DIR_NTres			12		/* Lower case flag (BYTE) */
-#define DIR_CrtTime10		13		/* Created time sub-second (BYTE) */
-#define DIR_CrtTime			14		/* Created time (DWORD) */
-#define DIR_LstAccDate		18		/* Last accessed date (WORD) */
-#define DIR_FstClusHI		20		/* Higher 16-bit of first cluster (WORD) */
-#define DIR_ModTime			22		/* Modified time (DWORD) */
-#define DIR_FstClusLO		26		/* Lower 16-bit of first cluster (WORD) */
-#define DIR_FileSize		28		/* File size (DWORD) */
-#define LDIR_Ord			0		/* LFN: LFN order and LLE flag (BYTE) */
-#define LDIR_Attr			11		/* LFN: LFN attribute (BYTE) */
-#define LDIR_Type			12		/* LFN: Entry type (BYTE) */
-#define LDIR_Chksum			13		/* LFN: Checksum of the SFN (BYTE) */
-#define LDIR_FstClusLO		26		/* LFN: MBZ field (WORD) */
-#define XDIR_Type			0		/* exFAT: Type of exFAT directory entry (BYTE) */
-#define XDIR_NumLabel		1		/* exFAT: Number of volume label characters (BYTE) */
-#define XDIR_Label			2		/* exFAT: Volume label (11-WORD) */
-#define XDIR_CaseSum		4		/* exFAT: Sum of case conversion table (DWORD) */
-#define XDIR_NumSec			1		/* exFAT: Number of secondary entries (BYTE) */
-#define XDIR_SetSum			2		/* exFAT: Sum of the set of directory entries (WORD) */
-#define XDIR_Attr			4		/* exFAT: File attribute (WORD) */
-#define XDIR_CrtTime		8		/* exFAT: Created time (DWORD) */
-#define XDIR_ModTime		12		/* exFAT: Modified time (DWORD) */
-#define XDIR_AccTime		16		/* exFAT: Last accessed time (DWORD) */
-#define XDIR_CrtTime10		20		/* exFAT: Created time subsecond (BYTE) */
-#define XDIR_ModTime10		21		/* exFAT: Modified time subsecond (BYTE) */
-#define XDIR_CrtTZ			22		/* exFAT: Created timezone (BYTE) */
-#define XDIR_ModTZ			23		/* exFAT: Modified timezone (BYTE) */
-#define XDIR_AccTZ			24		/* exFAT: Last accessed timezone (BYTE) */
-#define XDIR_GenFlags		33		/* exFAT: General secondary flags (BYTE) */
-#define XDIR_NumName		35		/* exFAT: Number of file name characters (BYTE) */
-#define XDIR_NameHash		36		/* exFAT: Hash of file name (WORD) */
-#define XDIR_ValidFileSize	40		/* exFAT: Valid file size (QWORD) */
-#define XDIR_FstClus		52		/* exFAT: First cluster of the file data (DWORD) */
-#define XDIR_FileSize		56		/* exFAT: File/Directory size (QWORD) */
+#define DIR_Name			0U		/* Short file name (11-byte) */
+#define DIR_Attr			11U		/* Attribute (BYTE) */
+#define DIR_NTres			12U		/* Lower case flag (BYTE) */
+#define DIR_CrtTime10		13U		/* Created time sub-second (BYTE) */
+#define DIR_CrtTime			14U		/* Created time (DWORD) */
+#define DIR_LstAccDate		18U		/* Last accessed date (WORD) */
+#define DIR_FstClusHI		20U		/* Higher 16-bit of first cluster (WORD) */
+#define DIR_ModTime			22U		/* Modified time (DWORD) */
+#define DIR_FstClusLO		26U		/* Lower 16-bit of first cluster (WORD) */
+#define DIR_FileSize		28U		/* File size (DWORD) */
+#define LDIR_Ord			0U		/* LFN: LFN order and LLE flag (BYTE) */
+#define LDIR_Attr			11U		/* LFN: LFN attribute (BYTE) */
+#define LDIR_Type			12U		/* LFN: Entry type (BYTE) */
+#define LDIR_Chksum			13U		/* LFN: Checksum of the SFN (BYTE) */
+#define LDIR_FstClusLO		26U		/* LFN: MBZ field (WORD) */
+#define XDIR_Type			0U		/* exFAT: Type of exFAT directory entry (BYTE) */
+#define XDIR_NumLabel		1U		/* exFAT: Number of volume label characters (BYTE) */
+#define XDIR_Label			2U		/* exFAT: Volume label (11-WORD) */
+#define XDIR_CaseSum		4U		/* exFAT: Sum of case conversion table (DWORD) */
+#define XDIR_NumSec			1U		/* exFAT: Number of secondary entries (BYTE) */
+#define XDIR_SetSum			2U		/* exFAT: Sum of the set of directory entries (WORD) */
+#define XDIR_Attr			4U		/* exFAT: File attribute (WORD) */
+#define XDIR_CrtTime		8U		/* exFAT: Created time (DWORD) */
+#define XDIR_ModTime		12U		/* exFAT: Modified time (DWORD) */
+#define XDIR_AccTime		16U		/* exFAT: Last accessed time (DWORD) */
+#define XDIR_CrtTime10		20U		/* exFAT: Created time subsecond (BYTE) */
+#define XDIR_ModTime10		21U		/* exFAT: Modified time subsecond (BYTE) */
+#define XDIR_CrtTZ			22U		/* exFAT: Created timezone (BYTE) */
+#define XDIR_ModTZ			23U		/* exFAT: Modified timezone (BYTE) */
+#define XDIR_AccTZ			24U		/* exFAT: Last accessed timezone (BYTE) */
+#define XDIR_GenFlags		33U		/* exFAT: General secondary flags (BYTE) */
+#define XDIR_NumName		35U		/* exFAT: Number of file name characters (BYTE) */
+#define XDIR_NameHash		36U		/* exFAT: Hash of file name (WORD) */
+#define XDIR_ValidFileSize	40U		/* exFAT: Valid file size (QWORD) */
+#define XDIR_FstClus		52U		/* exFAT: First cluster of the file data (DWORD) */
+#define XDIR_FileSize		56U		/* exFAT: File/Directory size (QWORD) */
 
-#define SZDIRE				32		/* Size of a directory entry */
-#define DDEM				0xE5	/* Deleted directory entry mark set to DIR_Name[0] */
-#define RDDEM				0x05	/* Replacement of the character collides with DDEM */
-#define LLEF				0x40	/* Last long entry flag in LDIR_Ord */
+#define SZDIRE				32U		/* Size of a directory entry */
+#define DDEM				0xE5U	/* Deleted directory entry mark set to DIR_Name[0] */
+#define RDDEM				0x05U	/* Replacement of the character collides with DDEM */
+#define LLEF				0x40U	/* Last long entry flag in LDIR_Ord */
 
-#define FSI_LeadSig			0		/* FAT32 FSI: Leading signature (DWORD) */
-#define FSI_StrucSig		484		/* FAT32 FSI: Structure signature (DWORD) */
-#define FSI_Free_Count		488		/* FAT32 FSI: Number of free clusters (DWORD) */
-#define FSI_Nxt_Free		492		/* FAT32 FSI: Last allocated cluster (DWORD) */
+#define FSI_LeadSig			0U		/* FAT32 FSI: Leading signature (DWORD) */
+#define FSI_StrucSig		484U		/* FAT32 FSI: Structure signature (DWORD) */
+#define FSI_Free_Count		488U	/* FAT32 FSI: Number of free clusters (DWORD) */
+#define FSI_Nxt_Free		492U		/* FAT32 FSI: Last allocated cluster (DWORD) */
 
-#define MBR_Table			446		/* MBR: Offset of partition table in the MBR */
-#define SZ_PTE				16		/* MBR: Size of a partition table entry */
-#define PTE_Boot			0		/* MBR PTE: Boot indicator */
-#define PTE_StHead			1		/* MBR PTE: Start head */
-#define PTE_StSec			2		/* MBR PTE: Start sector */
-#define PTE_StCyl			3		/* MBR PTE: Start cylinder */
-#define PTE_System			4		/* MBR PTE: System ID */
-#define PTE_EdHead			5		/* MBR PTE: End head */
-#define PTE_EdSec			6		/* MBR PTE: End sector */
-#define PTE_EdCyl			7		/* MBR PTE: End cylinder */
-#define PTE_StLba			8		/* MBR PTE: Start in LBA */
-#define PTE_SizLba			12		/* MBR PTE: Size in LBA */
+#define MBR_Table			446U		/* MBR: Offset of partition table in the MBR */
+#define SZ_PTE				16U		/* MBR: Size of a partition table entry */
+#define PTE_Boot			0U		/* MBR PTE: Boot indicator */
+#define PTE_StHead			1U		/* MBR PTE: Start head */
+#define PTE_StSec			2U		/* MBR PTE: Start sector */
+#define PTE_StCyl			3U		/* MBR PTE: Start cylinder */
+#define PTE_System			4U		/* MBR PTE: System ID */
+#define PTE_EdHead			5U		/* MBR PTE: End head */
+#define PTE_EdSec			6U		/* MBR PTE: End sector */
+#define PTE_EdCyl			7U		/* MBR PTE: End cylinder */
+#define PTE_StLba			8U		/* MBR PTE: Start in LBA */
+#define PTE_SizLba			12U		/* MBR PTE: Size in LBA */
 
 
 /* Post process on fatal error in the file operations */
@@ -584,6 +584,8 @@ static DWORD create_chain (FFOBJID* obj, DWORD clst);
 static FRESULT dir_clear (FATFS *fs, DWORD clst);
 static FRESULT dir_sdi (DIR* dp, DWORD ofs);
 static FRESULT dir_next (DIR* dp, int stretch);
+static FRESULT dir_read (DIR* dp, int vol);
+
 
 /*-----------------------------------------------------------------------*/
 /* Load/Store multi-byte word in the FAT structure                       */
@@ -2739,65 +2741,114 @@ static FRESULT dir_read (
 	FRESULT res = FR_NO_FILE;
 	FATFS *fs = dp->obj.fs;
 	BYTE a, c;
+	BYTE temp_byte;
+	BYTE loop_exit = 0U;
 #if FF_USE_LFN
-	BYTE ord = 0xFF, sum = 0xFF;
+	BYTE ord = 0xFFU, sum = 0xFFU;
 #endif
 
 	while (dp->sect) {
 		res = move_window(fs, dp->sect);
-		if (res != FR_OK) break;
-		c = dp->dir[DIR_Name];	/* Test for the entry type */
-		if (c == 0) {
-			res = FR_NO_FILE; break; /* Reached to end of the directory */
-		}
+
+		if(res == FR_OK){
+
+		    c = dp->dir[DIR_Name];  /* Test for the entry type */
+            if (c == 0U) {
+                res = FR_NO_FILE;   /* Reached to end of the directory */
+                loop_exit = 1U;
+            }
+            else{
 #if FF_FS_EXFAT
-		if (fs->fs_type == FS_EXFAT) {	/* On the exFAT volume */
-			if (FF_USE_LABEL && vol) {
-				if (c == 0x83) break;	/* Volume label entry? */
-			} else {
-				if (c == 0x85) {		/* Start of the file entry block? */
-					dp->blk_ofs = dp->dptr;	/* Get location of the block */
-					res = load_xdir(dp);	/* Load the entry block */
-					if (res == FR_OK) {
-						dp->obj.attr = fs->dirbuf[XDIR_Attr] & AM_MASK;	/* Get attribute */
-					}
-					break;
-				}
-			}
-		} else
+                if (fs->fs_type == FS_EXFAT) {  /* On the exFAT volume */
+                    if (FF_USE_LABEL && vol) {
+                        if (c == 0x83) {
+                            loop_exit = 1u;   /* Volume label entry? */
+                        }
+                    } else {
+                        if (c == 0x85) {        /* Start of the file entry block? */
+                            dp->blk_ofs = dp->dptr; /* Get location of the block */
+                            res = load_xdir(dp);    /* Load the entry block */
+                            if (res == FR_OK) {
+                                dp->obj.attr = fs->dirbuf[XDIR_Attr] & AM_MASK; /* Get attribute */
+                            }
+                            loop_exit = 1u;
+                        }
+                    }
+                } else
 #endif
-		{	/* On the FAT/FAT32 volume */
-			dp->obj.attr = a = dp->dir[DIR_Attr] & AM_MASK;	/* Get attribute */
-#if FF_USE_LFN		/* LFN configuration */
-			if (c == DDEM || c == '.' || (int)((a & ~AM_ARC) == AM_VOL) != vol) {	/* An entry without valid data */
-				ord = 0xFF;
-			} else {
-				if (a == AM_LFN) {			/* An LFN entry is found */
-					if (c & LLEF) {			/* Is it start of an LFN sequence? */
-						sum = dp->dir[LDIR_Chksum];
-						c &= (BYTE)~LLEF; ord = c;
-						dp->blk_ofs = dp->dptr;
-					}
-					/* Check LFN validity and capture it */
-					ord = (c == ord && sum == dp->dir[LDIR_Chksum] && pick_lfn(fs->lfnbuf, dp->dir)) ? ord - 1 : 0xFF;
-				} else {					/* An SFN entry is found */
-					if (ord != 0 || sum != sum_sfn(dp->dir)) {	/* Is there a valid LFN? */
-						dp->blk_ofs = 0xFFFFFFFF;			/* It has no LFN. */
-					}
-					break;
-				}
-			}
-#else		/* Non LFN configuration */
-			if (c != DDEM && c != '.' && a != AM_LFN && (int)((a & ~AM_ARC) == AM_VOL) == vol) {	/* Is it a valid entry? */
-				break;
-			}
-#endif
+
+                {   /* On the FAT/FAT32 volume */
+
+                    a = (dp->dir[DIR_Attr] & (BYTE)AM_MASK);
+                    dp->obj.attr = a;   /* Get attribute */
+#if FF_USE_LFN      /* LFN configuration */
+
+                    if((a & (BYTE)(~AM_ARC)) == AM_VOL){
+                        temp_byte = 1U;
+                    }
+                    else{
+                        temp_byte = 0U;
+                    }
+
+                    if ((c == (BYTE)DDEM) || (c == (BYTE)'.') || ((INT)temp_byte != vol)) { /* An entry without valid data */
+                        ord = 0xFFU;
+                    } else {
+                        if (a == (BYTE)AM_LFN) {            /* An LFN entry is found */
+
+                            if (c & (BYTE)LLEF) {           /* Is it start of an LFN sequence? */
+                                sum = dp->dir[LDIR_Chksum];
+                                c &= (BYTE)~LLEF;
+                                ord = c;
+                                dp->blk_ofs = dp->dptr;
+                            }
+
+                            /* Check LFN validity and capture it */
+                            ord = 0xFFU;
+                            if((c == ord) && (sum == dp->dir[LDIR_Chksum])){
+                                if(pick_lfn(fs->lfnbuf, dp->dir)){
+                                    ord = ord - 1U;
+                                }
+                            }
+
+                        }
+                        else {                  /* An SFN entry is found */
+                            if (ord != 0U){
+                                if(sum != sum_sfn(dp->dir)) {   /* Is there a valid LFN? */
+                                    dp->blk_ofs = 0xFFFFFFFFU;          /* It has no LFN. */
+                                }
+                            }
+                            loop_exit = 1U;
+                        }
+                    }
+    #else       /* Non LFN configuration */
+                    if (c != DDEM && c != '.' && a != AM_LFN && (int)((a & ~AM_ARC) == AM_VOL) == vol) {    /* Is it a valid entry? */
+                        loop_exit = 1U;
+                    }
+    #endif
+                }
+
+                if(loop_exit == 0U){
+                    res = dir_next(dp, 0);      /* Next entry */
+                    if (res != FR_OK){
+                        loop_exit = 1U;
+                    }
+                }
+            }
 		}
-		res = dir_next(dp, 0);		/* Next entry */
-		if (res != FR_OK) break;
+		else{
+		    loop_exit = 1U;
+		}
+
+		if(loop_exit == 1U){
+		    break;
+		}
+
 	}
 
-	if (res != FR_OK) dp->sect = 0;		/* Terminate the read operation on error or EOT */
+	if (res != FR_OK){
+	    dp->sect = 0U;		/* Terminate the read operation on error or EOT */
+	}
+
 	return res;
 }
 
