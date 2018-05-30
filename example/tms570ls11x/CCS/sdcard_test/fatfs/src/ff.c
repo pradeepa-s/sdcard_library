@@ -588,6 +588,7 @@ static FRESULT dir_alloc (DIR* dp, UINT nent);
 static DWORD ld_clust (FATFS* fs, const BYTE dir[]);
 static void st_clust (FATFS* fs, BYTE dir[], DWORD cl);
 static int cmp_lfn (const WCHAR lfnbuf[], BYTE dir[]);
+static int pick_lfn (WCHAR lfnbuf[], BYTE dir[]);
 
 static FRESULT dir_read (DIR* dp, int vol);
 static FRESULT dir_find (DIR* dp);
@@ -2288,7 +2289,7 @@ static int cmp_lfn (		/* 1:matched, 0:not matched */
 	BYTE dir[]				/* Pointer to the directory entry containing the part of LFN */
 )
 {
-    INT ret;
+    INT ret = 1;
     BYTE loop_exit = 0U;
 	BYTE temp_byte;
     UINT i, s;
@@ -2367,34 +2368,64 @@ static int cmp_lfn (		/* 1:matched, 0:not matched */
 /*-----------------------------------------------------*/
 
 static int pick_lfn (	/* 1:succeeded, 0:buffer overflow or invalid LFN entry */
-	WCHAR* lfnbuf,		/* Pointer to the LFN working buffer */
-	BYTE* dir			/* Pointer to the LFN entry */
+	WCHAR lfnbuf[],		/* Pointer to the LFN working buffer */
+	BYTE dir[]			/* Pointer to the LFN entry */
 )
 {
-	UINT i, s;
+	INT ret = 1;
+    UINT i, s;
 	WCHAR wc, uc;
+	BYTE temp_byte;
+	BYTE loop_exit = 0U;
 
+	if (ld_word(&dir[LDIR_FstClusLO]) == 0U){
+	    ret = 0;	/* Check LDIR_FstClusLO is 0 */
+	}
+	else{
+        /* Offset in the LFN buffer */
+        temp_byte = (BYTE)(dir[LDIR_Ord] & (BYTE)~LLEF);
+        i = (UINT)temp_byte;
+        i = i - 1U;
+        i = i * 13U;
 
-	if (ld_word(dir + LDIR_FstClusLO) != 0) return 0;	/* Check LDIR_FstClusLO is 0 */
+        wc = 1U;
+        for (s = 0U; s < 13U; s++) {		/* Process all characters in the entry */
+            uc = ld_word(&dir[LfnOfs[s]]);		/* Pick an LFN character */
+            if (wc != 0U) {
+                if (i >= FF_MAX_LFN){
+                    ret = 0;	/* Buffer overflow? */
+                    loop_exit = 1U;
+                }
+                else{
+                    wc = uc;            /* Store it */
+                    lfnbuf[i++] = wc;           /* Store it */
+                }
 
-	i = ((dir[LDIR_Ord] & ~LLEF) - 1) * 13;	/* Offset in the LFN buffer */
+            } else {
+                if (uc != 0xFFFFU){
+                    ret = 0;		/* Check filler */
+                    loop_exit = 1U;
+                }
+            }
 
-	for (wc = 1, s = 0; s < 13; s++) {		/* Process all characters in the entry */
-		uc = ld_word(dir + LfnOfs[s]);		/* Pick an LFN character */
-		if (wc != 0) {
-			if (i >= FF_MAX_LFN) return 0;	/* Buffer overflow? */
-			lfnbuf[i++] = wc = uc;			/* Store it */
-		} else {
-			if (uc != 0xFFFF) return 0;		/* Check filler */
-		}
+            if(loop_exit == 1U){
+                break;
+            }
+        }
+
+        if(loop_exit == 0U){
+            if (dir[LDIR_Ord] & LLEF) {				/* Put terminator if it is the last LFN part */
+                if (i >= FF_MAX_LFN){
+                    ret = 0;		/* Buffer overflow? */
+                }
+                else{
+                    lfnbuf[i] = 0U;
+                }
+            }
+        }
 	}
 
-	if (dir[LDIR_Ord] & LLEF) {				/* Put terminator if it is the last LFN part */
-		if (i >= FF_MAX_LFN) return 0;		/* Buffer overflow? */
-		lfnbuf[i] = 0;
-	}
-
-	return 1;		/* The part of LFN is valid */
+	return ret;		/* The part of LFN is valid */
 }
 #endif
 
