@@ -592,11 +592,10 @@ static int pick_lfn (WCHAR lfnbuf[], BYTE dir[]);
 static void put_lfn (const WCHAR lfn[], BYTE dir[], BYTE ord, BYTE sum);
 static void gen_numname (BYTE dst[], const BYTE* src, const WCHAR lfn[], UINT seq);
 static BYTE sum_sfn (const BYTE dir[]);
-
 static FRESULT dir_read (DIR* dp, int vol);
 static FRESULT dir_find (DIR* dp);
 static FRESULT dir_register (DIR* dp);
-
+static FRESULT dir_remove (DIR* dp);
 
 /*-----------------------------------------------------------------------*/
 /* Load/Store multi-byte word in the FAT structure                       */
@@ -3248,28 +3247,48 @@ static FRESULT dir_remove (	/* FR_OK:Succeeded, FR_DISK_ERR:A disk error */
 #if FF_USE_LFN		/* LFN configuration */
 	DWORD last = dp->dptr;
 
-	res = (dp->blk_ofs == 0xFFFFFFFF) ? FR_OK : dir_sdi(dp, dp->blk_ofs);	/* Goto top of the entry block if LFN is exist */
+	/* Goto top of the entry block if LFN is exist */
+	if(dp->blk_ofs == 0xFFFFFFFFU){
+	    res = FR_OK;
+	}
+	else{
+	    res = dir_sdi(dp, dp->blk_ofs);
+	}
+
 	if (res == FR_OK) {
 		do {
 			res = move_window(fs, dp->sect);
-			if (res != FR_OK) break;
-			if (FF_FS_EXFAT && fs->fs_type == FS_EXFAT) {	/* On the exFAT volume */
-				dp->dir[XDIR_Type] &= 0x7F;	/* Clear the entry InUse flag. */
-			} else {									/* On the FAT/FAT32 volume */
-				dp->dir[DIR_Name] = DDEM;	/* Mark the entry 'deleted'. */
+			if (res != FR_OK){
+			    break;
 			}
-			fs->wflag = 1;
-			if (dp->dptr >= last) break;	/* If reached last entry then all entries of the object has been deleted. */
+
+#if FF_FS_EXFAT
+			if (fs->fs_type == FS_EXFAT) {  /* On the exFAT volume */
+                dp->dir[XDIR_Type] &= 0x7FU;    /* Clear the entry InUse flag. */
+            }
+#else
+			/* On the FAT/FAT32 volume */
+            dp->dir[DIR_Name] = DDEM;   /* Mark the entry 'deleted'. */
+#endif
+
+			fs->wflag = 1U;
+			if (dp->dptr >= last){
+			    break;	/* If reached last entry then all entries of the object has been deleted. */
+			}
+
 			res = dir_next(dp, 0);	/* Next entry */
 		} while (res == FR_OK);
-		if (res == FR_NO_FILE) res = FR_INT_ERR;
+
+		if (res == FR_NO_FILE){
+		    res = FR_INT_ERR;
+		}
 	}
 #else			/* Non LFN configuration */
 
 	res = move_window(fs, dp->sect);
 	if (res == FR_OK) {
 		dp->dir[DIR_Name] = DDEM;	/* Mark the entry 'deleted'.*/
-		fs->wflag = 1;
+		fs->wflag = 1U;
 	}
 #endif
 
