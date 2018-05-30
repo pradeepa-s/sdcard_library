@@ -590,6 +590,7 @@ static void st_clust (FATFS* fs, BYTE dir[], DWORD cl);
 static int cmp_lfn (const WCHAR lfnbuf[], BYTE dir[]);
 static int pick_lfn (WCHAR lfnbuf[], BYTE dir[]);
 static void put_lfn (const WCHAR lfn[], BYTE dir[], BYTE ord, BYTE sum);
+static void gen_numname (BYTE dst[], const BYTE* src, const WCHAR lfn[], UINT seq);
 
 static FRESULT dir_read (DIR* dp, int vol);
 static FRESULT dir_find (DIR* dp);
@@ -2483,9 +2484,9 @@ static void put_lfn (
 /*-----------------------------------------------------------------------*/
 
 static void gen_numname (
-	BYTE* dst,			/* Pointer to the buffer to store numbered SFN */
+	BYTE dst[],			/* Pointer to the buffer to store numbered SFN */
 	const BYTE* src,	/* Pointer to SFN */
-	const WCHAR* lfn,	/* Pointer to LFN */
+	const WCHAR lfn[],	/* Pointer to LFN */
 	UINT seq			/* Sequence number */
 )
 {
@@ -2493,43 +2494,60 @@ static void gen_numname (
 	UINT i, j;
 	WCHAR wc;
 	DWORD sr;
+	UINT index = 0U;
 
+	mem_cpy(dst, src, 11U);
 
-	mem_cpy(dst, src, 11);
-
-	if (seq > 5) {	/* In case of many collisions, generate a hash number instead of sequential number */
+	if (seq > 5U) {	/* In case of many collisions, generate a hash number instead of sequential number */
 		sr = seq;
-		while (*lfn) {	/* Create a CRC as hash value */
-			wc = *lfn++;
-			for (i = 0; i < 16; i++) {
-				sr = (sr << 1) + (wc & 1);
+		while (lfn[index]) {	/* Create a CRC as hash value */
+			wc = lfn[index++];
+			for (i = 0U; i < 16U; i++) {
+				sr = (sr << 1);
+				sr = sr + ((DWORD)wc & 1U);
 				wc >>= 1;
-				if (sr & 0x10000) sr ^= 0x11021;
+				if (sr & 0x10000U){
+				    sr ^= 0x11021U;
+				}
 			}
 		}
 		seq = (UINT)sr;
 	}
 
 	/* itoa (hexdecimal) */
-	i = 7;
+	i = 7U;
 	do {
-		c = (BYTE)((seq % 16) + '0');
-		if (c > '9') c += 7;
+		c = (BYTE)((UINT)seq % 16U);
+		c = c + (BYTE)'0';
+		if (c > (BYTE)'9'){
+		    c += 7U;
+		}
 		ns[i--] = c;
-		seq /= 16;
+		seq /= 16U;
 	} while (seq);
-	ns[i] = '~';
+	ns[i] = (BYTE)'~';
 
 	/* Append the number to the SFN body */
-	for (j = 0; j < i && dst[j] != ' '; j++) {
-		if (dbc_1st(dst[j])) {
-			if (j == i - 1) break;
-			j++;
-		}
+	j = 0U;
+	while((j < i) && (dst[j] != (BYTE)' ')){
+	    if (dbc_1st(dst[j])) {
+            if (j == i - 1U){
+                break;
+            }
+            j++;
+        }
+	    j++;
 	}
+
 	do {
-		dst[j++] = (i < 8) ? ns[i++] : ' ';
-	} while (j < 8);
+	    if(i < 8U){
+	        dst[j++] = ns[i++];
+	    }
+	    else{
+	        dst[j++] = (BYTE)' ';
+	    }
+
+	} while (j < 8U);
 }
 #endif	/* FF_USE_LFN && !FF_FS_READONLY */
 
