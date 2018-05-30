@@ -2204,26 +2204,32 @@ static FRESULT dir_alloc (	/* FR_OK(0):succeeded, !=0:error */
 	FATFS *fs = dp->obj.fs;
 
 
-	res = dir_sdi(dp, 0);
+	res = dir_sdi(dp, 0U);
 	if (res == FR_OK) {
-		n = 0;
+		n = 0U;
 		do {
 			res = move_window(fs, dp->sect);
-			if (res != FR_OK) break;
+			if (res != FR_OK) {
+			    break;
+			}
 #if FF_FS_EXFAT
-			if ((fs->fs_type == FS_EXFAT) ? (int)((dp->dir[XDIR_Type] & 0x80) == 0) : (int)(dp->dir[DIR_Name] == DDEM || dp->dir[DIR_Name] == 0)) {
+			if ((fs->fs_type == FS_EXFAT) ? (int)((dp->dir[XDIR_Type] & 0x80U) == 0U) : (int)(dp->dir[DIR_Name] == DDEM || dp->dir[DIR_Name] == 0)) {
 #else
-			if (dp->dir[DIR_Name] == DDEM || dp->dir[DIR_Name] == 0) {
+			if ((dp->dir[DIR_Name] == DDEM) || (dp->dir[DIR_Name] == 0U)) {
 #endif
-				if (++n == nent) break;	/* A block of contiguous free entries is found */
+				if (++n == nent){
+				    break;	/* A block of contiguous free entries is found */
+				}
 			} else {
-				n = 0;					/* Not a blank entry. Restart to search */
+				n = 0U;					/* Not a blank entry. Restart to search */
 			}
 			res = dir_next(dp, 1);
 		} while (res == FR_OK);	/* Next entry with table stretch enabled */
 	}
 
-	if (res == FR_NO_FILE) res = FR_DENIED;	/* No directory entry to allocate */
+	if (res == FR_NO_FILE){
+	    res = FR_DENIED;	/* No directory entry to allocate */
+	}
 	return res;
 }
 
