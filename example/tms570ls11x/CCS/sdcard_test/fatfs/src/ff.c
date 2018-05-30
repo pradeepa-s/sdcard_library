@@ -35,12 +35,12 @@
 
 
 /* Character code support macros */
-#define IsUpper(c)		((c) >= 'A' && (c) <= 'Z')
-#define IsLower(c)		((c) >= 'a' && (c) <= 'z')
-#define IsDigit(c)		((c) >= '0' && (c) <= '9')
-#define IsSurrogate(c)	((c) >= 0xD800 && (c) <= 0xDFFF)
-#define IsSurrogateH(c)	((c) >= 0xD800 && (c) <= 0xDBFF)
-#define IsSurrogateL(c)	((c) >= 0xDC00 && (c) <= 0xDFFF)
+#define IsUpper(c)		(((c) >= (WCHAR)'A') && ((c) <= (WCHAR)'Z'))
+#define IsLower(c)		(((c) >= (WCHAR)'a') && ((c) <= (WCHAR)'z'))
+#define IsDigit(c)		(((c) >= (WCHAR)'0') && ((c) <= (WCHAR)'9'))
+#define IsSurrogate(c)	(((c) >= 0xD800U) && ((c) <= 0xDFFFU))
+#define IsSurrogateH(c)	(((c) >= 0xD800U) && ((c) <= 0xDBFFU))
+#define IsSurrogateL(c)	(((c) >= 0xDC00U) && ((c) <= 0xDFFFU))
 
 
 /* Additional file attribute bits for internal use */
@@ -596,6 +596,7 @@ static FRESULT dir_read (DIR* dp, int vol);
 static FRESULT dir_find (DIR* dp);
 static FRESULT dir_register (DIR* dp);
 static FRESULT dir_remove (DIR* dp);
+static void get_fileinfo (DIR* dp, FILINFO* fno);
 
 /*-----------------------------------------------------------------------*/
 /* Load/Store multi-byte word in the FAT structure                       */
@@ -3310,6 +3311,9 @@ static void get_fileinfo (
 )
 {
 	UINT si, di;
+	BYTE loop_skip = 0U;
+	DWORD temp_dword;
+	BYTE temp_byte;
 #if FF_USE_LFN
 	WCHAR wc, hs;
 	FATFS *fs = dp->obj.fs;
@@ -3318,85 +3322,134 @@ static void get_fileinfo (
 #endif
 
 
-	fno->fname[0] = 0;			/* Invaidate file info */
-	if (dp->sect == 0) return;	/* Exit if read pointer has reached end of directory */
+	fno->fname[0] = (TCHAR)0U;			/* Invaidate file info */
+
+	if (dp->sect != 0U){                /* Exit if read pointer has reached end of directory */
 
 #if FF_USE_LFN		/* LFN configuration */
 #if FF_FS_EXFAT
-	if (fs->fs_type == FS_EXFAT) {	/* On the exFAT volume */
-		get_xfileinfo(fs->dirbuf, fno);
-		return;
-	} else
-#endif
-	{	/* On the FAT/FAT32 volume */
-		if (dp->blk_ofs != 0xFFFFFFFF) {	/* Get LFN if available */
-			si = di = hs = 0;
-			while (fs->lfnbuf[si] != 0) {
-				wc = fs->lfnbuf[si++];		/* Get an LFN character (UTF-16) */
-				if (hs == 0 && IsSurrogate(wc)) {	/* Is it a surrogate? */
-					hs = wc; continue;		/* Get low surrogate */
-				}
-				wc = put_utf((DWORD)hs << 16 | wc, &fno->fname[di], FF_LFN_BUF - di);	/* Store it in UTF-16 or UTF-8 encoding */
-				if (wc == 0) { di = 0; break; }	/* Invalid char or buffer overflow? */
-				di += wc;
-				hs = 0;
-			}
-			if (hs != 0) di = 0;	/* Broken surrogate pair? */
-			fno->fname[di] = 0;		/* Terminate the LFN (null string means LFN is invalid) */
-		}
-	}
 
-	si = di = 0;
-	while (si < 11) {		/* Get SFN from SFN entry */
-		wc = dp->dir[si++];			/* Get a char */
-		if (wc == ' ') continue;	/* Skip padding spaces */
-		if (wc == RDDEM) wc = DDEM;	/* Restore replaced DDEM character */
-		if (si == 9 && di < FF_SFN_BUF) fno->altname[di++] = '.';	/* Insert a . if extension is exist */
-#if FF_LFN_UNICODE >= 1	/* Unicode output */
-		if (dbc_1st((BYTE)wc) && si != 8 && si != 11 && dbc_2nd(dp->dir[si])) {	/* Make a DBC if needed */
-			wc = wc << 8 | dp->dir[si++];
-		}
-		wc = ff_oem2uni(wc, CODEPAGE);		/* ANSI/OEM -> Unicode */
-		if (wc == 0) { di = 0; break; }		/* Wrong char in the current code page? */
-		wc = put_utf(wc, &fno->altname[di], FF_SFN_BUF - di);	/* Store it in Unicode */
-		if (wc == 0) { di = 0; break; }		/* Buffer overflow? */
-		di += wc;
-#else					/* ANSI/OEM output */
-		fno->altname[di++] = (TCHAR)wc;	/* Store it without any conversion */
-#endif
-	}
-	fno->altname[di] = 0;	/* Terminate the SFN  (null string means SFN is invalid) */
-
-	if (fno->fname[0] == 0) {	/* If LFN is invalid, altname[] needs to be copied to fname[] */
-		if (di == 0) {	/* If LFN and SFN both are invalid, this object is inaccesible */
-			fno->fname[di++] = '?';
-		} else {
-			for (si = di = 0; fno->altname[si]; si++, di++) {	/* Copy altname[] to fname[] with case information */
-				wc = (WCHAR)fno->altname[si];
-				if (IsUpper(wc) && (dp->dir[DIR_NTres] & ((si >= 9) ? NS_EXT : NS_BODY))) wc += 0x20;
-				fno->fname[di] = (TCHAR)wc;
-			}
-		}
-		fno->fname[di] = 0;	/* Terminate the LFN */
-		if (!dp->dir[DIR_NTres]) fno->altname[0] = 0;	/* Altname is not needed if neither LFN nor case info is exist. */
-	}
-
-#else	/* Non-LFN configuration */
-	si = di = 0;
-	while (si < 11) {		/* Copy name body and extension */
-		c = (TCHAR)dp->dir[si++];
-		if (c == ' ') continue;		/* Skip padding spaces */
-		if (c == RDDEM) c = DDEM;	/* Restore replaced DDEM character */
-		if (si == 9) fno->fname[di++] = '.';/* Insert a . if extension is exist */
-		fno->fname[di++] = c;
-	}
-	fno->fname[di] = 0;
+	    if (fs->fs_type == FS_EXFAT) {	/* On the exFAT volume */
+            get_xfileinfo(fs->dirbuf, fno);
+            return;
+        } else
 #endif
 
-	fno->fattrib = dp->dir[DIR_Attr];					/* Attribute */
-	fno->fsize = ld_dword(dp->dir + DIR_FileSize);		/* Size */
-	fno->ftime = ld_word(dp->dir + DIR_ModTime + 0);	/* Time */
-	fno->fdate = ld_word(dp->dir + DIR_ModTime + 2);	/* Date */
+        {	/* On the FAT/FAT32 volume */
+            if (dp->blk_ofs != 0xFFFFFFFFU) {	/* Get LFN if available */
+                hs = 0U;
+                di = hs;
+                si = di;
+
+                while (fs->lfnbuf[si] != 0U) {
+                    wc = fs->lfnbuf[si++];		/* Get an LFN character (UTF-16) */
+
+                    if(hs == 0U){   /* Is it a surrogate? */
+                        if(IsSurrogate(wc)){
+                            hs = wc;
+                            loop_skip = 1U;       /* Get low surrogate */
+                        }
+                    }
+
+                    if(loop_skip == 0U){
+                        temp_dword = (DWORD)((DWORD)hs << 16U);
+                        temp_dword = (temp_dword | wc);
+                        wc = put_utf(temp_dword, &fno->fname[di], (UINT)((UINT)FF_LFN_BUF - di));	/* Store it in UTF-16 or UTF-8 encoding */
+                        if (wc == 0U) {
+                            di = 0U;
+                            break;
+                        }	/* Invalid char or buffer overflow? */
+
+                        di += wc;
+                        hs = 0U;
+                    }
+                } /* end of while */
+
+                if (hs != 0U) {
+                    di = 0U;	/* Broken surrogate pair? */
+                }
+                fno->fname[di] = (TCHAR)0U;		/* Terminate the LFN (null string means LFN is invalid) */
+            }
+        }
+
+        di = 0U;
+        si = di;
+
+        while (si < 11U) {		/* Get SFN from SFN entry */
+            wc = dp->dir[si++];			/* Get a char */
+
+            if (wc != (WCHAR)' '){  /* Skip padding spaces */
+
+                if (wc == RDDEM){
+                    wc = DDEM;  /* Restore replaced DDEM character */
+                }
+
+                if ((si == 9U) && (di < (UINT)FF_SFN_BUF)) {
+                    fno->altname[di++] = (TCHAR)'.';   /* Insert a . if extension is exist */
+                }
+#if FF_LFN_UNICODE >= 1 /* Unicode output */
+                if (dbc_1st((BYTE)wc) && si != 8 && si != 11 && dbc_2nd(dp->dir[si])) { /* Make a DBC if needed */
+                    wc = wc << 8 | dp->dir[si++];
+                }
+                wc = ff_oem2uni(wc, CODEPAGE);      /* ANSI/OEM -> Unicode */
+                if (wc == 0) { di = 0; break; }     /* Wrong char in the current code page? */
+                wc = put_utf(wc, &fno->altname[di], FF_SFN_BUF - di);   /* Store it in Unicode */
+                if (wc == 0) { di = 0; break; }     /* Buffer overflow? */
+                di += wc;
+#else                   /* ANSI/OEM output */
+                fno->altname[di++] = (TCHAR)wc; /* Store it without any conversion */
+#endif
+            }
+        }
+
+        fno->altname[di] = (TCHAR)0U;	/* Terminate the SFN  (null string means SFN is invalid) */
+
+        if (fno->fname[0] == (TCHAR)0U) {	/* If LFN is invalid, altname[] needs to be copied to fname[] */
+            if (di == 0U) {	/* If LFN and SFN both are invalid, this object is inaccesible */
+                fno->fname[di++] = '?';
+            } else {
+                di = 0U;
+                for (si = di; fno->altname[si]; si++) {	/* Copy altname[] to fname[] with case information */
+                    wc = (WCHAR)fno->altname[si];
+
+                    if(si >= 9U){
+                        temp_byte = NS_EXT;
+                    }
+                    else{
+                        temp_byte = NS_BODY;
+                    }
+
+                    if (IsUpper(wc) && (dp->dir[DIR_NTres] & temp_byte)){
+                        wc += 0x20U;
+                    }
+                    fno->fname[di] = (TCHAR)wc;
+                    di++;
+                }
+            }
+
+            fno->fname[di] = (TCHAR)0;	/* Terminate the LFN */
+            if (!dp->dir[DIR_NTres]){
+                fno->altname[0] = (TCHAR)0;	/* Altname is not needed if neither LFN nor case info is exist. */
+            }
+        }
+
+    #else	/* Non-LFN configuration */
+        si = di = 0;
+        while (si < 11) {		/* Copy name body and extension */
+            c = (TCHAR)dp->dir[si++];
+            if (c == ' ') continue;		/* Skip padding spaces */
+            if (c == RDDEM) c = DDEM;	/* Restore replaced DDEM character */
+            if (si == 9) fno->fname[di++] = '.';/* Insert a . if extension is exist */
+            fno->fname[di++] = c;
+        }
+        fno->fname[di] = 0;
+    #endif
+
+        fno->fattrib = dp->dir[DIR_Attr];					/* Attribute */
+        fno->fsize = ld_dword(&dp->dir[DIR_FileSize]);		/* Size */
+        fno->ftime = ld_word(&dp->dir[DIR_ModTime + 0U]);	/* Time */
+        fno->fdate = ld_word(&dp->dir[DIR_ModTime + 2U]);	/* Date */
+    }
 }
 
 #endif /* FF_FS_MINIMIZE <= 1 || FF_FS_RPATH >= 2 */
