@@ -585,6 +585,8 @@ static FRESULT dir_clear (FATFS *fs, DWORD clst);
 static FRESULT dir_sdi (DIR* dp, DWORD ofs);
 static FRESULT dir_next (DIR* dp, int stretch);
 static FRESULT dir_alloc (DIR* dp, UINT nent);
+static DWORD ld_clust (FATFS* fs, const BYTE dir[]);
+
 static FRESULT dir_read (DIR* dp, int vol);
 static FRESULT dir_find (DIR* dp);
 static FRESULT dir_register (DIR* dp);
@@ -2244,14 +2246,14 @@ static FRESULT dir_alloc (	/* FR_OK(0):succeeded, !=0:error */
 
 static DWORD ld_clust (	/* Returns the top cluster value of the SFN entry */
 	FATFS* fs,			/* Pointer to the fs object */
-	const BYTE* dir		/* Pointer to the key entry */
+	const BYTE dir[]		/* Pointer to the key entry */
 )
 {
 	DWORD cl;
 
-	cl = ld_word(dir + DIR_FstClusLO);
+	cl = ld_word(&dir[DIR_FstClusLO]);
 	if (fs->fs_type == FS_FAT32) {
-		cl |= (DWORD)ld_word(dir + DIR_FstClusHI) << 16;
+		cl |= (DWORD)ld_word(&dir[DIR_FstClusHI]) << 16;
 	}
 
 	return cl;
