@@ -589,6 +589,7 @@ static DWORD ld_clust (FATFS* fs, const BYTE dir[]);
 static void st_clust (FATFS* fs, BYTE dir[], DWORD cl);
 static int cmp_lfn (const WCHAR lfnbuf[], BYTE dir[]);
 static int pick_lfn (WCHAR lfnbuf[], BYTE dir[]);
+static void put_lfn (const WCHAR lfn[], BYTE dir[], BYTE ord, BYTE sum);
 
 static FRESULT dir_read (DIR* dp, int vol);
 static FRESULT dir_find (DIR* dp);
@@ -2436,8 +2437,8 @@ static int pick_lfn (	/* 1:succeeded, 0:buffer overflow or invalid LFN entry */
 /*-----------------------------------------*/
 
 static void put_lfn (
-	const WCHAR* lfn,	/* Pointer to the LFN */
-	BYTE* dir,			/* Pointer to the LFN entry to be created */
+	const WCHAR lfn[],	/* Pointer to the LFN */
+	BYTE dir[],			/* Pointer to the LFN entry to be created */
 	BYTE ord,			/* LFN order (1-20) */
 	BYTE sum			/* Checksum of the corresponding SFN */
 )
@@ -2448,17 +2449,26 @@ static void put_lfn (
 
 	dir[LDIR_Chksum] = sum;			/* Set checksum */
 	dir[LDIR_Attr] = AM_LFN;		/* Set attribute. LFN entry */
-	dir[LDIR_Type] = 0;
-	st_word(dir + LDIR_FstClusLO, 0);
+	dir[LDIR_Type] = 0U;
+	st_word(&dir[LDIR_FstClusLO], 0U);
 
-	i = (ord - 1) * 13;				/* Get offset in the LFN working buffer */
-	s = wc = 0;
+	i = (UINT)((UINT)ord - 1U);				/* Get offset in the LFN working buffer */
+	i = i * 13U;
+	wc = 0U;
+	s = wc;
+
 	do {
-		if (wc != 0xFFFF) wc = lfn[i++];	/* Get an effective character */
-		st_word(dir + LfnOfs[s], wc);		/* Put it */
-		if (wc == 0) wc = 0xFFFF;		/* Padding characters for left locations */
-	} while (++s < 13);
-	if (wc == 0xFFFF || !lfn[i]) ord |= LLEF;	/* Last LFN part is the start of LFN sequence */
+		if (wc != 0xFFFFU){
+		    wc = lfn[i++];	/* Get an effective character */
+		}
+		st_word(&dir[LfnOfs[s]], wc);		/* Put it */
+		if (wc == 0U){
+		    wc = 0xFFFFU;		/* Padding characters for left locations */
+		}
+	} while (++s < 13U);
+	if ((wc == 0xFFFFU) || (!lfn[i])){
+	    ord |= LLEF;	/* Last LFN part is the start of LFN sequence */
+	}
 	dir[LDIR_Ord] = ord;			/* Set the LFN order */
 }
 
