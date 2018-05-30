@@ -591,6 +591,7 @@ static int cmp_lfn (const WCHAR lfnbuf[], BYTE dir[]);
 static int pick_lfn (WCHAR lfnbuf[], BYTE dir[]);
 static void put_lfn (const WCHAR lfn[], BYTE dir[], BYTE ord, BYTE sum);
 static void gen_numname (BYTE dst[], const BYTE* src, const WCHAR lfn[], UINT seq);
+static BYTE sum_sfn (const BYTE dir[]);
 
 static FRESULT dir_read (DIR* dp, int vol);
 static FRESULT dir_find (DIR* dp);
@@ -2559,14 +2560,17 @@ static void gen_numname (
 /*-----------------------------------------------------------------------*/
 
 static BYTE sum_sfn (
-	const BYTE* dir		/* Pointer to the SFN entry */
+	const BYTE dir[]		/* Pointer to the SFN entry */
 )
 {
-	BYTE sum = 0;
-	UINT n = 11;
+	BYTE sum = 0U;
+	UINT n = 11U;
+	UINT index = 0U;
 
 	do {
-		sum = (sum >> 1) + (sum << 7) + *dir++;
+	    sum = (BYTE)((BYTE)sum >> 1);
+	    sum = sum + (BYTE)((BYTE)sum << 7);
+	    sum = sum + dir[index++];
 	} while (--n);
 	return sum;
 }
