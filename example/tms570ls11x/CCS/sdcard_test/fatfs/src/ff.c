@@ -587,6 +587,7 @@ static FRESULT dir_next (DIR* dp, int stretch);
 static FRESULT dir_alloc (DIR* dp, UINT nent);
 static DWORD ld_clust (FATFS* fs, const BYTE dir[]);
 static void st_clust (FATFS* fs, BYTE dir[], DWORD cl);
+static int cmp_lfn (const WCHAR lfnbuf[], BYTE dir[]);
 
 static FRESULT dir_read (DIR* dp, int vol);
 static FRESULT dir_find (DIR* dp);
@@ -2283,33 +2284,80 @@ static void st_clust (
 /*--------------------------------------------------------*/
 
 static int cmp_lfn (		/* 1:matched, 0:not matched */
-	const WCHAR* lfnbuf,	/* Pointer to the LFN working buffer to be compared */
-	BYTE* dir				/* Pointer to the directory entry containing the part of LFN */
+	const WCHAR lfnbuf[],	/* Pointer to the LFN working buffer to be compared */
+	BYTE dir[]				/* Pointer to the directory entry containing the part of LFN */
 )
 {
-	UINT i, s;
+    INT ret;
+    BYTE loop_exit = 0U;
+	BYTE temp_byte;
+    UINT i, s;
 	WCHAR wc, uc;
+	DWORD temp_dword;
 
+	if (ld_word(&dir[LDIR_FstClusLO]) == 0U) {  /* Check LDIR_FstClusLO */
+	    /* Offset in the LFN buffer */
+        temp_byte = (BYTE)(dir[LDIR_Ord] & 0x3FU);
+        i = (UINT)temp_byte;
+        i = (UINT)(i - 1U);
+        i = (UINT)(i * 13U);
 
-	if (ld_word(dir + LDIR_FstClusLO) != 0) return 0;	/* Check LDIR_FstClusLO */
+        wc = 1U;
+        for (s = 0U; s < 13U; s++) {        /* Process all characters in the entry */
+            uc = ld_word(&dir[LfnOfs[s]]);      /* Pick an LFN character */
+            if (wc != 0U) {
 
-	i = ((dir[LDIR_Ord] & 0x3F) - 1) * 13;	/* Offset in the LFN buffer */
+                if(i >= FF_MAX_LFN){    /* Not matched */
+                    ret = 0;
+                    loop_exit = 1U;
+                }
+                else{
+                    temp_dword = ff_wtoupper((DWORD)uc);
+                    if(temp_dword != ff_wtoupper((DWORD)lfnbuf[i++])){
+                        ret = 0;        /* Not matched */
+                        loop_exit = 1U;
+                    }
+                }
 
-	for (wc = 1, s = 0; s < 13; s++) {		/* Process all characters in the entry */
-		uc = ld_word(dir + LfnOfs[s]);		/* Pick an LFN character */
-		if (wc != 0) {
-			if (i >= FF_MAX_LFN || ff_wtoupper(uc) != ff_wtoupper(lfnbuf[i++])) {	/* Compare it */
-				return 0;					/* Not matched */
-			}
-			wc = uc;
-		} else {
-			if (uc != 0xFFFF) return 0;		/* Check filler */
-		}
+                if(loop_exit == 0U){
+
+                    /* Compare it */
+                    if(i >= FF_MAX_LFN){
+                        ret = 0;                    /* Not matched */
+                        loop_exit = 1U;
+                    }
+                    else{
+                        temp_dword = ff_wtoupper((DWORD)uc);
+                        if(temp_dword != ff_wtoupper((DWORD)lfnbuf[i++])){
+                            ret = 0;                    /* Not matched */
+                            loop_exit = 1U;
+                        }
+                    }
+
+                    if(loop_exit == 0U){
+                        wc = uc;
+                    }
+                }
+            } else {
+                if (uc != 0xFFFFU) {
+                    loop_exit = 1U;
+                    ret = 0;        /* Check filler */
+                }
+            }
+
+            if(loop_exit == 1U){
+                break;
+            }
+        }
+
+        if ((dir[LDIR_Ord] & LLEF) && (wc) && (lfnbuf[i])){
+            ret = 0;    /* Last segment matched but different length */
+        }
 	}
-
-	if ((dir[LDIR_Ord] & LLEF) && wc && lfnbuf[i]) return 0;	/* Last segment matched but different length */
-
-	return 1;		/* The part of LFN matched */
+	else{
+	    ret = 0;
+	}
+	return ret;		/* The part of LFN matched */
 }
 
 
