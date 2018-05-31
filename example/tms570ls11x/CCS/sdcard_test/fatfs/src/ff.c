@@ -600,6 +600,7 @@ static void get_fileinfo (DIR* dp, FILINFO* fno);
 static FRESULT create_name (DIR* dp, const TCHAR** path);
 static FRESULT follow_path (DIR* dp, const TCHAR* path);
 static int get_ldnumber (const TCHAR** path);
+static BYTE check_fs (FATFS* fs, DWORD sect);
 
 /*-----------------------------------------------------------------------*/
 /* Load/Store multi-byte word in the FAT structure                       */
@@ -4060,19 +4061,40 @@ static BYTE check_fs (	/* 0:FAT, 1:exFAT, 2:Valid BS but not FAT, 3:Not a BS, 4:
 	DWORD sect			/* Sector# (lba) to load and check if it is an FAT-VBR or not */
 )
 {
-	fs->wflag = 0; fs->winsect = 0xFFFFFFFF;		/* Invaidate window */
-	if (move_window(fs, sect) != FR_OK) return 4;	/* Load boot record */
+	BYTE ret = 2U;
+	fs->wflag = 0U;
+	fs->winsect = 0xFFFFFFFFU;		/* Invaidate window */
 
-	if (ld_word(fs->win + BS_55AA) != 0xAA55) return 3;	/* Check boot record signature (always here regardless of the sector size) */
-
-#if FF_FS_EXFAT
-	if (!mem_cmp(fs->win + BS_JmpBoot, "\xEB\x76\x90" "EXFAT   ", 11)) return 1;	/* Check if exFAT VBR */
-#endif
-	if (fs->win[BS_JmpBoot] == 0xE9 || fs->win[BS_JmpBoot] == 0xEB || fs->win[BS_JmpBoot] == 0xE8) {	/* Valid JumpBoot code? */
-		if (!mem_cmp(fs->win + BS_FilSysType, (const BYTE*)"FAT", 3)) return 0;		/* Is it an FAT VBR? */
-		if (!mem_cmp(fs->win + BS_FilSysType32, (const BYTE*)"FAT32", 5)) return 0;	/* Is it an FAT32 VBR? */
+	if (move_window(fs, sect) != FR_OK){
+	    ret = 4U;	/* Load boot record */
 	}
-	return 2;	/* Valid BS but not FAT */
+	else{
+	    if (ld_word(&fs->win[BS_55AA]) != 0xAA55U){
+            ret = 3U;   /* Check boot record signature (always here regardless of the sector size) */
+        }
+	    else{
+#if FF_FS_EXFAT
+           if (!mem_cmp(&fs->win[BS_JmpBoot], "\xEB\x76\x90" "EXFAT   ", 11U)){
+               ret = 1U;   /* Check if exFAT VBR */
+           }
+           else
+#endif
+           {
+               if ((fs->win[BS_JmpBoot] == 0xE9U) || (fs->win[BS_JmpBoot] == 0xEBU) || (fs->win[BS_JmpBoot] == 0xE8U)) {    /* Valid JumpBoot code? */
+                   if (!mem_cmp(&fs->win[BS_FilSysType], (const BYTE*)"FAT", 3U)){
+                       ret = 0U;       /* Is it an FAT VBR? */
+                   }
+                   else{
+                       if (!mem_cmp(&fs->win[BS_FilSysType32], (const BYTE*)"FAT32", 5U)){
+                          ret = 0U;   /* Is it an FAT32 VBR? */
+                      }
+                   }
+               }
+           }
+	    }
+	}
+
+	return ret;	/* Valid BS but not FAT */
 }
 
 
