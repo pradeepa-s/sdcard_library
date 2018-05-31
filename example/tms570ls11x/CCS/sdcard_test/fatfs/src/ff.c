@@ -597,6 +597,7 @@ static FRESULT dir_find (DIR* dp);
 static FRESULT dir_register (DIR* dp);
 static FRESULT dir_remove (DIR* dp);
 static void get_fileinfo (DIR* dp, FILINFO* fno);
+static FRESULT create_name (DIR* dp, const TCHAR** path);
 
 /*-----------------------------------------------------------------------*/
 /* Load/Store multi-byte word in the FAT structure                       */
@@ -3544,6 +3545,11 @@ static FRESULT create_name (	/* FR_OK: successful, FR_INVALID_NAME: could not cr
 	const TCHAR** path			/* Pointer to pointer to the segment in the path string */
 )
 {
+
+    FRESULT ret = FR_OK;
+    BYTE func_exit = 0U;
+    BYTE loop_skip = 0U;
+    BYTE loop_exit = 0U;
 #if FF_USE_LFN		/* LFN configuration */
 	BYTE b, cf;
 	WCHAR wc, *lfn;
@@ -3553,116 +3559,226 @@ static FRESULT create_name (	/* FR_OK: successful, FR_INVALID_NAME: could not cr
 
 
 	/* Create LFN into LFN working buffer */
-	p = *path; lfn = dp->obj.fs->lfnbuf; di = 0;
+	p = *path;
+	lfn = dp->obj.fs->lfnbuf;
+	di = 0U;
+
 	for (;;) {
 		uc = tchar2uni(&p);			/* Get a character */
-		if (uc == 0xFFFFFFFF) return FR_INVALID_NAME;		/* Invalid code or UTF decode error */
-		if (uc >= 0x10000) lfn[di++] = (WCHAR)(uc >> 16);	/* Store high surrogate if needed */
-		wc = (WCHAR)uc;
-		if (wc < ' ' || wc == '/' || wc == '\\') break;	/* Break if end of the path or a separator is found */
-		if (wc < 0x80 && chk_chr("\"*:<>\?|\x7F", wc)) return FR_INVALID_NAME;	/* Reject illegal characters for LFN */
-		if (di >= FF_MAX_LFN) return FR_INVALID_NAME;	/* Reject too long name */
-		lfn[di++] = wc;					/* Store the Unicode character */
-	}
-	while (*p == '/' || *p == '\\') p++;	/* Skip duplicated separators if exist */
-	*path = p;							/* Return pointer to the next segment */
-	cf = (wc < ' ') ? NS_LAST : 0;		/* Set last segment flag if end of the path */
-
-#if FF_FS_RPATH != 0
-	if ((di == 1 && lfn[di - 1] == '.') ||
-		(di == 2 && lfn[di - 1] == '.' && lfn[di - 2] == '.')) {	/* Is this segment a dot name? */
-		lfn[di] = 0;
-		for (i = 0; i < 11; i++) {		/* Create dot name for SFN entry */
-			dp->fn[i] = (i < di) ? '.' : ' ';
+		if (uc == 0xFFFFFFFFU){
+		    ret = FR_INVALID_NAME;
+		    func_exit = 1U;
+		    /* Invalid code or UTF decode error */
 		}
-		dp->fn[i] = cf | NS_DOT;		/* This is a dot entry */
-		return FR_OK;
-	}
-#endif
-	while (di) {						/* Snip off trailing spaces and dots if exist */
-		wc = lfn[di - 1];
-		if (wc != ' ' && wc != '.') break;
-		di--;
-	}
-	lfn[di] = 0;							/* LFN is created into the working buffer */
-	if (di == 0) return FR_INVALID_NAME;	/* Reject null name */
+		else{
+		    if (uc >= 0x10000U){
+                lfn[di++] = (WCHAR)(uc >> 16);  /* Store high surrogate if needed */
+            }
 
-	/* Create SFN in directory form */
-	for (si = 0; lfn[si] == ' '; si++) ;	/* Remove leading spaces */
-	if (si > 0 || lfn[si] == '.') cf |= NS_LOSS | NS_LFN;	/* Is there any leading space or dot? */
-	while (di > 0 && lfn[di - 1] != '.') di--;	/* Find last dot (di<=si: no extension) */
+            wc = (WCHAR)uc;
 
-	mem_set(dp->fn, ' ', 11);
-	i = b = 0; ni = 8;
-	for (;;) {
-		wc = lfn[si++];					/* Get an LFN character */
-		if (wc == 0) break;				/* Break on end of the LFN */
-		if (wc == ' ' || (wc == '.' && si != di)) {	/* Remove embedded spaces and dots */
-			cf |= NS_LOSS | NS_LFN;
-			continue;
+            if ((wc < (WCHAR)' ') || (wc == (WCHAR)'/') || (wc == (WCHAR)'\\')) {
+                break;  /* Break if end of the path or a separator is found */
+            }
+
+            if (wc < 0x80U){
+                if(chk_chr("\"*:<>\?|\x7F", (INT)wc)){
+                    ret = FR_INVALID_NAME;  /* Reject illegal characters for LFN */
+                    func_exit = 1U;
+                }
+            }
+
+            if(func_exit == 0U){
+                if (di >= FF_MAX_LFN){
+                    ret = FR_INVALID_NAME;  /* Reject too long name */
+                    func_exit = 1U;
+                }
+                else{
+                    lfn[di++] = wc;                 /* Store the Unicode character */
+                }
+            }
 		}
-
-		if (i >= ni || si == di) {		/* End of field? */
-			if (ni == 11) {				/* Name extension overflow? */
-				cf |= NS_LOSS | NS_LFN;
-				break;
-			}
-			if (si != di) cf |= NS_LOSS | NS_LFN;	/* Name body overflow? */
-			if (si > di) break;						/* No name extension? */
-			si = di; i = 8; ni = 11; b <<= 2;		/* Enter name extension */
-			continue;
-		}
-
-		if (wc >= 0x80) {	/* Is this a non-ASCII character? */
-			cf |= NS_LFN;	/* LFN entry needs to be created */
-#if FF_CODE_PAGE == 0
-			if (ExCvt) {	/* At SBCS */
-				wc = ff_uni2oem(wc, CODEPAGE);			/* Unicode ==> ANSI/OEM code */
-				if (wc & 0x80) wc = ExCvt[wc & 0x7F];	/* Convert extended character to upper (SBCS) */
-			} else {		/* At DBCS */
-				wc = ff_uni2oem(ff_wtoupper(wc), CODEPAGE);	/* Unicode ==> Upper convert ==> ANSI/OEM code */
-			}
-#elif FF_CODE_PAGE < 900	/* SBCS cfg */
-			wc = ff_uni2oem(wc, CODEPAGE);			/* Unicode ==> ANSI/OEM code */
-			if (wc & 0x80) wc = ExCvt[wc & 0x7F];	/* Convert extended character to upper (SBCS) */
-#else						/* DBCS cfg */
-			wc = ff_uni2oem(ff_wtoupper(wc), CODEPAGE);	/* Unicode ==> Upper convert ==> ANSI/OEM code */
-#endif
-		}
-
-		if (wc >= 0x100) {				/* Is this a DBC? */
-			if (i >= ni - 1) {			/* Field overflow? */
-				cf |= NS_LOSS | NS_LFN;
-				i = ni; continue;		/* Next field */
-			}
-			dp->fn[i++] = (BYTE)(wc >> 8);	/* Put 1st byte */
-		} else {						/* SBC */
-			if (wc == 0 || chk_chr("+,;=[]", wc)) {	/* Replace illegal characters for SFN if needed */
-				wc = '_'; cf |= NS_LOSS | NS_LFN;/* Lossy conversion */
-			} else {
-				if (IsUpper(wc)) {		/* ASCII upper case? */
-					b |= 2;
-				}
-				if (IsLower(wc)) {		/* ASCII lower case? */
-					b |= 1; wc -= 0x20;
-				}
-			}
-		}
-		dp->fn[i++] = (BYTE)wc;
 	}
 
-	if (dp->fn[0] == DDEM) dp->fn[0] = RDDEM;	/* If the first character collides with DDEM, replace it with RDDEM */
+	if(func_exit == 0U){
 
-	if (ni == 8) b <<= 2;				/* Shift capital flags if no extension */
-	if ((b & 0x0C) == 0x0C || (b & 0x03) == 0x03) cf |= NS_LFN;	/* LFN entry needs to be created if composite capitals */
-	if (!(cf & NS_LFN)) {				/* When LFN is in 8.3 format without extended character, NT flags are created */
-		if (b & 0x01) cf |= NS_EXT;		/* NT flag (Extension has small capital letters only) */
-		if (b & 0x04) cf |= NS_BODY;	/* NT flag (Body has small capital letters only) */
+        while ((*p == (TCHAR)'/') || (*p == (TCHAR)'\\')){
+            p++;	/* Skip duplicated separators if exist */
+        }
+
+        *path = p;							/* Return pointer to the next segment */
+
+        if(wc < (WCHAR)' '){                /* Set last segment flag if end of the path */
+            cf = NS_LAST;
+        }
+        else{
+            cf = 0U;
+        }
+
+    #if FF_FS_RPATH != 0
+        if ((di == 1 && lfn[di - 1] == '.') ||
+            (di == 2 && lfn[di - 1] == '.' && lfn[di - 2] == '.')) {	/* Is this segment a dot name? */
+            lfn[di] = 0;
+            for (i = 0; i < 11; i++) {		/* Create dot name for SFN entry */
+                dp->fn[i] = (i < di) ? '.' : ' ';
+            }
+            dp->fn[i] = cf | NS_DOT;		/* This is a dot entry */
+            return FR_OK;
+        }
+    #endif
+        while (di) {						/* Snip off trailing spaces and dots if exist */
+            wc = lfn[di - 1];
+            if ((wc != (WCHAR)' ') && (wc != (WCHAR)'.')){
+                break;
+            }
+            di--;
+        }
+
+        lfn[di] = 0U;							/* LFN is created into the working buffer */
+        if (di == 0U){
+            ret = FR_INVALID_NAME;  /* Reject null name */
+            func_exit = 1U;
+        }
+        else{
+
+            /* Create SFN in directory form */
+            for (si = 0U; lfn[si] == (WCHAR)' '; si++) {	/* Remove leading spaces */
+
+            }
+
+            if ((si > 0U) || (lfn[si] == (WCHAR)'.')){
+                cf |= NS_LOSS | NS_LFN;	/* Is there any leading space or dot? */
+            }
+
+            while ((di > 0U) && (lfn[di - 1] != (WCHAR)'.')){
+                di--;	/* Find last dot (di<=si: no extension) */
+            }
+
+            mem_set(dp->fn, ' ', 11U);
+
+            b = 0U;
+            i = b;
+            ni = 8u;
+
+            for (;;) {
+                wc = lfn[si++];					/* Get an LFN character */
+
+                if (wc == 0U){
+                    loop_exit = 1U;             /* Break on end of the LFN */
+                }
+                else{
+
+                    if ((wc == (WCHAR)' ') || ((wc == (WCHAR)'.') && (si != di))) {	/* Remove embedded spaces and dots */
+                        cf |= NS_LOSS | NS_LFN;
+                        loop_skip = 1U;
+                    }
+                    else{
+                        if ((i >= ni) || (si == di)) {		/* End of field? */
+                            if (ni == 11U) {				/* Name extension overflow? */
+                                cf |= NS_LOSS | NS_LFN;
+                                break;
+                            }
+                            if (si != di){
+                                cf |= NS_LOSS | NS_LFN;	/* Name body overflow? */
+                            }
+
+                            if (si > di){
+                                break;						/* No name extension? */
+                            }
+
+                            si = di;
+                            i = 8U;
+                            ni = 11U;
+                            b <<= 2;		/* Enter name extension */
+                            loop_skip = 1U;
+                        }
+
+                        if(loop_skip == 0U){
+
+                            if (wc >= 0x80U) {	/* Is this a non-ASCII character? */
+                                cf |= NS_LFN;	/* LFN entry needs to be created */
+                    #if FF_CODE_PAGE == 0
+                                if (ExCvt) {	/* At SBCS */
+                                    wc = ff_uni2oem(wc, CODEPAGE);			/* Unicode ==> ANSI/OEM code */
+                                    if (wc & 0x80) wc = ExCvt[wc & 0x7F];	/* Convert extended character to upper (SBCS) */
+                                } else {		/* At DBCS */
+                                    wc = ff_uni2oem(ff_wtoupper(wc), CODEPAGE);	/* Unicode ==> Upper convert ==> ANSI/OEM code */
+                                }
+                    #elif FF_CODE_PAGE < 900	/* SBCS cfg */
+                                wc = ff_uni2oem((DWORD)wc, (WORD)CODEPAGE);			/* Unicode ==> ANSI/OEM code */
+                                if (wc & 0x80U){
+                                    wc = ExCvt[wc & 0x7FU];	/* Convert extended character to upper (SBCS) */
+                                }
+                    #else						/* DBCS cfg */
+                                wc = ff_uni2oem(ff_wtoupper(wc), CODEPAGE);	/* Unicode ==> Upper convert ==> ANSI/OEM code */
+                    #endif
+                            }
+
+                            if (wc >= 0x100U) {				/* Is this a DBC? */
+                                if (i >= ni - 1U) {			/* Field overflow? */
+                                    cf |= NS_LOSS | NS_LFN;
+                                    i = ni;
+                                    loop_skip = 1U;		/* Next field */
+                                }
+                                else{
+                                    dp->fn[i++] = (BYTE)(wc >> 8);	/* Put 1st byte */
+                                }
+                            }
+                            else {						/* SBC */
+                                if ((wc == 0U) || (chk_chr("+,;=[]", wc))) {	/* Replace illegal characters for SFN if needed */
+                                    wc = (WCHAR)'_';
+                                    cf |= NS_LOSS | NS_LFN;/* Lossy conversion */
+                                }
+                                else {
+                                    if (IsUpper(wc)) {		/* ASCII upper case? */
+                                        b |= 2U;
+                                    }
+                                    if (IsLower(wc)) {		/* ASCII lower case? */
+                                        b |= 1U;
+                                        wc -= 0x20U;
+                                    }
+                                }
+                            }
+
+                            if(loop_skip == 0U){
+                                dp->fn[i++] = (BYTE)wc;
+                            }
+                        }
+                    }
+                }
+
+                if(loop_exit == 1U){
+                    break;
+                }
+            }
+
+            if (dp->fn[0] == DDEM){
+                dp->fn[0] = RDDEM;	/* If the first character collides with DDEM, replace it with RDDEM */
+            }
+
+            if (ni == 8U){
+                b <<= 2;				/* Shift capital flags if no extension */
+            }
+
+            if (((b & 0x0CU) == 0x0CU) || ((b & 0x03U) == 0x03U)){
+                cf |= NS_LFN;	/* LFN entry needs to be created if composite capitals */
+            }
+
+            if (!(cf & NS_LFN)) {				/* When LFN is in 8.3 format without extended character, NT flags are created */
+                if (b & 0x01U){
+                    cf |= NS_EXT;		/* NT flag (Extension has small capital letters only) */
+                }
+
+                if (b & 0x04U){
+                    cf |= NS_BODY;	/* NT flag (Body has small capital letters only) */
+                }
+            }
+
+            dp->fn[NSFLAG] = cf;	/* SFN is created into dp->fn[] */
+        }
 	}
 
-	dp->fn[NSFLAG] = cf;	/* SFN is created into dp->fn[] */
-
-	return FR_OK;
+	return ret;
 
 
 #else	/* FF_USE_LFN : Non-LFN configuration */
@@ -4251,7 +4367,7 @@ FRESULT f_open (
 {
 	FRESULT res;
 	DIR dj;
-	FATFS *fs;
+	FATFS *fs = (FATFS *)0;
 #if !FF_FS_READONLY
 	DWORD dw, cl, bcs, clst, sc;
 	FSIZE_t ofs;
@@ -4441,7 +4557,7 @@ FRESULT f_read (
 )
 {
 	FRESULT res;
-	FATFS *fs;
+    FATFS *fs = (FATFS *)0;
 	DWORD clst, sect;
 	FSIZE_t remain;
 	UINT rcnt, cc, csect;
@@ -4541,7 +4657,7 @@ FRESULT f_write (
 )
 {
 	FRESULT res;
-	FATFS *fs;
+    FATFS *fs = (FATFS *)0;
 	DWORD clst, sect;
 	UINT wcnt, cc, csect;
 	const BYTE *wbuff = (const BYTE*)buff;
@@ -4659,7 +4775,7 @@ FRESULT f_sync (
 )
 {
 	FRESULT res;
-	FATFS *fs;
+    FATFS *fs = (FATFS *)0;
 	DWORD tm;
 	BYTE *dir;
 
@@ -4740,7 +4856,7 @@ FRESULT f_close (
 )
 {
 	FRESULT res;
-	FATFS *fs;
+    FATFS *fs = (FATFS *)0;
 
 #if !FF_FS_READONLY
 	res = f_sync(fp);					/* Flush cached data */
@@ -4955,7 +5071,7 @@ FRESULT f_lseek (
 )
 {
 	FRESULT res;
-	FATFS *fs;
+    FATFS *fs = (FATFS *)0;
 	DWORD clst, bcs, nsect;
 	FSIZE_t ifptr;
 #if FF_USE_FASTSEEK
@@ -5116,7 +5232,7 @@ FRESULT f_opendir (
 )
 {
 	FRESULT res;
-	FATFS *fs;
+    FATFS *fs = (FATFS *)0;
 	DEF_NAMBUF
 
 
@@ -5181,7 +5297,7 @@ FRESULT f_closedir (
 )
 {
 	FRESULT res;
-	FATFS *fs;
+    FATFS *fs = (FATFS *)0;
 
 
 	res = validate(&dp->obj, &fs);	/* Check validity of the file object */
@@ -5212,7 +5328,7 @@ FRESULT f_readdir (
 )
 {
 	FRESULT res;
-	FATFS *fs;
+    FATFS *fs = (FATFS *)0;
 	DEF_NAMBUF
 
 
@@ -5300,7 +5416,7 @@ FRESULT f_stat (
 )
 {
 	FRESULT res;
-	DIR dj;
+	DIR dj = {0};
 	DEF_NAMBUF
 
 
@@ -5336,7 +5452,7 @@ FRESULT f_getfree (
 )
 {
 	FRESULT res;
-	FATFS *fs;
+    FATFS *fs = (FATFS *)0;
 	DWORD nfree, clst, sect, stat;
 	UINT i;
 	FFOBJID obj;
@@ -5423,7 +5539,7 @@ FRESULT f_truncate (
 )
 {
 	FRESULT res;
-	FATFS *fs;
+    FATFS *fs = (FATFS *)0;
 	DWORD ncl;
 
 
@@ -5475,7 +5591,7 @@ FRESULT f_unlink (
 	FRESULT res;
 	DIR dj, sdj;
 	DWORD dclst = 0;
-	FATFS *fs;
+    FATFS *fs = (FATFS *)0;
 #if FF_FS_EXFAT
 	FFOBJID obj;
 #endif
@@ -5568,7 +5684,7 @@ FRESULT f_mkdir (
 {
 	FRESULT res;
 	DIR dj;
-	FATFS *fs;
+    FATFS *fs = (FATFS *)0;
 	BYTE *dir;
 	DWORD dcl, pcl, tm;
 	DEF_NAMBUF
@@ -5656,9 +5772,9 @@ FRESULT f_rename (
 )
 {
 	FRESULT res;
-	DIR djo, djn;
-	FATFS *fs;
-	BYTE buf[FF_FS_EXFAT ? SZDIRE * 2 : SZDIRE], *dir;
+	DIR djo, djn = {0};
+    FATFS *fs = (FATFS *)0;
+	BYTE buf[FF_FS_EXFAT ? SZDIRE * 2 : SZDIRE] = {0}, *dir;
 	DWORD dw;
 	DEF_NAMBUF
 
@@ -6925,7 +7041,7 @@ void putc_bfd (		/* Buffered write with code conversion */
 	TCHAR c
 )
 {
-	UINT n;
+	UINT n = 0U;
 	int i, nc;
 #if FF_USE_LFN && FF_LFN_UNICODE
 	WCHAR hs, wc;
@@ -7056,7 +7172,7 @@ int putc_flush (		/* Flush left characters in the buffer */
 	putbuff* pb
 )
 {
-	UINT nw;
+	UINT nw = 0U;
 
 	if (   pb->idx >= 0	/* Flush buffered characters to the file */
 		&& f_write(pb->fp, pb->buf, (UINT)pb->idx, &nw) == FR_OK
@@ -7082,7 +7198,7 @@ int f_putc (
 	FIL* fp		/* Pointer to the file object */
 )
 {
-	putbuff pb;
+	putbuff pb = {0};;
 
 
 	putc_init(&pb, fp);
@@ -7102,7 +7218,7 @@ int f_puts (
 	FIL* fp				/* Pointer to the file object */
 )
 {
-	putbuff pb;
+	putbuff pb = {0};
 
 
 	putc_init(&pb, fp);
@@ -7124,7 +7240,7 @@ int f_printf (
 )
 {
 	va_list arp;
-	putbuff pb;
+	putbuff pb = {0};
 	BYTE f, r;
 	UINT i, j, w;
 	DWORD v;
