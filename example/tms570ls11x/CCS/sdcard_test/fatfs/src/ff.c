@@ -599,6 +599,7 @@ static FRESULT dir_remove (DIR* dp);
 static void get_fileinfo (DIR* dp, FILINFO* fno);
 static FRESULT create_name (DIR* dp, const TCHAR** path);
 static FRESULT follow_path (DIR* dp, const TCHAR* path);
+static int get_ldnumber (const TCHAR** path);
 
 /*-----------------------------------------------------------------------*/
 /* Load/Store multi-byte word in the FAT structure                       */
@@ -3967,7 +3968,7 @@ static int get_ldnumber (	/* Returns logical drive number (-1:invalid drive numb
 	const TCHAR** path		/* Pointer to pointer to the path name */
 )
 {
-	const TCHAR *tp, *tt;
+    const TCHAR *tp, *tt;
 	TCHAR tc;
 	int i, vol = -1;
 #if FF_STR_VOLUME_ID		/* Find string volume ID */
@@ -3975,58 +3976,75 @@ static int get_ldnumber (	/* Returns logical drive number (-1:invalid drive numb
 	char c;
 #endif
 
-	tt = tp = *path;
-	if (!tp) return vol;	/* Invalid path name? */
-	do tc = *tt++; while ((UINT)tc >= (FF_USE_LFN ? ' ' : '!') && tc != ':');	/* Find a colon in the path */
-
-	if (tc == ':') {	/* DOS/Windows style volume ID? */
-		i = FF_VOLUMES;
-		if (IsDigit(*tp) && tp + 2 == tt) {	/* Is there a numeric volume ID + colon? */
-			i = (int)*tp - '0';	/* Get the LD number */
-		}
-#if FF_STR_VOLUME_ID == 1	/* Arbitrary string is enabled */
-		else {
-			i = 0;
-			do {
-				sp = VolumeStr[i]; tp = *path;	/* This string volume ID and path name */
-				do {	/* Compare the volume ID with path name */
-					c = *sp++; tc = *tp++;
-					if (IsLower(c)) c -= 0x20;
-					if (IsLower(tc)) tc -= 0x20;
-				} while (c && (TCHAR)c == tc);
-			} while ((c || tp != tt) && ++i < FF_VOLUMES);	/* Repeat for each id until pattern match */
-		}
-#endif
-		if (i < FF_VOLUMES) {	/* If a volume ID is found, get the drive number and strip it */
-			vol = i;		/* Drive number */
-			*path = tt;		/* Snip the drive prefix off */
-		}
-		return vol;
-	}
-#if FF_STR_VOLUME_ID == 2		/* Unix style volume ID is enabled */
-	if (*tp == '/') {
-		i = 0;
-		do {
-			sp = VolumeStr[i]; tp = *path;	/* This string volume ID and path name */
-			do {	/* Compare the volume ID with path name */
-				c = *sp++; tc = *(++tp);
-				if (IsLower(c)) c -= 0x20;
-				if (IsLower(tc)) tc -= 0x20;
-			} while (c && (TCHAR)c == tc);
-		} while ((c || (tc != '/' && (UINT)tc >= (FF_USE_LFN ? ' ' : '!'))) && ++i < FF_VOLUMES);	/* Repeat for each ID until pattern match */
-		if (i < FF_VOLUMES) {	/* If a volume ID is found, get the drive number and strip it */
-			vol = i;		/* Drive number */
-			*path = tp;		/* Snip the drive prefix off */
-			return vol;
-		}
-	}
-#endif
-	/* No drive prefix is found */
-#if FF_FS_RPATH != 0
-	vol = CurrVol;	/* Default drive is current drive */
+#if FF_USE_LFN
+	const TCHAR temp_char = ' ';
 #else
-	vol = 0;		/* Default drive is 0 */
+	const TCHAR temp_char = '!';
 #endif
+	BYTE func_exit = 0U;
+
+	tp = *path;
+	tt = tp;
+
+	if (tp){   /* Invalid path name? */
+        do{
+            tc = *tt++; 	/* Find a colon in the path */
+        }while (((UINT)tc >= (UINT)temp_char) && ((UINT)tc != (UINT)':'));
+
+        if (tc == ':') {	/* DOS/Windows style volume ID? */
+            i = FF_VOLUMES;
+            if ((IsDigit((WCHAR)*tp)) && (tp + 2U == tt)) {	/* Is there a numeric volume ID + colon? */
+                i = (int)*tp - (INT)'0';	/* Get the LD number */
+            }
+#if FF_STR_VOLUME_ID == 1	/* Arbitrary string is enabled */
+            else {
+                i = 0;
+                do {
+                    sp = VolumeStr[i]; tp = *path;	/* This string volume ID and path name */
+                    do {	/* Compare the volume ID with path name */
+                        c = *sp++; tc = *tp++;
+                        if (IsLower(c)) c -= 0x20;
+                        if (IsLower(tc)) tc -= 0x20;
+                    } while (c && (TCHAR)c == tc);
+                } while ((c || tp != tt) && ++i < FF_VOLUMES);	/* Repeat for each id until pattern match */
+            }
+#endif
+            if (i < FF_VOLUMES) {	/* If a volume ID is found, get the drive number and strip it */
+                vol = i;		/* Drive number */
+                *path = tt;		/* Snip the drive prefix off */
+            }
+            func_exit = 1U;
+        }
+
+        if(func_exit == 0U){
+
+#if FF_STR_VOLUME_ID == 2       /* Unix style volume ID is enabled */
+            if (*tp == '/') {
+                i = 0;
+                do {
+                    sp = VolumeStr[i]; tp = *path;  /* This string volume ID and path name */
+                    do {    /* Compare the volume ID with path name */
+                        c = *sp++; tc = *(++tp);
+                        if (IsLower(c)) c -= 0x20;
+                        if (IsLower(tc)) tc -= 0x20;
+                    } while (c && (TCHAR)c == tc);
+                } while ((c || (tc != '/' && (UINT)tc >= (FF_USE_LFN ? ' ' : '!'))) && ++i < FF_VOLUMES);   /* Repeat for each ID until pattern match */
+                if (i < FF_VOLUMES) {   /* If a volume ID is found, get the drive number and strip it */
+                    vol = i;        /* Drive number */
+                    *path = tp;     /* Snip the drive prefix off */
+                    return vol;
+                }
+            }
+#endif
+            /* No drive prefix is found */
+#if FF_FS_RPATH != 0
+            vol = CurrVol;  /* Default drive is current drive */
+#else
+            vol = 0;        /* Default drive is 0 */
+#endif
+        }
+	}
+
 	return vol;		/* Return the default drive */
 }
 
