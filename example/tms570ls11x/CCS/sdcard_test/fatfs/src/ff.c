@@ -598,6 +598,7 @@ static FRESULT dir_register (DIR* dp);
 static FRESULT dir_remove (DIR* dp);
 static void get_fileinfo (DIR* dp, FILINFO* fno);
 static FRESULT create_name (DIR* dp, const TCHAR** path);
+static FRESULT follow_path (DIR* dp, const TCHAR* path);
 
 /*-----------------------------------------------------------------------*/
 /* Load/Store multi-byte word in the FAT structure                       */
@@ -3854,13 +3855,13 @@ static FRESULT create_name (	/* FR_OK: successful, FR_INVALID_NAME: could not cr
 
 static FRESULT follow_path (	/* FR_OK(0): successful, !=0: error code */
 	DIR* dp,					/* Directory object to return last directory and found object */
-	const TCHAR* path			/* Full-path string to find a file or directory */
+	const TCHAR path[]			/* Full-path string to find a file or directory */
 )
 {
 	FRESULT res;
 	BYTE ns;
 	FATFS *fs = dp->obj.fs;
-
+	UINT index = 0U;
 
 #if FF_FS_RPATH != 0
 	if (*path != '/' && *path != '\\') {	/* Without heading separator */
@@ -3868,8 +3869,11 @@ static FRESULT follow_path (	/* FR_OK(0): successful, !=0: error code */
 	} else
 #endif
 	{										/* With heading separator */
-		while (*path == '/' || *path == '\\') path++;	/* Strip heading separator */
-		dp->obj.sclust = 0;					/* Start from root directory */
+		while ((path[index] == '/') || (path[index] == '\\')){
+		    index++;	/* Strip heading separator */
+		}
+
+		dp->obj.sclust = 0U;					/* Start from root directory */
 	}
 #if FF_FS_EXFAT
 	dp->obj.n_frag = 0;	/* Invalidate last fragment counter of the object */
@@ -3888,32 +3892,52 @@ static FRESULT follow_path (	/* FR_OK(0): successful, !=0: error code */
 #endif
 #endif
 
-	if ((UINT)*path < ' ') {				/* Null path name is the origin directory itself */
+	if ((UINT)path[0] < (UINT)' ') {				/* Null path name is the origin directory itself */
 		dp->fn[NSFLAG] = NS_NONAME;
-		res = dir_sdi(dp, 0);
+		res = dir_sdi(dp, 0U);
 
 	} else {								/* Follow path */
 		for (;;) {
 			res = create_name(dp, &path);	/* Get a segment name of the path */
-			if (res != FR_OK) break;
+			if (res != FR_OK){
+			    break;
+			}
+
 			res = dir_find(dp);				/* Find an object with the segment name */
 			ns = dp->fn[NSFLAG];
 			if (res != FR_OK) {				/* Failed to find the object */
 				if (res == FR_NO_FILE) {	/* Object is not found */
-					if (FF_FS_RPATH && (ns & NS_DOT)) {	/* If dot entry is not exist, stay there */
-						if (!(ns & NS_LAST)) continue;	/* Continue to follow if not last segment */
-						dp->fn[NSFLAG] = NS_NONAME;
-						res = FR_OK;
-					} else {							/* Could not find the object */
-						if (!(ns & NS_LAST)) res = FR_NO_PATH;	/* Adjust error code if not last segment */
-					}
+
+#if FF_FS_RPATH
+				    if (ns & NS_DOT) { /* If dot entry is not exist, stay there */
+                        if (!(ns & NS_LAST)){
+                            continue;   /* Continue to follow if not last segment */
+                        }
+                        dp->fn[NSFLAG] = NS_NONAME;
+                        res = FR_OK;
+                    } else {                            /* Could not find the object */
+                        if (!(ns & NS_LAST)){
+                            res = FR_NO_PATH;   /* Adjust error code if not last segment */
+                        }
+                    }
+#else
+				    /* Could not find the object */
+                    if (!(ns & NS_LAST)){
+                        res = FR_NO_PATH;   /* Adjust error code if not last segment */
+                    }
+#endif
 				}
 				break;
 			}
-			if (ns & NS_LAST) break;			/* Last segment matched. Function completed. */
+
+			if (ns & NS_LAST){
+			    break;			/* Last segment matched. Function completed. */
+			}
+
 			/* Get into the sub-directory */
 			if (!(dp->obj.attr & AM_DIR)) {		/* It is not a sub-directory and cannot follow */
-				res = FR_NO_PATH; break;
+				res = FR_NO_PATH;
+				break;
 			}
 #if FF_FS_EXFAT
 			if (fs->fs_type == FS_EXFAT) {		/* Save containing directory information for next dir */
