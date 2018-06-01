@@ -602,6 +602,7 @@ static FRESULT follow_path (DIR* dp, const TCHAR* path);
 static int get_ldnumber (const TCHAR** path);
 static BYTE check_fs (FATFS* fs, DWORD sect);
 static FRESULT find_volume (const TCHAR** path, FATFS** rfs, BYTE mode);
+static FRESULT validate (FFOBJID* obj, FATFS** rfs);
 
 /*-----------------------------------------------------------------------*/
 /* Load/Store multi-byte word in the FAT structure                       */
@@ -4521,7 +4522,7 @@ static FRESULT validate (	/* Returns FR_OK or FR_INVALID_OBJECT */
 	FRESULT res = FR_INVALID_OBJECT;
 
 
-	if (obj && obj->fs && obj->fs->fs_type && obj->id == obj->fs->id) {	/* Test if the object is valid */
+	if ((obj) && (obj->fs) && (obj->fs->fs_type) && (obj->id == obj->fs->id)) {	/* Test if the object is valid */
 #if FF_FS_REENTRANT
 		if (lock_fs(obj->fs)) {	/* Obtain the filesystem object */
 			if (!(disk_status(obj->fs->pdrv) & STA_NOINIT)) { /* Test if the phsical drive is kept initialized */
