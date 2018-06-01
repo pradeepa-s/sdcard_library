@@ -4978,11 +4978,11 @@ FRESULT f_write (
 
 	*bw = 0U;	/* Clear write byte counter */
 	res = validate(&fp->obj, &fs);			/* Check validity of the file object */
-	if (res != FR_OK || (res = (FRESULT)fp->err) != FR_OK) LEAVE_FF(fs, res);	/* Check validity */
+	if ((res != FR_OK) || ((res = (FRESULT)fp->err) != FR_OK)) LEAVE_FF(fs, res);	/* Check validity */
 	if (!(fp->flag & FA_WRITE)) LEAVE_FF(fs, FR_DENIED);	/* Check access mode */
 
 	/* Check fptr wrap-around (file size cannot reach 4 GiB at FAT volume) */
-	if ((!FF_FS_EXFAT || fs->fs_type != FS_EXFAT) && (DWORD)(fp->fptr + btw) < (DWORD)fp->fptr) {
+	if (((!FF_FS_EXFAT) || (fs->fs_type != FS_EXFAT)) && ((DWORD)(fp->fptr + btw) < (DWORD)fp->fptr)) {
 		btw = (UINT)(0xFFFFFFFF - (DWORD)fp->fptr);
 	}
 
@@ -5051,9 +5051,9 @@ FRESULT f_write (
 				fs->winsect = sect;
 			}
 #else
-			if (fp->sect != sect && 		/* Fill sector cache with file data */
-				fp->fptr < fp->obj.objsize &&
-				disk_read(fs->pdrv, fp->buf, sect, 1) != RES_OK) {
+			if ((fp->sect != sect) && 		/* Fill sector cache with file data */
+				(fp->fptr < fp->obj.objsize) &&
+				(disk_read(fs->pdrv, fp->buf, sect, 1) != RES_OK)) {
 					ABORT(fs, FR_DISK_ERR);
 			}
 #endif
@@ -5457,15 +5457,15 @@ FRESULT f_lseek (
 #if FF_FS_EXFAT
 		if (fs->fs_type != FS_EXFAT && ofs >= 0x100000000) ofs = 0xFFFFFFFF;	/* Clip at 4 GiB - 1 if at FATxx */
 #endif
-		if (ofs > fp->obj.objsize && (FF_FS_READONLY || !(fp->flag & FA_WRITE))) {	/* In read-only mode, clip offset with the file size */
+		if ((ofs > fp->obj.objsize) && ((FF_FS_READONLY) || (!(fp->flag & FA_WRITE)))) {	/* In read-only mode, clip offset with the file size */
 			ofs = fp->obj.objsize;
 		}
 		ifptr = fp->fptr;
 		fp->fptr = nsect = 0U;
 		if (ofs > 0U) {
 			bcs = (DWORD)fs->csize * SS(fs);	/* Cluster size (byte) */
-			if (ifptr > 0U &&
-				(ofs - 1U) / bcs >= (ifptr - 1U) / bcs) {	/* When seek to same or following cluster, */
+			if ((ifptr > 0U) &&
+				((ofs - 1U) / bcs >= (ifptr - 1U) / bcs)) {	/* When seek to same or following cluster, */
 				fp->fptr = (ifptr - 1U) & ~(FSIZE_t)(bcs - 1U);	/* start from the current cluster */
 				ofs -= fp->fptr;
 				clst = fp->clust;
@@ -5486,7 +5486,7 @@ FRESULT f_lseek (
 					ofs -= bcs; fp->fptr += bcs;
 #if !FF_FS_READONLY
 					if (fp->flag & FA_WRITE) {			/* Check if in write mode or not */
-						if (FF_FS_EXFAT && fp->fptr > fp->obj.objsize) {	/* No FAT chain object needs correct objsize to generate FAT value */
+						if ((FF_FS_EXFAT) && (fp->fptr > fp->obj.objsize)) {	/* No FAT chain object needs correct objsize to generate FAT value */
 							fp->obj.objsize = fp->fptr;
 							fp->flag |= FA_MODIFIED;
 						}
@@ -5500,7 +5500,7 @@ FRESULT f_lseek (
 						clst = get_fat(&fp->obj, clst);	/* Follow cluster chain if not in write mode */
 					}
 					if (clst == 0xFFFFFFFFU) ABORT(fs, FR_DISK_ERR);
-					if (clst <= 1U || clst >= fs->n_fatent) ABORT(fs, FR_INT_ERR);
+					if ((clst <= 1U) || (clst >= fs->n_fatent)) ABORT(fs, FR_INT_ERR);
 					fp->clust = clst;
 				}
 				fp->fptr += ofs;
@@ -5511,11 +5511,11 @@ FRESULT f_lseek (
 				}
 			}
 		}
-		if (!FF_FS_READONLY && fp->fptr > fp->obj.objsize) {	/* Set file change flag if the file size is extended */
+		if ((!FF_FS_READONLY) && (fp->fptr > fp->obj.objsize)) {	/* Set file change flag if the file size is extended */
 			fp->obj.objsize = fp->fptr;
 			fp->flag |= FA_MODIFIED;
 		}
-		if (fp->fptr % SS(fs) && nsect != fp->sect) {	/* Fill sector cache if needed */
+		if ((fp->fptr % SS(fs)) && (nsect != fp->sect)) {	/* Fill sector cache if needed */
 #if !FF_FS_TINY
 #if !FF_FS_READONLY
 			if (fp->flag & FA_DIRTY) {			/* Write-back dirty sector cache */
@@ -5857,7 +5857,7 @@ FRESULT f_truncate (
 
 
 	res = validate(&fp->obj, &fs);	/* Check validity of the file object */
-	if (res != FR_OK || (res = (FRESULT)fp->err) != FR_OK) LEAVE_FF(fs, res);
+	if ((res != FR_OK) || ((res = (FRESULT)fp->err) != FR_OK)) LEAVE_FF(fs, res);
 	if (!(fp->flag & FA_WRITE)) LEAVE_FF(fs, FR_DENIED);	/* Check access mode */
 
 	if (fp->fptr < fp->obj.objsize) {	/* Process when fptr is not on the eof */
@@ -5869,14 +5869,14 @@ FRESULT f_truncate (
 			res = FR_OK;
 			if (ncl == 0xFFFFFFFFU) res = FR_DISK_ERR;
 			if (ncl == 1U) res = FR_INT_ERR;
-			if (res == FR_OK && ncl < fs->n_fatent) {
+			if ((res == FR_OK) && (ncl < fs->n_fatent)) {
 				res = remove_chain(&fp->obj, ncl, fp->clust);
 			}
 		}
 		fp->obj.objsize = fp->fptr;	/* Set file size to current read/write point */
 		fp->flag |= FA_MODIFIED;
 #if !FF_FS_TINY
-		if (res == FR_OK && (fp->flag & FA_DIRTY)) {
+		if ((res == FR_OK) && ((fp->flag & FA_DIRTY))) {
 			if (disk_write(fs->pdrv, fp->buf, fp->sect, 1U) != RES_OK) {
 				res = FR_DISK_ERR;
 			} else {
@@ -5917,7 +5917,7 @@ FRESULT f_unlink (
 		dj.obj.fs = fs;
 		INIT_NAMBUF(fs);
 		res = follow_path(&dj, path);		/* Follow the file path */
-		if (FF_FS_RPATH && res == FR_OK && (dj.fn[NSFLAG] & NS_DOT)) {
+		if ((FF_FS_RPATH) && (res == FR_OK) && (dj.fn[NSFLAG] & NS_DOT)) {
 			res = FR_INVALID_NAME;			/* Cannot remove dot entry */
 		}
 #if FF_FS_LOCK != 0
@@ -5968,7 +5968,7 @@ FRESULT f_unlink (
 			}
 			if (res == FR_OK) {
 				res = dir_remove(&dj);			/* Remove the directory entry */
-				if (res == FR_OK && dclst != 0U) {	/* Remove the cluster chain if exist */
+				if ((res == FR_OK) && (dclst != 0U)) {	/* Remove the cluster chain if exist */
 #if FF_FS_EXFAT
 					res = remove_chain(&obj, dclst, 0U);
 #else
@@ -6010,7 +6010,7 @@ FRESULT f_mkdir (
 		INIT_NAMBUF(fs);
 		res = follow_path(&dj, path);			/* Follow the file path */
 		if (res == FR_OK) res = FR_EXIST;		/* Any object with same name is already existing */
-		if (FF_FS_RPATH && res == FR_NO_FILE && (dj.fn[NSFLAG] & NS_DOT)) {
+		if ((FF_FS_RPATH) && (res == FR_NO_FILE) && (dj.fn[NSFLAG] & NS_DOT)) {
 			res = FR_INVALID_NAME;
 		}
 		if (res == FR_NO_FILE) {				/* Can create a new directory */
@@ -6024,7 +6024,7 @@ FRESULT f_mkdir (
 			tm = GET_FATTIME();
 			if (res == FR_OK) {					/* Initialize the new directory table */
 				res = dir_clear(fs, dcl);		/* Clean up the new table */
-				if (res == FR_OK && (!FF_FS_EXFAT || fs->fs_type != FS_EXFAT)) {	/* Create dot entries (FAT only) */
+				if ((res == FR_OK) && ((!FF_FS_EXFAT) || (fs->fs_type != FS_EXFAT))) {	/* Create dot entries (FAT only) */
 					dir = fs->win;
 					mem_set(dir + DIR_Name, ' ', 11U);	/* Create "." entry */
 					dir[DIR_Name] = '.';
@@ -6098,7 +6098,7 @@ FRESULT f_rename (
 		djo.obj.fs = fs;
 		INIT_NAMBUF(fs);
 		res = follow_path(&djo, path_old);		/* Check old object */
-		if (res == FR_OK && (djo.fn[NSFLAG] & (NS_DOT | NS_NONAME))) res = FR_INVALID_NAME;	/* Check validity of name */
+		if ((res == FR_OK) && (djo.fn[NSFLAG] & (NS_DOT | NS_NONAME))) res = FR_INVALID_NAME;	/* Check validity of name */
 #if FF_FS_LOCK != 0
 		if (res == FR_OK) {
 			res = chk_lock(&djo, 2);
@@ -6136,7 +6136,7 @@ FRESULT f_rename (
 				mem_cpy((BYTE*)&djn, (const BYTE*)&djo, sizeof (DIR));		/* Duplicate the directory object */
 				res = follow_path(&djn, path_new);		/* Make sure if new object name is not in use */
 				if (res == FR_OK) {						/* Is new name already in use by any other object? */
-					res = (djn.obj.sclust == djo.obj.sclust && djn.dptr == djo.dptr) ? FR_NO_FILE : FR_EXIST;
+					res = ((djn.obj.sclust == djo.obj.sclust) && (djn.dptr == djo.dptr)) ? FR_NO_FILE : FR_EXIST;
 				}
 				if (res == FR_NO_FILE) { 				/* It is a valid path and no name collision */
 					res = dir_register(&djn);			/* Register the new entry */
@@ -6146,7 +6146,7 @@ FRESULT f_rename (
 						dir[DIR_Attr] = buf[DIR_Attr];
 						if (!(dir[DIR_Attr] & AM_DIR)) dir[DIR_Attr] |= AM_ARC;	/* Set archive attribute if it is a file */
 						fs->wflag = 1U;
-						if ((dir[DIR_Attr] & AM_DIR) && djo.obj.sclust != djn.obj.sclust) {	/* Update .. entry in the sub-directory if needed */
+						if ((dir[DIR_Attr] & AM_DIR) && (djo.obj.sclust != djn.obj.sclust)) {	/* Update .. entry in the sub-directory if needed */
 							dw = clst2sect(fs, ld_clust(fs, dir));
 							if (dw == 0U) {
 								res = FR_INT_ERR;
@@ -6154,7 +6154,7 @@ FRESULT f_rename (
 /* Start of critical section where an interruption can cause a cross-link */
 								res = move_window(fs, dw);
 								dir = fs->win + SZDIRE * 1U;	/* Ptr to .. entry */
-								if (res == FR_OK && dir[1] == '.') {
+								if ((res == FR_OK) && (dir[1] == '.')) {
 									st_clust(fs, dir, djn.obj.sclust);
 									fs->wflag = 1U;
 								}
@@ -7316,7 +7316,7 @@ TCHAR* f_gets (
 		f_read(fp, s, 1, &rc);
 		if (rc != 1U) break;
 		dc = s[0];
-		if (FF_USE_STRFUNC == 2 && dc == '\r') continue;
+		if ((FF_USE_STRFUNC == 2) && (dc == '\r')) continue;
 		*p++ = (TCHAR)dc; nc++;
 		if (dc == '\n') break;
 	}
@@ -7364,7 +7364,7 @@ void putc_bfd (		/* Buffered write with code conversion */
 #endif
 #endif
 
-	if (FF_USE_STRFUNC == 2 && c == '\n') {	 /* LF -> CRLF conversion */
+	if ((FF_USE_STRFUNC == 2) && (c == '\n')) {	 /* LF -> CRLF conversion */
 		putc_bfd(pb, '\r');
 	}
 
@@ -7487,9 +7487,9 @@ int putc_flush (		/* Flush left characters in the buffer */
 {
 	UINT nw = 0U;
 
-	if (   pb->idx >= 0	/* Flush buffered characters to the file */
-		&& f_write(pb->fp, pb->buf, (UINT)pb->idx, &nw) == FR_OK
-		&& (UINT)pb->idx == nw) return pb->nchr;
+	if (   (pb->idx >= 0)	/* Flush buffered characters to the file */
+		&& (f_write(pb->fp, pb->buf, (UINT)pb->idx, &nw) == FR_OK)
+		&& ((UINT)pb->idx == nw)) return pb->nchr;
 	return EOF;
 }
 
@@ -7589,7 +7589,7 @@ int f_printf (
 				c = *fmt++;
 			}
 		}
-		if (c == 'l' || c == 'L') {	/* Type prefix: Size is long int */
+		if ((c == 'l') || (c == 'L')) {	/* Type prefix: Size is long int */
 			f |= 4U; c = *fmt++;
 		}
 		if (c == 0U) break;
@@ -7628,7 +7628,7 @@ int f_printf (
 
 		/* Get an argument and put it in numeral */
 		v = (f & 4U) ? (DWORD)va_arg(arp, long) : ((d == 'D') ? (DWORD)(long)va_arg(arp, int) : (DWORD)va_arg(arp, unsigned int));
-		if (d == 'D' && (v & 0x80000000U)) {
+		if ((d == 'D') && (v & 0x80000000U)) {
 			v = 0U - v;
 			f |= 8U;
 		}
@@ -7637,7 +7637,7 @@ int f_printf (
 			d = (TCHAR)(v % r); v /= r;
 			if (d > 9U) d += (c == 'x') ? 0x27U : 0x07U;
 			str[i++] = d + '0';
-		} while (v && i < sizeof str / sizeof *str);
+		} while (v && (i < sizeof str / sizeof *str));
 		if (f & 8U) str[i++] = '-';
 		j = i; d = (f & 1U) ? '0' : ' ';
 		if (!(f & 2U)) {
