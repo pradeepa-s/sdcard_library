@@ -4572,30 +4572,39 @@ FRESULT f_mount (
 
 	/* Get logical drive number */
 	vol = get_ldnumber(&rp);
-	if (vol < 0) return FR_INVALID_DRIVE;
-	cfs = FatFs[vol];					/* Pointer to fs object */
+	if (vol < 0) {
+	    res = FR_INVALID_DRIVE;
+	}
+	else{
 
-	if (cfs) {
-#if FF_FS_LOCK != 0
-		clear_lock(cfs);
-#endif
-#if FF_FS_REENTRANT						/* Discard sync object of the current volume */
-		if (!ff_del_syncobj(cfs->sobj)) return FR_INT_ERR;
-#endif
-		cfs->fs_type = 0;				/* Clear old fs object */
+        cfs = FatFs[vol];					/* Pointer to fs object */
+
+        if (cfs) {
+    #if FF_FS_LOCK != 0
+            clear_lock(cfs);
+    #endif
+    #if FF_FS_REENTRANT						/* Discard sync object of the current volume */
+            if (!ff_del_syncobj(cfs->sobj)) return FR_INT_ERR;
+    #endif
+            cfs->fs_type = 0U;				/* Clear old fs object */
+        }
+
+        if (fs) {
+            fs->fs_type = 0U;				/* Clear new fs object */
+    #if FF_FS_REENTRANT						/* Create sync object for the new volume */
+            if (!ff_cre_syncobj((BYTE)vol, &fs->sobj)) return FR_INT_ERR;
+    #endif
+        }
+        FatFs[vol] = fs;					/* Register new fs object */
+
+        if (opt == 0U){
+            res = FR_OK;			/* Do not mount now, it will be mounted later */
+        }
+        else{
+            res = find_volume(&path, &fs, 0U);	/* Force mounted the volume */
+        }
 	}
 
-	if (fs) {
-		fs->fs_type = 0;				/* Clear new fs object */
-#if FF_FS_REENTRANT						/* Create sync object for the new volume */
-		if (!ff_cre_syncobj((BYTE)vol, &fs->sobj)) return FR_INT_ERR;
-#endif
-	}
-	FatFs[vol] = fs;					/* Register new fs object */
-
-	if (opt == 0) return FR_OK;			/* Do not mount now, it will be mounted later */
-
-	res = find_volume(&path, &fs, 0);	/* Force mounted the volume */
 	LEAVE_FF(fs, res);
 }
 
