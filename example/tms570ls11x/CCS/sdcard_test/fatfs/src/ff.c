@@ -2943,12 +2943,17 @@ static FRESULT dir_find (	/* FR_OK(0):succeeded, !=0:error */
                         }
 
                         /* Check validity of the LFN entry and compare it with given name */
-                        ord = 0xFFU;
 
                         if((c == ord) && (sum == dp->dir[LDIR_Chksum])){
                             if(cmp_lfn(fs->lfnbuf, dp->dir)){
                                 ord = ord - 1U;
                             }
+                            else{
+                                ord = 0xFFU;
+                            }
+                        }
+                        else{
+                            ord = 0xFFU;
                         }
                     }
                 } else {                    /* An SFN entry is found */
