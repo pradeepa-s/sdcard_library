@@ -2293,7 +2293,7 @@ static int cmp_lfn (		/* 1:matched, 0:not matched */
 	BYTE dir[]				/* Pointer to the directory entry containing the part of LFN */
 )
 {
-    INT ret;
+    INT ret = 1;
     BYTE loop_exit = 0U;
 	BYTE temp_byte;
     UINT i, s;
@@ -2325,23 +2325,7 @@ static int cmp_lfn (		/* 1:matched, 0:not matched */
                 }
 
                 if(loop_exit == 0U){
-
-                    /* Compare it */
-                    if(i >= FF_MAX_LFN){
-                        ret = 0;                    /* Not matched */
-                        loop_exit = 1U;
-                    }
-                    else{
-                        temp_dword = ff_wtoupper((DWORD)uc);
-                        if(temp_dword != ff_wtoupper((DWORD)lfnbuf[i++])){
-                            ret = 0;                    /* Not matched */
-                            loop_exit = 1U;
-                        }
-                    }
-
-                    if(loop_exit == 0U){
-                        wc = uc;
-                    }
+                    wc = uc;
                 }
             } else {
                 if (uc != 0xFFFFU) {
@@ -2362,6 +2346,7 @@ static int cmp_lfn (		/* 1:matched, 0:not matched */
 	else{
 	    ret = 0;
 	}
+
 	return ret;		/* The part of LFN matched */
 }
 
