@@ -349,24 +349,24 @@ int ff_del_syncobj (FF_SYNC_t sobj);	/* Delete a sync object */
 #define CREATE_LINKMAP	((FSIZE_t)0 - 1)
 
 /* Format options (2nd argument of f_mkfs) */
-#define FM_FAT		0x01
-#define FM_FAT32	0x02
-#define FM_EXFAT	0x04
-#define FM_ANY		0x07
-#define FM_SFD		0x08
+#define FM_FAT		0x01U
+#define FM_FAT32	0x02U
+#define FM_EXFAT	0x04U
+#define FM_ANY		0x07U
+#define FM_SFD		0x08U
 
 /* Filesystem type (FATFS.fs_type) */
-#define FS_FAT12	1
-#define FS_FAT16	2
-#define FS_FAT32	3
-#define FS_EXFAT	4
+#define FS_FAT12	1U
+#define FS_FAT16	2U
+#define FS_FAT32	3U
+#define FS_EXFAT	4U
 
 /* File attribute bits for directory entry (FILINFO.fattrib) */
-#define	AM_RDO	0x01	/* Read only */
-#define	AM_HID	0x02	/* Hidden */
-#define	AM_SYS	0x04	/* System */
-#define AM_DIR	0x10	/* Directory */
-#define AM_ARC	0x20	/* Archive */
+#define	AM_RDO	0x01U	/* Read only */
+#define	AM_HID	0x02U	/* Hidden */
+#define	AM_SYS	0x04U	/* System */
+#define AM_DIR	0x10U	/* Directory */
+#define AM_ARC	0x20U	/* Archive */
 
 
 #ifdef __cplusplus
