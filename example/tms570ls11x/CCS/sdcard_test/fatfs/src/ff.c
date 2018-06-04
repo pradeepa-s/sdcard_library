@@ -3868,6 +3868,8 @@ static FRESULT follow_path (	/* FR_OK(0): successful, !=0: error code */
 	FATFS *fs = dp->obj.fs;
 	UINT index = 0U;
 
+	const TCHAR* found_path;
+
 #if FF_FS_RPATH != 0
 	if (*path != '/' && *path != '\\') {	/* Without heading separator */
 		dp->obj.sclust = fs->cdir;				/* Start from current directory */
@@ -3877,6 +3879,8 @@ static FRESULT follow_path (	/* FR_OK(0): successful, !=0: error code */
 		while ((path[index] == '/') || (path[index] == '\\')){
 		    index++;	/* Strip heading separator */
 		}
+
+		found_path = &path[index];
 
 		dp->obj.sclust = 0U;					/* Start from root directory */
 	}
@@ -3897,13 +3901,15 @@ static FRESULT follow_path (	/* FR_OK(0): successful, !=0: error code */
 #endif
 #endif
 
-	if ((UINT)path[0] < (UINT)' ') {				/* Null path name is the origin directory itself */
+	if ((UINT)path[index] < (UINT)' ') {				/* Null path name is the origin directory itself */
 		dp->fn[NSFLAG] = NS_NONAME;
 		res = dir_sdi(dp, 0U);
 
 	} else {								/* Follow path */
 		for (;;) {
-			res = create_name(dp, &path);	/* Get a segment name of the path */
+
+
+		    res = create_name(dp, &found_path);	/* Get a segment name of the path */
 			if (res != FR_OK){
 			    break;
 			}
