@@ -2808,16 +2808,24 @@ static FRESULT dir_read (
                             }
 
                             /* Check LFN validity and capture it */
-                            ord = 0xFFU;
                             if((c == ord) && (sum == dp->dir[LDIR_Chksum])){
                                 if(pick_lfn(fs->lfnbuf, dp->dir)){
                                     ord = ord - 1U;
                                 }
+                                else{
+                                    ord = 0xFFU;
+                                }
+                            }
+                            else{
+                                ord = 0xFFU;
                             }
 
                         }
                         else {                  /* An SFN entry is found */
                             if (ord != 0U){
+                                dp->blk_ofs = 0xFFFFFFFFU;          /* It has no LFN. */
+                            }
+                            else{
                                 if(sum != sum_sfn(dp->dir)) {   /* Is there a valid LFN? */
                                     dp->blk_ofs = 0xFFFFFFFFU;          /* It has no LFN. */
                                 }
