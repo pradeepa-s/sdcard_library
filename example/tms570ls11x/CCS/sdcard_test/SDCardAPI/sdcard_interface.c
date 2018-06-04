@@ -735,20 +735,37 @@ unsigned char string_to_val(char str[])
     /* Maximum value is 255 */
     size_t str_size = strlen(str);
     const unsigned char zero_ascii = (unsigned char)'0';
+    const unsigned char nine_ascii = (unsigned char)'9';
     unsigned char ones_pos = 0U;
     unsigned char tenth_pos = 0U;
     unsigned char hundredth_pos = 0U;
     unsigned char final_val = 0U;
+    unsigned char char_val = 0U;
+    unsigned int i = 0U;
 
     if(str != (char*)0){
+
+        for(i = 0U; i < str_size; i++){
+
+            char_val = (unsigned char)str[i];
+
+            if((char_val < zero_ascii) || (char_val > nine_ascii)){
+                str_size = i;
+                break;
+            }
+        }
+
         if(str_size == 1U){
+
             ones_pos = (unsigned char)str[0] - zero_ascii;
         }
         else if(str_size == 2U){
+
             ones_pos = (unsigned char)str[1] - zero_ascii;
             tenth_pos = (unsigned char)str[0] - zero_ascii;
         }
         else if(str_size == 3U){
+
             ones_pos = (unsigned char)str[2] - zero_ascii;
             tenth_pos = (unsigned char)str[1] - zero_ascii;
             hundredth_pos = (unsigned char)str[0] - zero_ascii;
@@ -991,6 +1008,10 @@ void create_event_entry(ITSI_LOG_EVENT event, char *out_string, size_t out_strin
         memcpy(p_string, temp_string, string_len);
 
         string_pos = string_pos + string_len;
+
+        /* new line */
+        output_string[string_pos] = (unsigned char)'\n';
+        string_pos = string_pos + 1U;
 
         memcpy(out_string, output_string, string_pos);
     }
