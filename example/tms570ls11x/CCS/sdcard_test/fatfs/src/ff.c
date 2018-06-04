@@ -925,17 +925,20 @@ static BYTE put_utf (	/* Returns number of encoding units written (0:buffer over
 		if (szb < 2U) {
 		    ret = 0U;
 		}
-
-		buf[index++] = (char)(wc >> 8);	/* Store DBC 1st byte */
-		buf[index++] = (TCHAR)wc;			/* Store DBC 2nd byte */
-		ret = 2U;
+		else{
+            buf[index++] = (char)(wc >> 8);	/* Store DBC 1st byte */
+            buf[index++] = (TCHAR)wc;			/* Store DBC 2nd byte */
+            ret = 2U;
+		}
 	}
-
-	if ((wc == 0U) || (szb < 1U)){
+	else if ((wc == 0U) || (szb < 1U)){
 	    ret = 0U;	/* Invalid char or buffer overflow? */
 	}
+	else{
+	    buf[index++] = (TCHAR)wc;					/* Store the character */
+	    ret = 1U;
+	}
 
-	buf[index++] = (TCHAR)wc;					/* Store the character */
 	return ret;
 #endif
 }
