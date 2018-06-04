@@ -2553,13 +2553,15 @@ static BYTE sum_sfn (
 	const BYTE dir[]		/* Pointer to the SFN entry */
 )
 {
-	BYTE sum = 0U;
+	BYTE sum = 0U, temp = 0U;
 	UINT n = 11U;
 	UINT index = 0U;
 
 	do {
-	    sum = (BYTE)((BYTE)sum >> 1);
-	    sum = sum + (BYTE)((BYTE)sum << 7);
+	    temp = sum;
+
+	    sum = (BYTE)((BYTE)temp >> 1);
+	    sum = sum + (BYTE)((BYTE)temp << 7);
 	    sum = sum + dir[index++];
 	} while (--n);
 	return sum;
