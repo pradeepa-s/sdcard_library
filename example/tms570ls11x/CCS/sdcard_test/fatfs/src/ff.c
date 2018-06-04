@@ -3111,7 +3111,7 @@ static FRESULT dir_register (	/* FR_OK:succeeded, FR_DENIED:no free entry or too
 	DIR* dp						/* Target directory with object name to be created */
 )
 {
-	FRESULT res;
+	FRESULT res = FR_OK;
 	FATFS *fs = dp->obj.fs;
 #if FF_USE_LFN		/* LFN configuration */
 	UINT n, nlen, nent;
