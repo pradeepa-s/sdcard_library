@@ -2179,6 +2179,7 @@ static FRESULT dir_next (	/* FR_OK(0):succeeded, FR_NO_FILE:End of table, FR_DEN
         if(func_exit == 0U){
             dp->dptr = ofs;						/* Current entry */
             dp->dir = &fs->win[ofs % SS(fs)];	/* Pointer to the entry in the win[] */
+            ret = FR_OK;
         }
 	}
 
