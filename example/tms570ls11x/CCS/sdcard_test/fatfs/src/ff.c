@@ -2818,6 +2818,9 @@ static FRESULT dir_read (
                         }
                         else {                  /* An SFN entry is found */
                             if (ord != 0U){
+                                dp->blk_ofs = 0xFFFFFFFFU;          /* It has no LFN. */
+                            }
+                            else{
                                 if(sum != sum_sfn(dp->dir)) {   /* Is there a valid LFN? */
                                     dp->blk_ofs = 0xFFFFFFFFU;          /* It has no LFN. */
                                 }
