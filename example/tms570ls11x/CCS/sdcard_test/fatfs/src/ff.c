@@ -2368,7 +2368,7 @@ static int pick_lfn (	/* 1:succeeded, 0:buffer overflow or invalid LFN entry */
 	BYTE temp_byte;
 	BYTE loop_exit = 0U;
 
-	if (ld_word(&dir[LDIR_FstClusLO]) == 0U){
+	if (ld_word(&dir[LDIR_FstClusLO]) != 0U){
 	    ret = 0;	/* Check LDIR_FstClusLO is 0 */
 	}
 	else{
