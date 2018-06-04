@@ -2038,6 +2038,7 @@ static FRESULT dir_sdi (	/* FR_OK(0):succeeded, !=0:error */
             else{
                 dp->sect += ofs / SS(fs);           /* Sector# of the directory entry */
                 dp->dir = &fs->win[(ofs % SS(fs))]; /* Pointer to the entry in the win[] */
+                ret = FR_OK;
             }
         }
 
