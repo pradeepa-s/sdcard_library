@@ -2808,11 +2808,16 @@ static FRESULT dir_read (
                             }
 
                             /* Check LFN validity and capture it */
-                            ord = 0xFFU;
                             if((c == ord) && (sum == dp->dir[LDIR_Chksum])){
                                 if(pick_lfn(fs->lfnbuf, dp->dir)){
                                     ord = ord - 1U;
                                 }
+                                else{
+                                    ord = 0xFFU;
+                                }
+                            }
+                            else{
+                                ord = 0xFFU;
                             }
 
                         }
