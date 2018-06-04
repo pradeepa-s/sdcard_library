@@ -627,7 +627,7 @@ int32_t FileIF_ReadLine(const char *filename, uint32_t line_no, char *line_buffe
 	/* Check whether initialization is done */
 	ret = CheckInitialization();
 
-	if(FILEIF_OP_SUCCESS != ret){
+	if(FILEIF_OP_SUCCESS == ret){
 
 	    /* Parameter validation */
 	    if((NULL == filename) || (NULL == line_buffer) || (NULL == buf_size)){
@@ -731,7 +731,7 @@ int32_t FileIF_CopyBufferToFile(const char *filename, char *buffer, uint32_t buf
 	/* Check whether initialization is done */
 	ret = CheckInitialization();
 
-	if(FILEIF_OP_SUCCESS != ret){
+	if(FILEIF_OP_SUCCESS == ret){
 
 	    if( (NULL == filename)  ||
 	        (NULL == buffer)    ||
