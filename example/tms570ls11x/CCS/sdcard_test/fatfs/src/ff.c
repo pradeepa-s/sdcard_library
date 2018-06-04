@@ -928,17 +928,20 @@ static BYTE put_utf (	/* Returns number of encoding units written (0:buffer over
 		if (szb < 2U) {
 		    ret = 0U;
 		}
-
-		buf[index++] = (char)(wc >> 8);	/* Store DBC 1st byte */
-		buf[index++] = (TCHAR)wc;			/* Store DBC 2nd byte */
-		ret = 2U;
+		else{
+            buf[index++] = (char)(wc >> 8);	/* Store DBC 1st byte */
+            buf[index++] = (TCHAR)wc;			/* Store DBC 2nd byte */
+            ret = 2U;
+		}
 	}
-
-	if ((wc == 0U) || (szb < 1U)){
+	else if ((wc == 0U) || (szb < 1U)){
 	    ret = 0U;	/* Invalid char or buffer overflow? */
 	}
+	else{
+	    buf[index++] = (TCHAR)wc;					/* Store the character */
+	    ret = 1U;
+	}
 
-	buf[index++] = (TCHAR)wc;					/* Store the character */
 	return ret;
 #endif
 }
@@ -2038,6 +2041,7 @@ static FRESULT dir_sdi (	/* FR_OK(0):succeeded, !=0:error */
             else{
                 dp->sect += ofs / SS(fs);           /* Sector# of the directory entry */
                 dp->dir = &fs->win[(ofs % SS(fs))]; /* Pointer to the entry in the win[] */
+                ret = FR_OK;
             }
         }
 
@@ -2177,6 +2181,7 @@ static FRESULT dir_next (	/* FR_OK(0):succeeded, FR_NO_FILE:End of table, FR_DEN
         if(func_exit == 0U){
             dp->dptr = ofs;						/* Current entry */
             dp->dir = &fs->win[ofs % SS(fs)];	/* Pointer to the entry in the win[] */
+            ret = FR_OK;
         }
 	}
 
