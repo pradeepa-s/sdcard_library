@@ -7363,7 +7363,10 @@ typedef struct {	/* Putchar output buffer and work area */
 	BYTE buf[64];	/* Write buffer */
 } putbuff;
 
+
 static void putc_bfd (putbuff* pb, TCHAR c);
+static int putc_flush (putbuff* pb);
+static void putc_init (putbuff* pb, FIL* fp);
 
 static
 void putc_bfd (		/* Buffered write with code conversion */
@@ -7507,10 +7510,29 @@ int putc_flush (		/* Flush left characters in the buffer */
 {
 	UINT nw = 0U;
 
-	if (   (pb->idx >= 0)	/* Flush buffered characters to the file */
-		&& (f_write(pb->fp, pb->buf, (UINT)pb->idx, &nw) == FR_OK)
-		&& ((UINT)pb->idx == nw)) return pb->nchr;
-	return EOF;
+	/*
+     * (MISRA-C:2004 20.9/R) Can be ignored because EOF is defined in ff.h
+     */
+	int ret = EOF;
+	INT temp_int = 0;
+
+	/* Flush buffered characters to the file */
+	if(pb->idx >= 0){
+
+	    /*
+         * MISRA-C:2004 12.2/R can be ignored because evaluation order doesn't interfere with the
+         * integrity of the internal strucutres in the following expression
+         */
+	    if(f_write(pb->fp, pb->buf, (UINT)pb->idx, &nw) == FR_OK){
+
+	        temp_int = pb->idx;
+	        if((UINT)temp_int == nw){
+	            ret = pb->nchr;
+	        }
+	    }
+	}
+
+	return ret;
 }
 
 
@@ -7531,7 +7553,7 @@ int f_putc (
 	FIL* fp		/* Pointer to the file object */
 )
 {
-	putbuff pb = {0};;
+	putbuff pb = {0};
 
 
 	putc_init(&pb, fp);
