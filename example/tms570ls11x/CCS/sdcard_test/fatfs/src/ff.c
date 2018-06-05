@@ -5931,9 +5931,13 @@ FRESULT f_unlink (
 		dj.obj.fs = fs;
 		INIT_NAMBUF(fs);
 		res = follow_path(&dj, path);		/* Follow the file path */
-		if ((FF_FS_RPATH) && (res == FR_OK) && (dj.fn[NSFLAG] & NS_DOT)) {
+
+#if FF_FS_RPATH
+		if ((res == FR_OK) && (dj.fn[NSFLAG] & NS_DOT)) {
 			res = FR_INVALID_NAME;			/* Cannot remove dot entry */
 		}
+#endif
+
 #if FF_FS_LOCK != 0
 		if (res == FR_OK) res = chk_lock(&dj, 2);	/* Check if it is an open object */
 #endif
@@ -5971,11 +5975,16 @@ FRESULT f_unlink (
 							sdj.obj.stat = obj.stat;
 						}
 #endif
-						res = dir_sdi(&sdj, 0);
+						res = dir_sdi(&sdj, 0U);
 						if (res == FR_OK) {
 							res = dir_read_file(&sdj);			/* Test if the directory is empty */
-							if (res == FR_OK) res = FR_DENIED;	/* Not empty? */
-							if (res == FR_NO_FILE) res = FR_OK;	/* Empty? */
+							if (res == FR_OK){
+							    res = FR_DENIED;	/* Not empty? */
+							}
+
+							if (res == FR_NO_FILE){
+							    res = FR_OK;	/* Empty? */
+							}
 						}
 					}
 				}
@@ -5989,7 +5998,9 @@ FRESULT f_unlink (
 					res = remove_chain(&dj.obj, dclst, 0U);
 #endif
 				}
-				if (res == FR_OK) res = sync_fs(fs);
+				if (res == FR_OK){
+				    res = sync_fs(fs);
+				}
 			}
 		}
 		FREE_NAMBUF();
@@ -6015,7 +6026,7 @@ FRESULT f_mkdir (
 	BYTE *dir;
 	DWORD dcl, pcl, tm;
 	DEF_NAMBUF
-
+	WORD temp_word;
 
 	/* Get logical drive */
 	res = find_volume(&path, &fs, FA_WRITE);
@@ -6023,37 +6034,64 @@ FRESULT f_mkdir (
 		dj.obj.fs = fs;
 		INIT_NAMBUF(fs);
 		res = follow_path(&dj, path);			/* Follow the file path */
-		if (res == FR_OK) res = FR_EXIST;		/* Any object with same name is already existing */
-		if ((FF_FS_RPATH) && (res == FR_NO_FILE) && (dj.fn[NSFLAG] & NS_DOT)) {
+		if (res == FR_OK){
+		    res = FR_EXIST;		/* Any object with same name is already existing */
+		}
+
+#if FF_FS_RPATH
+		if ((res == FR_NO_FILE) && (dj.fn[NSFLAG] & NS_DOT)) {
 			res = FR_INVALID_NAME;
 		}
+#endif
+
 		if (res == FR_NO_FILE) {				/* Can create a new directory */
 			dcl = create_chain(&dj.obj, 0U);		/* Allocate a cluster for the new directory table */
-			dj.obj.objsize = (DWORD)fs->csize * SS(fs);
+			temp_word = fs->csize;
+			dj.obj.objsize = (DWORD)temp_word * SS(fs);
 			res = FR_OK;
-			if (dcl == 0U) res = FR_DENIED;		/* No space to allocate a new cluster */
-			if (dcl == 1U) res = FR_INT_ERR;
-			if (dcl == 0xFFFFFFFFU) res = FR_DISK_ERR;
-			if (res == FR_OK) res = sync_window(fs);	/* Flush FAT */
+
+			if (dcl == 0U){
+			    res = FR_DENIED;		/* No space to allocate a new cluster */
+			}
+
+			if (dcl == 1U){
+			    res = FR_INT_ERR;
+			}
+
+			if (dcl == 0xFFFFFFFFU) {
+			    res = FR_DISK_ERR;
+			}
+
+			if (res == FR_OK){
+			    res = sync_window(fs);	/* Flush FAT */
+			}
+
 			tm = GET_FATTIME();
 			if (res == FR_OK) {					/* Initialize the new directory table */
 				res = dir_clear(fs, dcl);		/* Clean up the new table */
 				if ((res == FR_OK) && ((!FF_FS_EXFAT) || (fs->fs_type != FS_EXFAT))) {	/* Create dot entries (FAT only) */
-					dir = fs->win;
+
+				    dir = fs->win;
 					mem_set(dir + DIR_Name, ' ', 11U);	/* Create "." entry */
-					dir[DIR_Name] = '.';
+
+					dir[DIR_Name] = (BYTE) '.';
 					dir[DIR_Attr] = AM_DIR;
 					st_dword(dir + DIR_ModTime, tm);
+
 					st_clust(fs, dir, dcl);
 					mem_cpy(dir + SZDIRE, dir, SZDIRE); /* Create ".." entry */
-					dir[SZDIRE + 1U] = '.'; pcl = dj.obj.sclust;
+
+					dir[SZDIRE + 1U] = (BYTE)'.';
+					pcl = dj.obj.sclust;
 					st_clust(fs, dir + SZDIRE, pcl);
 					fs->wflag = 1U;
 				}
 			}
+
 			if (res == FR_OK) {
 				res = dir_register(&dj);	/* Register the object to the directoy */
 			}
+
 			if (res == FR_OK) {
 #if FF_FS_EXFAT
 				if (fs->fs_type == FS_EXFAT) {	/* Initialize directory entry block */
@@ -6101,6 +6139,7 @@ FRESULT f_rename (
 	FRESULT res;
 	DIR djo, djn = {0};
     FATFS *fs = (FATFS *)0;
+    DWORD temp_dword = 0U;
 
 #if FF_FS_EXFAT
 	BYTE buf[SZDIRE * 2] = {0}, *dir;
@@ -6117,13 +6156,18 @@ FRESULT f_rename (
 	if (res == FR_OK) {
 		djo.obj.fs = fs;
 		INIT_NAMBUF(fs);
+
 		res = follow_path(&djo, path_old);		/* Check old object */
-		if ((res == FR_OK) && (djo.fn[NSFLAG] & (NS_DOT | NS_NONAME))) res = FR_INVALID_NAME;	/* Check validity of name */
+		if ((res == FR_OK) && (djo.fn[NSFLAG] & (NS_DOT | NS_NONAME))){
+		    res = FR_INVALID_NAME;	/* Check validity of name */
+		}
+
 #if FF_FS_LOCK != 0
 		if (res == FR_OK) {
 			res = chk_lock(&djo, 2);
 		}
 #endif
+
 		if (res == FR_OK) {						/* Object to be renamed is found */
 #if FF_FS_EXFAT
 			if (fs->fs_type == FS_EXFAT) {	/* At exFAT volume */
@@ -6156,25 +6200,44 @@ FRESULT f_rename (
 				mem_cpy((BYTE*)&djn, (const BYTE*)&djo, sizeof (DIR));		/* Duplicate the directory object */
 				res = follow_path(&djn, path_new);		/* Make sure if new object name is not in use */
 				if (res == FR_OK) {						/* Is new name already in use by any other object? */
-					res = ((djn.obj.sclust == djo.obj.sclust) && (djn.dptr == djo.dptr)) ? FR_NO_FILE : FR_EXIST;
+
+
+				    if((djn.obj.sclust == djo.obj.sclust) && (djn.dptr == djo.dptr)){
+				        res = FR_NO_FILE;
+				    }
+				    else{
+				        res = FR_EXIST;
+				    }
 				}
+
 				if (res == FR_NO_FILE) { 				/* It is a valid path and no name collision */
 					res = dir_register(&djn);			/* Register the new entry */
 					if (res == FR_OK) {
 						dir = djn.dir;					/* Copy directory entry of the object except name */
 						mem_cpy(dir + 13U, buf + 13U, SZDIRE - 13U);
+
 						dir[DIR_Attr] = buf[DIR_Attr];
-						if (!(dir[DIR_Attr] & AM_DIR)) dir[DIR_Attr] |= AM_ARC;	/* Set archive attribute if it is a file */
+
+						if (!(dir[DIR_Attr] & AM_DIR)){
+						    dir[DIR_Attr] |= AM_ARC;	/* Set archive attribute if it is a file */
+						}
+
 						fs->wflag = 1U;
+
 						if ((dir[DIR_Attr] & AM_DIR) && (djo.obj.sclust != djn.obj.sclust)) {	/* Update .. entry in the sub-directory if needed */
-							dw = clst2sect(fs, ld_clust(fs, dir));
-							if (dw == 0U) {
+
+						    temp_dword = ld_clust(fs, dir);
+						    dw = clst2sect(fs, temp_dword);
+
+						    if (dw == 0U) {
 								res = FR_INT_ERR;
-							} else {
+							}
+						    else {
 /* Start of critical section where an interruption can cause a cross-link */
 								res = move_window(fs, dw);
-								dir = fs->win + SZDIRE * 1U;	/* Ptr to .. entry */
-								if ((res == FR_OK) && (dir[1] == '.')) {
+								dir = &fs->win[SZDIRE * 1U];	/* Ptr to .. entry */
+
+								if ((res == FR_OK) && (dir[1] == (BYTE)'.')) {
 									st_clust(fs, dir, djn.obj.sclust);
 									fs->wflag = 1U;
 								}
