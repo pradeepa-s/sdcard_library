@@ -36,8 +36,8 @@
 
 /* Character code support macros */
 #define IsUpper(c)		(((c) >= (WCHAR)'A') && ((c) <= (WCHAR)'Z'))
-#define IsLower(c)		(((c) >= (WCHAR)'a') && ((c) <= (WCHAR)'z'))
-#define IsDigit(c)		(((c) >= (WCHAR)'0') && ((c) <= (WCHAR)'9'))
+#define IsLower(c)		((((WCHAR)c) >= (WCHAR)'a') && (((WCHAR)c) <= (WCHAR)'z'))
+#define IsDigit(c)		((((WCHAR)c) >= (WCHAR)'0') && (((WCHAR)c) <= (WCHAR)'9'))
 #define IsSurrogate(c)	(((c) >= 0xD800U) && ((c) <= 0xDFFFU))
 #define IsSurrogateH(c)	(((c) >= 0xD800U) && ((c) <= 0xDBFFU))
 #define IsSurrogateL(c)	(((c) >= 0xDC00U) && ((c) <= 0xDFFFU))
@@ -6101,7 +6101,13 @@ FRESULT f_rename (
 	FRESULT res;
 	DIR djo, djn = {0};
     FATFS *fs = (FATFS *)0;
-	BYTE buf[FF_FS_EXFAT ? SZDIRE * 2 : SZDIRE] = {0}, *dir;
+
+#if FF_FS_EXFAT
+	BYTE buf[SZDIRE * 2] = {0}, *dir;
+#else
+	BYTE buf[SZDIRE] = {0}, *dir;
+#endif
+
 	DWORD dw;
 	DEF_NAMBUF
 
@@ -7569,15 +7575,17 @@ int f_putc (
 /*-----------------------------------------------------------------------*/
 
 int f_puts (
-	const TCHAR* str,	/* Pointer to the string to be output */
+	const TCHAR str[],	/* Pointer to the string to be output */
 	FIL* fp				/* Pointer to the file object */
 )
 {
 	putbuff pb = {0};
-
+	UINT index = 0U;
 
 	putc_init(&pb, fp);
-	while (*str) putc_bfd(&pb, *str++);		/* Put the string */
+	while (str[index]){
+	    putc_bfd(&pb, str[index++]);		/* Put the string */
+	}
 	return putc_flush(&pb);
 }
 
@@ -7590,7 +7598,7 @@ int f_puts (
 
 int f_printf (
 	FIL* fp,			/* Pointer to the file object */
-	const TCHAR* fmt,	/* Pointer to the format string */
+	const TCHAR fmt[],	/* Pointer to the format string */
 	...					/* Optional arguments... */
 )
 {
@@ -7600,6 +7608,7 @@ int f_printf (
 	UINT i, j, w;
 	DWORD v;
 	TCHAR c, d, str[32], *p;
+	UINT index = 0U;
 
 
 	putc_init(&pb, fp);
@@ -7607,49 +7616,79 @@ int f_printf (
 	va_start(arp, fmt);
 
 	for (;;) {
-		c = *fmt++;
-		if (c == 0U) break;			/* End of string */
+		c = fmt[index++];
+		if ((UINT)c == 0U) {
+		    break;			/* End of string */
+		}
+
 		if (c != '%') {				/* Non escape character */
 			putc_bfd(&pb, c);
 			continue;
 		}
-		w = f = 0U;
-		c = *fmt++;
+		f = 0U;
+		w = f;
+
+		c = fmt[index++];
 		if (c == '0') {				/* Flag: '0' padding */
-			f = 1U; c = *fmt++;
+			f = 1U;
+			c = fmt[index++];
 		} else {
 			if (c == '-') {			/* Flag: left justified */
-				f = 2U; c = *fmt++;
+				f = 2U;
+				c = fmt[index++];
 			}
 		}
+
 		if (c == '*') {				/* Minimum width by argument */
 			w = va_arg(arp, int);
-			c = *fmt++;
+			c = fmt[index++];
 		} else {
 			while (IsDigit(c)) {	/* Minimum width */
-				w = w * 10U + c - '0';
-				c = *fmt++;
+				w = w * 10U + (UINT)c - (UINT)'0';
+				c = fmt[index++];
 			}
 		}
+
 		if ((c == 'l') || (c == 'L')) {	/* Type prefix: Size is long int */
-			f |= 4U; c = *fmt++;
+			f |= 4U;
+			c = fmt[index++];
 		}
-		if (c == 0U) break;
+
+		if ((UINT)c == 0U){
+		    break;
+		}
+
 		d = c;
-		if (IsLower(d)) d -= 0x20U;
+		if (IsLower(d)){
+		    d = (TCHAR)((UINT)d - 0x20U);
+		}
+
 		switch (d) {				/* Atgument type is... */
 		case 'S' :					/* String */
 			p = va_arg(arp, TCHAR*);
-			for (j = 0U; p[j]; j++) ;
-			if (!(f & 2U)) {						/* Right padded */
-				while (j++ < w) putc_bfd(&pb, ' ') ;
+			for (j = 0U; p[j]; j++){
+
 			}
-			while (*p) putc_bfd(&pb, *p++) ;		/* String body */
-			while (j++ < w) putc_bfd(&pb, ' ') ;	/* Left padded */
+
+			if (!(f & 2U)) {						/* Right padded */
+				while (j++ < w){
+				    putc_bfd(&pb, ' ') ;
+				}
+			}
+
+			while (*p){
+			    putc_bfd(&pb, *p++) ;		/* String body */
+			}
+
+			while (j++ < w){
+			    putc_bfd(&pb, ' ') ;	/* Left padded */
+			}
+
 			continue;
 
 		case 'C' :					/* Character */
-			putc_bfd(&pb, (TCHAR)va_arg(arp, int)); continue;
+			putc_bfd(&pb, (TCHAR)va_arg(arp, int));
+			continue;
 
 		case 'B' :					/* Unsigned binary */
 			r = 2U; break;
@@ -7665,30 +7704,65 @@ int f_printf (
 			r = 16U; break;
 
 		default:					/* Unknown type (pass-through) */
-			putc_bfd(&pb, c); continue;
+			putc_bfd(&pb, c);
+			continue;
 		}
 
 		/* Get an argument and put it in numeral */
-		v = (f & 4U) ? (DWORD)va_arg(arp, long) : ((d == 'D') ? (DWORD)(long)va_arg(arp, int) : (DWORD)va_arg(arp, unsigned int));
+		if(f & 4U){
+		    v = (DWORD)va_arg(arp, long);
+		}
+		else{
+		    if(d == 'D'){
+		        v = (DWORD)(long)va_arg(arp, int);
+		    }
+		    else{
+		        v = (DWORD)va_arg(arp, unsigned int);
+		    }
+		}
+
 		if ((d == 'D') && (v & 0x80000000U)) {
 			v = 0U - v;
 			f |= 8U;
 		}
+
 		i = 0U;
+
 		do {
 			d = (TCHAR)(v % r); v /= r;
-			if (d > 9U) d += (c == 'x') ? 0x27U : 0x07U;
-			str[i++] = d + '0';
+			if (d > 9U){
+
+			    if(c == 'x'){
+			        d = (TCHAR)((UINT)d + 0x27U);
+			    }
+			    else{
+			        d = (TCHAR)((UINT)d + 0x07U);
+			    }
+
+			}
+
+			str[i++] = (TCHAR)((UINT)d + (UINT)'0');
 		} while (v && (i < sizeof str / sizeof *str));
-		if (f & 8U) str[i++] = '-';
-		j = i; d = (f & 1U) ? '0' : ' ';
-		if (!(f & 2U)) {
-			while (j++ < w) putc_bfd(&pb, d);	/* Right pad */
+
+		if (f & 8U){
+		    str[i++] = '-';
 		}
+
+		j = i;
+		d = (f & 1U) ? '0' : ' ';
+		if (!(f & 2U)) {
+			while (j++ < w){
+			    putc_bfd(&pb, d);	/* Right pad */
+			}
+		}
+
 		do {
 			putc_bfd(&pb, str[--i]);			/* Number body */
 		} while (i);
-		while (j++ < w) putc_bfd(&pb, d);		/* Left pad */
+
+		while (j++ < w){
+		    putc_bfd(&pb, d);		/* Left pad */
+		}
 	}
 
 	va_end(arp);
