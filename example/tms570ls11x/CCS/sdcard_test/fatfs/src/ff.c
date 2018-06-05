@@ -3111,15 +3111,16 @@ static FRESULT dir_register (	/* FR_OK:succeeded, FR_DENIED:no free entry or too
 	DIR* dp						/* Target directory with object name to be created */
 )
 {
-	FRESULT res = FR_OK;
+	FRESULT res;
 	FATFS *fs = dp->obj.fs;
 #if FF_USE_LFN		/* LFN configuration */
 	UINT n, nlen, nent;
 	BYTE sn[12] = {0}, sum;
-
+	BYTE func_exit = 0U;
 
 	if ((dp->fn[NSFLAG]) & (NS_DOT | NS_NONAME)) {
 	    res = FR_INVALID_NAME;	/* Check name validity */
+	    func_exit = 1U;
 	}
 	else{
 	    for (nlen = 0U; fs->lfnbuf[nlen]; nlen++){ /* Get lfn length */
@@ -3181,16 +3182,18 @@ static FRESULT dir_register (	/* FR_OK:succeeded, FR_DENIED:no free entry or too
 
             if (n == 100U){
                 res = FR_DENIED;       /* Abort if too many collisions */
+                func_exit = 1U;
             }
-            else if(res == FR_NO_FILE){
-                dp->fn[NSFLAG] = sn[NSFLAG];
+            else if(res != FR_NO_FILE){
+                /* Abort if the result is other than 'not collided' */
+                func_exit = 1U;
             }
             else{
-                /* Abort if the result is other than 'not collided' */
+                dp->fn[NSFLAG] = sn[NSFLAG];
             }
         }
 
-        if(res == FR_NO_FILE){
+        if(func_exit == 0U){
 
             /* Create an SFN with/without LFNs. */
             nent = (sn[NSFLAG] & NS_LFN) ? (nlen + 12U) / 13U + 1U : 1U;    /* Number of entries to allocate */
