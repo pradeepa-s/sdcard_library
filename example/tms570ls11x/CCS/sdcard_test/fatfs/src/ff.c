@@ -798,7 +798,8 @@ static DWORD tchar2uni (	/* Returns character in UTF-16 encoding (>=0x10000 on d
 	const TCHAR** str		/* Pointer to pointer to TCHAR string in configured encoding */
 )
 {
-	DWORD uc;
+    DWORD ret = 0U;
+    DWORD uc;
 	const TCHAR *p = *str;
 
 #if FF_LFN_UNICODE == 1		/* UTF-16 input */
@@ -851,18 +852,35 @@ static DWORD tchar2uni (	/* Returns character in UTF-16 encoding (>=0x10000 on d
 	wc = (BYTE)*p++;			/* Get a byte */
 	if (dbc_1st((BYTE)wc)) {	/* Is it a DBC 1st byte? */
 		b = (BYTE)*p++;			/* Get 2nd byte */
-		if (!dbc_2nd(b)) return 0xFFFFFFFF;	/* Invalid code? */
-		wc = (wc << 8) + b;		/* Make a DBC */
+		if (!dbc_2nd(b)){
+		    ret = 0xFFFFFFFFU;   /* Invalid code? */
+		}
+		else{
+		    wc = (WCHAR)(wc << 8) + b;		/* Make a DBC */
+		}
 	}
-	if (wc != 0U) {
-		wc = ff_oem2uni(wc, CODEPAGE);	/* ANSI/OEM ==> Unicode */
-		if (wc == 0U) return 0xFFFFFFFFU;	/* Invalid code? */
+
+	if(ret == 0U){
+        if (wc != 0U) {
+            wc = ff_oem2uni(wc, (WORD)CODEPAGE);	/* ANSI/OEM ==> Unicode */
+            if (wc == 0U){
+                ret = 0xFFFFFFFFU; /* Invalid code? */
+            }
+        }
+
+        if(ret == 0U){
+            uc = wc;
+        }
 	}
-	uc = wc;
 
 #endif
-	*str = p;	/* Next read pointer */
-	return uc;
+
+	if(ret == 0U){
+	    *str = p;	/* Next read pointer */
+	}
+
+	ret = uc;
+	return ret;
 }
 
 
@@ -3743,11 +3761,16 @@ static FRESULT create_name (	/* FR_OK: successful, FR_INVALID_NAME: could not cr
                                 }
                             }
                             else {						/* SBC */
-                                if ((wc == 0U) || (chk_chr("+,;=[]", wc))) {	/* Replace illegal characters for SFN if needed */
+                                if(wc == 0U){    /* Replace illegal characters for SFN if needed */
                                     wc = (WCHAR)'_';
                                     cf |= NS_LOSS | NS_LFN;/* Lossy conversion */
                                 }
-                                else {
+                                else if(chk_chr("+,;=[]", (INT)wc)){    /* Replace illegal characters for SFN if needed */
+                                    wc = (WCHAR)'_';
+                                    cf |= NS_LOSS | NS_LFN;/* Lossy conversion */
+                                }
+                                else{
+
                                     if (IsUpper(wc)) {		/* ASCII upper case? */
                                         b |= 2U;
                                     }
@@ -4793,7 +4816,7 @@ FRESULT f_open (
                 fp->fptr = 0U;			/* Set file pointer top of the file */
     #if !FF_FS_READONLY
     #if !FF_FS_TINY
-                mem_set(fp->buf, 0U, FF_MAX_SS);	/* Clear sector buffer */
+                mem_set(fp->buf, 0U, (UINT)FF_MAX_SS);	/* Clear sector buffer */
     #endif
                 if ((mode & FA_SEEKEND) && (fp->obj.objsize > 0U)) {	/* Seek to end of file if FA_OPEN_APPEND is specified */
                     fp->fptr = fp->obj.objsize;			/* Offset to seek */
@@ -4944,13 +4967,13 @@ FRESULT f_read (
                 if (fp->sect != sect) {			/* Load data sector if not in cache */
     #if !FF_FS_READONLY
                     if (fp->flag & FA_DIRTY) {		/* Write-back dirty sector cache */
-                        if (disk_write(fs->pdrv, fp->buf, fp->sect, 1) != RES_OK){
+                        if (disk_write(fs->pdrv, fp->buf, fp->sect, 1U) != RES_OK){
                             ABORT(fs, FR_DISK_ERR);
                         }
                         fp->flag &= (BYTE)~FA_DIRTY;
                     }
     #endif
-                    if (disk_read(fs->pdrv, fp->buf, sect, 1) != RES_OK){
+                    if (disk_read(fs->pdrv, fp->buf, sect, 1U) != RES_OK){
                         ABORT(fs, FR_DISK_ERR);	/* Fill sector cache */
                     }
                 }
@@ -5276,7 +5299,7 @@ FRESULT f_sync (
 		if (fp->flag & FA_MODIFIED) {	/* Is there any change to the file? */
 #if !FF_FS_TINY
 			if (fp->flag & FA_DIRTY) {	/* Write-back cached data if needed */
-				if (disk_write(fs->pdrv, fp->buf, fp->sect, 1) != RES_OK) LEAVE_FF(fs, FR_DISK_ERR);
+				if (disk_write(fs->pdrv, fp->buf, fp->sect, 1U) != RES_OK) LEAVE_FF(fs, FR_DISK_ERR);
 				fp->flag &= (BYTE)~FA_DIRTY;
 			}
 #endif
@@ -5321,7 +5344,7 @@ FRESULT f_sync (
 					st_clust(fp->obj.fs, dir, fp->obj.sclust);		/* Update file allocation information  */
 					st_dword(dir + DIR_FileSize, (DWORD)fp->obj.objsize);	/* Update file size */
 					st_dword(dir + DIR_ModTime, tm);				/* Update modified time */
-					st_word(dir + DIR_LstAccDate, 0);
+					st_word(dir + DIR_LstAccDate, 0U);
 					fs->wflag = 1U;
 					res = sync_fs(fs);					/* Restore it to the directory */
 					fp->flag &= (BYTE)~FA_MODIFIED;
@@ -5730,7 +5753,7 @@ FRESULT f_opendir (
 	if (!dp) return FR_INVALID_OBJECT;
 
 	/* Get logical drive */
-	res = find_volume(&path, &fs, 0);
+	res = find_volume(&path, &fs, 0U);
 	if (res == FR_OK) {
 		dp->obj.fs = fs;
 		INIT_NAMBUF(fs);
@@ -5755,7 +5778,7 @@ FRESULT f_opendir (
 			}
 			if (res == FR_OK) {
 				dp->obj.id = fs->id;
-				res = dir_sdi(dp, 0);			/* Rewind directory */
+				res = dir_sdi(dp, 0U);			/* Rewind directory */
 #if FF_FS_LOCK != 0
 				if (res == FR_OK) {
 					if (dp->obj.sclust != 0) {
@@ -5826,7 +5849,7 @@ FRESULT f_readdir (
 	res = validate(&dp->obj, &fs);	/* Check validity of the directory object */
 	if (res == FR_OK) {
 		if (!fno) {
-			res = dir_sdi(dp, 0);			/* Rewind the directory object */
+			res = dir_sdi(dp, 0U);			/* Rewind the directory object */
 		} else {
 			INIT_NAMBUF(fs);
 			res = dir_read_file(dp);		/* Read an item */
@@ -5912,7 +5935,7 @@ FRESULT f_stat (
 
 
 	/* Get logical drive */
-	res = find_volume(&path, &dj.obj.fs, 0);
+	res = find_volume(&path, &dj.obj.fs, 0U);
 	if (res == FR_OK) {
 		INIT_NAMBUF(dj.obj.fs);
 		res = follow_path(&dj, path);	/* Follow the file path */
@@ -7583,7 +7606,7 @@ TCHAR* f_gets (
 #else			/* Byte-by-byte without any conversion (ANSI/OEM API) */
 	len -= 1;	/* Make a room for the terminator */
 	while (nc < len) {
-		f_read(fp, s, 1, &rc);
+		f_read(fp, s, 1U, &rc);
 		if (rc != 1U) break;
 		dc = s[0];
 		if ((FF_USE_STRFUNC == 2) && (dc == '\r')) continue;
