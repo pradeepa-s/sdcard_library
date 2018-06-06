@@ -4890,8 +4890,12 @@ FRESULT f_read (
 
 	*br = 0U;	/* Clear read byte counter */
 	res = validate(&fp->obj, &fs);				/* Check validity of the file object */
-	if ((res != FR_OK) || ((res = (FRESULT)fp->err) != FR_OK)){
+	if (res != FR_OK){
 	    /* Check validity */
+	}
+	else if((FRESULT)fp->err != FR_OK){
+	    /* Check validity */
+	    res = (FRESULT)fp->err;
 	}
 	else if (!(fp->flag & FA_READ)){
 	    res = FR_DENIED;            /* Check access mode */
@@ -5816,51 +5820,59 @@ FRESULT f_opendir (
 	DEF_NAMBUF
 
 
-	if (!dp) return FR_INVALID_OBJECT;
-
-	/* Get logical drive */
-	res = find_volume(&path, &fs, 0U);
-	if (res == FR_OK) {
-		dp->obj.fs = fs;
-		INIT_NAMBUF(fs);
-		res = follow_path(dp, path);			/* Follow the path to the directory */
-		if (res == FR_OK) {						/* Follow completed */
-			if (!(dp->fn[NSFLAG] & NS_NONAME)) {	/* It is not the origin directory itself */
-				if (dp->obj.attr & AM_DIR) {		/* This object is a sub-directory */
-#if FF_FS_EXFAT
-					if (fs->fs_type == FS_EXFAT) {
-						dp->obj.c_scl = dp->obj.sclust;							/* Get containing directory inforamation */
-						dp->obj.c_size = ((DWORD)dp->obj.objsize & 0xFFFFFF00) | dp->obj.stat;
-						dp->obj.c_ofs = dp->blk_ofs;
-						init_alloc_info(fs, &dp->obj);	/* Get object allocation info */
-					} else
-#endif
-					{
-						dp->obj.sclust = ld_clust(fs, dp->dir);	/* Get object allocation info */
-					}
-				} else {						/* This object is a file */
-					res = FR_NO_PATH;
-				}
-			}
-			if (res == FR_OK) {
-				dp->obj.id = fs->id;
-				res = dir_sdi(dp, 0U);			/* Rewind directory */
-#if FF_FS_LOCK != 0
-				if (res == FR_OK) {
-					if (dp->obj.sclust != 0) {
-						dp->obj.lockid = inc_lock(dp, 0);	/* Lock the sub directory */
-						if (!dp->obj.lockid) res = FR_TOO_MANY_OPEN_FILES;
-					} else {
-						dp->obj.lockid = 0;	/* Root directory need not to be locked */
-					}
-				}
-#endif
-			}
-		}
-		FREE_NAMBUF();
-		if (res == FR_NO_FILE) res = FR_NO_PATH;
+	if (!dp){
+	    res = FR_INVALID_OBJECT;
 	}
-	if (res != FR_OK) dp->obj.fs = (FATFS*)0U;		/* Invalidate the directory object if function faild */
+	else{
+
+        /* Get logical drive */
+        res = find_volume(&path, &fs, 0U);
+        if (res == FR_OK) {
+            dp->obj.fs = fs;
+            INIT_NAMBUF(fs);
+            res = follow_path(dp, path);			/* Follow the path to the directory */
+            if (res == FR_OK) {						/* Follow completed */
+                if (!(dp->fn[NSFLAG] & NS_NONAME)) {	/* It is not the origin directory itself */
+                    if (dp->obj.attr & AM_DIR) {		/* This object is a sub-directory */
+#if FF_FS_EXFAT
+                        if (fs->fs_type == FS_EXFAT) {
+                            dp->obj.c_scl = dp->obj.sclust;							/* Get containing directory inforamation */
+                            dp->obj.c_size = ((DWORD)dp->obj.objsize & 0xFFFFFF00) | dp->obj.stat;
+                            dp->obj.c_ofs = dp->blk_ofs;
+                            init_alloc_info(fs, &dp->obj);	/* Get object allocation info */
+                        } else
+#endif
+                        {
+                            dp->obj.sclust = ld_clust(fs, dp->dir);	/* Get object allocation info */
+                        }
+                    } else {						/* This object is a file */
+                        res = FR_NO_PATH;
+                    }
+                }
+                if (res == FR_OK) {
+                    dp->obj.id = fs->id;
+                    res = dir_sdi(dp, 0U);			/* Rewind directory */
+#if FF_FS_LOCK != 0
+                    if (res == FR_OK) {
+                        if (dp->obj.sclust != 0) {
+                            dp->obj.lockid = inc_lock(dp, 0);	/* Lock the sub directory */
+                            if (!dp->obj.lockid) res = FR_TOO_MANY_OPEN_FILES;
+                        } else {
+                            dp->obj.lockid = 0;	/* Root directory need not to be locked */
+                        }
+                    }
+#endif
+                }
+            }
+            FREE_NAMBUF();
+            if (res == FR_NO_FILE){
+                res = FR_NO_PATH;
+            }
+        }
+        if (res != FR_OK){
+            dp->obj.fs = (FATFS*)0U;		/* Invalidate the directory object if function faild */
+        }
+	}
 
 	LEAVE_FF(fs, res);
 }
@@ -5919,11 +5931,15 @@ FRESULT f_readdir (
 		} else {
 			INIT_NAMBUF(fs);
 			res = dir_read_file(dp);		/* Read an item */
-			if (res == FR_NO_FILE) res = FR_OK;	/* Ignore end of directory */
+			if (res == FR_NO_FILE){
+			    res = FR_OK;	/* Ignore end of directory */
+			}
 			if (res == FR_OK) {				/* A valid entry is found */
 				get_fileinfo(dp, fno);		/* Get the object information */
 				res = dir_next(dp, 0);		/* Increment index for next */
-				if (res == FR_NO_FILE) res = FR_OK;	/* Ignore end of directory now */
+				if (res == FR_NO_FILE){
+				    res = FR_OK;	/* Ignore end of directory now */
+				}
 			}
 			FREE_NAMBUF();
 		}
@@ -6009,7 +6025,9 @@ FRESULT f_stat (
 			if (dj.fn[NSFLAG] & NS_NONAME) {	/* It is origin directory */
 				res = FR_INVALID_NAME;
 			} else {							/* Found an object */
-				if (fno) get_fileinfo(&dj, fno);
+				if (fno){
+				    get_fileinfo(&dj, fno);
+				}
 			}
 		}
 		FREE_NAMBUF();
@@ -6052,9 +6070,19 @@ FRESULT f_getfree (
 				clst = 2U; obj.fs = fs;
 				do {
 					stat = get_fat(&obj, clst);
-					if (stat == 0xFFFFFFFFU) { res = FR_DISK_ERR; break; }
-					if (stat == 1U) { res = FR_INT_ERR; break; }
-					if (stat == 0U) nfree++;
+					if (stat == 0xFFFFFFFFU) {
+					    res = FR_DISK_ERR;
+					    break;
+					}
+
+					if (stat == 1U) {
+					    res = FR_INT_ERR;
+					    break;
+					}
+
+					if (stat == 0U) {
+					    nfree++;
+					}
 				} while (++clst < fs->n_fatent);
 			} else {
 #if FF_FS_EXFAT
@@ -6068,10 +6096,14 @@ FRESULT f_getfree (
 					do {	/* Counts numbuer of bits with zero in the bitmap */
 						if (i == 0U) {
 							res = move_window(fs, sect++);
-							if (res != FR_OK) break;
+							if (res != FR_OK) {
+							    break;
+							}
 						}
 						for (b = 8U, bm = fs->win[i]; b && clst; b--, clst--) {
-							if (!(bm & 1U)) nfree++;
+							if (!(bm & 1U)){
+							    nfree++;
+							}
 							bm >>= 1U;
 						}
 						i = (i + 1U) % SS(fs);
@@ -6085,13 +6117,19 @@ FRESULT f_getfree (
 					do {	/* Counts numbuer of entries with zero in the FAT */
 						if (i == 0U) {
 							res = move_window(fs, sect++);
-							if (res != FR_OK) break;
+							if (res != FR_OK) {
+							    break;
+							}
 						}
 						if (fs->fs_type == FS_FAT16) {
-							if (ld_word(fs->win + i) == 0U) nfree++;
+							if (ld_word(&fs->win[i]) == 0U){
+							    nfree++;
+							}
 							i += 2U;
 						} else {
-							if ((ld_dword(fs->win + i) & 0x0FFFFFFFU) == 0U) nfree++;
+							if ((ld_dword(&fs->win[i]) & 0x0FFFFFFFU) == 0U){
+							    nfree++;
+							}
 							i += 4U;
 						}
 						i %= SS(fs);
@@ -7855,10 +7893,7 @@ int putc_flush (		/* Flush left characters in the buffer */
 {
 	UINT nw = 0U;
 
-	/*
-     * (MISRA-C:2004 20.9/R) Can be ignored because EOF is defined in ff.h
-     */
-	int ret = EOF;
+	int ret = FF_EOF;
 	INT temp_int = 0;
 
 	/* Flush buffered characters to the file */
@@ -7948,159 +7983,178 @@ int f_printf (
 	DWORD v;
 	TCHAR c, d, str[32], *p;
 	UINT index = 0U;
-
+	BYTE loop_skip = 0U;
+	BYTE loop_exit = 0U;
 
 	putc_init(&pb, fp);
 
 	va_start(arp, fmt);
 
 	for (;;) {
-		c = fmt[index++];
+
+	    loop_skip = 0U;
+	    c = fmt[index++];
 		if ((UINT)c == 0U) {
-		    break;			/* End of string */
+		    loop_exit = 1U;			/* End of string */
 		}
 
-		if (c != '%') {				/* Non escape character */
-			putc_bfd(&pb, c);
-			continue;
-		}
-		f = 0U;
-		w = f;
+		if(loop_exit == 0U){
+            if (c != '%') {				/* Non escape character */
+                putc_bfd(&pb, c);
+                loop_skip = 1U;
+            }
 
-		c = fmt[index++];
-		if (c == '0') {				/* Flag: '0' padding */
-			f = 1U;
-			c = fmt[index++];
-		} else {
-			if (c == '-') {			/* Flag: left justified */
-				f = 2U;
-				c = fmt[index++];
-			}
+            if(loop_skip == 0U){
+                f = 0U;
+                w = f;
+
+                c = fmt[index++];
+                if (c == '0') {				/* Flag: '0' padding */
+                    f = 1U;
+                    c = fmt[index++];
+                } else {
+                    if (c == '-') {			/* Flag: left justified */
+                        f = 2U;
+                        c = fmt[index++];
+                    }
+                }
+
+                if (c == '*') {				/* Minimum width by argument */
+                    w = va_arg(arp, int);
+                    c = fmt[index++];
+                } else {
+                    while (IsDigit(c)) {	/* Minimum width */
+                        w = w * 10U + (UINT)c - (UINT)'0';
+                        c = fmt[index++];
+                    }
+                }
+
+                if ((c == 'l') || (c == 'L')) {	/* Type prefix: Size is long int */
+                    f |= 4U;
+                    c = fmt[index++];
+                }
+
+                if ((UINT)c == 0U){
+                    break;
+                }
+
+                if(loop_exit == 0U){
+                    d = c;
+                    if (IsLower(d)){
+                        d = (TCHAR)((UINT)d - 0x20U);
+                    }
+
+                    switch (d) {				/* Atgument type is... */
+                    case 'S' :					/* String */
+                        p = va_arg(arp, TCHAR*);
+                        for (j = 0U; p[j]; j++){
+
+                        }
+
+                        if (!(f & 2U)) {						/* Right padded */
+                            while (j++ < w){
+                                putc_bfd(&pb, ' ') ;
+                            }
+                        }
+
+                        while (*p){
+                            putc_bfd(&pb, *p++) ;		/* String body */
+                        }
+
+                        while (j++ < w){
+                            putc_bfd(&pb, ' ') ;	/* Left padded */
+                        }
+
+                        loop_skip = 1U;
+                        break;
+
+                    case 'C' :					/* Character */
+                        putc_bfd(&pb, (TCHAR)va_arg(arp, int));
+                        loop_skip = 1U;
+                        break;
+
+                    case 'B' :					/* Unsigned binary */
+                        r = 2U; break;
+
+                    case 'O' :					/* Unsigned octal */
+                        r = 8U; break;
+
+                    case 'D' :					/* Signed decimal */
+                    case 'U' :					/* Unsigned decimal */
+                        r = 10U; break;
+
+                    case 'X' :					/* Unsigned hexdecimal */
+                        r = 16U; break;
+
+                    default:					/* Unknown type (pass-through) */
+                        putc_bfd(&pb, c);
+                        loop_skip = 1U;
+                        break;
+                    }
+                }
+            }
+
+            if((loop_skip == 0U) && (loop_exit == 0U)){
+                /* Get an argument and put it in numeral */
+                if(f & 4U){
+                    v = (DWORD)va_arg(arp, long);
+                }
+                else{
+                    if(d == 'D'){
+                        v = (DWORD)(long)va_arg(arp, int);
+                    }
+                    else{
+                        v = (DWORD)va_arg(arp, unsigned int);
+                    }
+                }
+
+                if ((d == 'D') && (v & 0x80000000U)) {
+                    v = 0U - v;
+                    f |= 8U;
+                }
+
+                i = 0U;
+
+                do {
+                    d = (TCHAR)(v % r); v /= r;
+                    if (d > 9U){
+
+                        if(c == 'x'){
+                            d = (TCHAR)((UINT)d + 0x27U);
+                        }
+                        else{
+                            d = (TCHAR)((UINT)d + 0x07U);
+                        }
+
+                    }
+
+                    str[i++] = (TCHAR)((UINT)d + (UINT)'0');
+                } while (v && (i < sizeof str / sizeof *str));
+
+                if (f & 8U){
+                    str[i++] = '-';
+                }
+
+                j = i;
+                d = (f & 1U) ? '0' : ' ';
+                if (!(f & 2U)) {
+                    while (j++ < w){
+                        putc_bfd(&pb, d);	/* Right pad */
+                    }
+                }
+
+                do {
+                    putc_bfd(&pb, str[--i]);			/* Number body */
+                } while (i);
+
+                while (j++ < w){
+                    putc_bfd(&pb, d);		/* Left pad */
+                }
+            }
 		}
 
-		if (c == '*') {				/* Minimum width by argument */
-			w = va_arg(arp, int);
-			c = fmt[index++];
-		} else {
-			while (IsDigit(c)) {	/* Minimum width */
-				w = w * 10U + (UINT)c - (UINT)'0';
-				c = fmt[index++];
-			}
-		}
-
-		if ((c == 'l') || (c == 'L')) {	/* Type prefix: Size is long int */
-			f |= 4U;
-			c = fmt[index++];
-		}
-
-		if ((UINT)c == 0U){
+		if(loop_exit == 1U){
 		    break;
-		}
-
-		d = c;
-		if (IsLower(d)){
-		    d = (TCHAR)((UINT)d - 0x20U);
-		}
-
-		switch (d) {				/* Atgument type is... */
-		case 'S' :					/* String */
-			p = va_arg(arp, TCHAR*);
-			for (j = 0U; p[j]; j++){
-
-			}
-
-			if (!(f & 2U)) {						/* Right padded */
-				while (j++ < w){
-				    putc_bfd(&pb, ' ') ;
-				}
-			}
-
-			while (*p){
-			    putc_bfd(&pb, *p++) ;		/* String body */
-			}
-
-			while (j++ < w){
-			    putc_bfd(&pb, ' ') ;	/* Left padded */
-			}
-
-			continue;
-
-		case 'C' :					/* Character */
-			putc_bfd(&pb, (TCHAR)va_arg(arp, int));
-			continue;
-
-		case 'B' :					/* Unsigned binary */
-			r = 2U; break;
-
-		case 'O' :					/* Unsigned octal */
-			r = 8U; break;
-
-		case 'D' :					/* Signed decimal */
-		case 'U' :					/* Unsigned decimal */
-			r = 10U; break;
-
-		case 'X' :					/* Unsigned hexdecimal */
-			r = 16U; break;
-
-		default:					/* Unknown type (pass-through) */
-			putc_bfd(&pb, c);
-			continue;
-		}
-
-		/* Get an argument and put it in numeral */
-		if(f & 4U){
-		    v = (DWORD)va_arg(arp, long);
-		}
-		else{
-		    if(d == 'D'){
-		        v = (DWORD)(long)va_arg(arp, int);
-		    }
-		    else{
-		        v = (DWORD)va_arg(arp, unsigned int);
-		    }
-		}
-
-		if ((d == 'D') && (v & 0x80000000U)) {
-			v = 0U - v;
-			f |= 8U;
-		}
-
-		i = 0U;
-
-		do {
-			d = (TCHAR)(v % r); v /= r;
-			if (d > 9U){
-
-			    if(c == 'x'){
-			        d = (TCHAR)((UINT)d + 0x27U);
-			    }
-			    else{
-			        d = (TCHAR)((UINT)d + 0x07U);
-			    }
-
-			}
-
-			str[i++] = (TCHAR)((UINT)d + (UINT)'0');
-		} while (v && (i < sizeof str / sizeof *str));
-
-		if (f & 8U){
-		    str[i++] = '-';
-		}
-
-		j = i;
-		d = (f & 1U) ? '0' : ' ';
-		if (!(f & 2U)) {
-			while (j++ < w){
-			    putc_bfd(&pb, d);	/* Right pad */
-			}
-		}
-
-		do {
-			putc_bfd(&pb, str[--i]);			/* Number body */
-		} while (i);
-
-		while (j++ < w){
-		    putc_bfd(&pb, d);		/* Left pad */
 		}
 	}
 

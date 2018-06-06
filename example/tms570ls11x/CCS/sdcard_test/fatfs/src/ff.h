@@ -295,8 +295,8 @@ TCHAR* f_gets (TCHAR* buff, int len, FIL* fp);						/* Get a string from the fil
 #define f_rmdir(path) (f_unlink(path))
 #define f_unmount(path) (f_mount(0, (path), 0))
 
-#ifndef EOF
-#define EOF (-1)
+#ifndef FF_EOF
+#define FF_EOF (-1)
 #endif
 
 
