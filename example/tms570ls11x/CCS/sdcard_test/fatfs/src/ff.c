@@ -5595,17 +5595,22 @@ FRESULT f_lseek (
 	DWORD cl, pcl, ncl, tcl, dsc, tlen, ulen, *tbl;
 #endif
 
+	WORD temp_word = 0U;
+
+
 	res = validate(&fp->obj, &fs);		/* Check validity of the file object */
-	if (res == FR_OK) res = (FRESULT)fp->err;
+	if (res == FR_OK){
+	    res = (FRESULT)fp->err;
+	}
+
 #if FF_FS_EXFAT && !FF_FS_READONLY
 	if (res == FR_OK && fs->fs_type == FS_EXFAT) {
 		res = fill_last_frag(&fp->obj, fp->clust, 0xFFFFFFFF);	/* Fill last fragment on the FAT if needed */
 	}
 #endif
-	if (res != FR_OK) LEAVE_FF(fs, res);
 
 #if FF_USE_FASTSEEK
-	if (fp->cltbl) {	/* Fast seek */
+	if ((res == FR_OK) && (fp->cltbl)) {	/* Fast seek */
 		if (ofs == CREATE_LINKMAP) {	/* Create CLMT */
 			tbl = fp->cltbl;
 			tlen = *tbl++; ulen = 2;	/* Given table size and required table size */
@@ -5658,79 +5663,137 @@ FRESULT f_lseek (
 
 	/* Normal Seek */
 	{
+
+	    if(res == FR_OK){
+
 #if FF_FS_EXFAT
-		if (fs->fs_type != FS_EXFAT && ofs >= 0x100000000) ofs = 0xFFFFFFFF;	/* Clip at 4 GiB - 1 if at FATxx */
+	        if ((fs->fs_type != FS_EXFAT) && (ofs >= 0x100000000)){
+	            ofs = 0xFFFFFFFF;	/* Clip at 4 GiB - 1 if at FATxx */
+	        }
 #endif
-		if ((ofs > fp->obj.objsize) && ((FF_FS_READONLY) || (!(fp->flag & FA_WRITE)))) {	/* In read-only mode, clip offset with the file size */
-			ofs = fp->obj.objsize;
-		}
-		ifptr = fp->fptr;
-		fp->fptr = nsect = 0U;
-		if (ofs > 0U) {
-			bcs = (DWORD)fs->csize * SS(fs);	/* Cluster size (byte) */
-			if ((ifptr > 0U) &&
-				((ofs - 1U) / bcs >= (ifptr - 1U) / bcs)) {	/* When seek to same or following cluster, */
-				fp->fptr = (ifptr - 1U) & ~(FSIZE_t)(bcs - 1U);	/* start from the current cluster */
-				ofs -= fp->fptr;
-				clst = fp->clust;
-			} else {									/* When seek to back cluster, */
-				clst = fp->obj.sclust;					/* start from the first cluster */
+	        if ((ofs > fp->obj.objsize) && ((FF_FS_READONLY) || (!(fp->flag & FA_WRITE)))) {	/* In read-only mode, clip offset with the file size */
+	            ofs = fp->obj.objsize;
+	        }
+
+	        ifptr = fp->fptr;
+            nsect = 0U;
+            fp->fptr = nsect;
+
+            if (ofs > 0U) {
+                temp_word = fs->csize;
+                bcs = (DWORD)temp_word * SS(fs);	/* Cluster size (byte) */
+                if ((ifptr > 0U) &&
+                    ((ofs - 1U) / bcs >= (ifptr - 1U) / bcs)) {	/* When seek to same or following cluster, */
+                    fp->fptr = (ifptr - 1U) & ~(FSIZE_t)(bcs - 1U);	/* start from the current cluster */
+                    ofs -= fp->fptr;
+                    clst = fp->clust;
+                } else {									/* When seek to back cluster, */
+                    clst = fp->obj.sclust;					/* start from the first cluster */
 #if !FF_FS_READONLY
-				if (clst == 0U) {						/* If no cluster chain, create a new chain */
-					clst = create_chain(&fp->obj, 0U);
-					if (clst == 1U) ABORT(fs, FR_INT_ERR);
-					if (clst == 0xFFFFFFFFU) ABORT(fs, FR_DISK_ERR);
-					fp->obj.sclust = clst;
-				}
+                    if (clst == 0U) {						/* If no cluster chain, create a new chain */
+                        clst = create_chain(&fp->obj, 0U);
+                        if (clst == 1U){
+                            res = FR_INT_ERR;
+                            fp->err = (BYTE)(res);
+                        }
+                        else if (clst == 0xFFFFFFFFU){
+                            res = FR_DISK_ERR;
+                            fp->err = (BYTE)(res);
+                        }
+                        else{
+                            fp->obj.sclust = clst;
+                        }
+                    }
 #endif
-				fp->clust = clst;
-			}
-			if (clst != 0U) {
-				while (ofs > bcs) {						/* Cluster following loop */
-					ofs -= bcs; fp->fptr += bcs;
-#if !FF_FS_READONLY
-					if (fp->flag & FA_WRITE) {			/* Check if in write mode or not */
-						if ((FF_FS_EXFAT) && (fp->fptr > fp->obj.objsize)) {	/* No FAT chain object needs correct objsize to generate FAT value */
-							fp->obj.objsize = fp->fptr;
-							fp->flag |= FA_MODIFIED;
-						}
-						clst = create_chain(&fp->obj, clst);	/* Follow chain with forceed stretch */
-						if (clst == 0U) {				/* Clip file size in case of disk full */
-							ofs = 0U; break;
-						}
-					} else
-#endif
-					{
-						clst = get_fat(&fp->obj, clst);	/* Follow cluster chain if not in write mode */
-					}
-					if (clst == 0xFFFFFFFFU) ABORT(fs, FR_DISK_ERR);
-					if ((clst <= 1U) || (clst >= fs->n_fatent)) ABORT(fs, FR_INT_ERR);
-					fp->clust = clst;
-				}
-				fp->fptr += ofs;
-				if (ofs % SS(fs)) {
-					nsect = clst2sect(fs, clst);	/* Current sector */
-					if (nsect == 0U) ABORT(fs, FR_INT_ERR);
-					nsect += (DWORD)(ofs / SS(fs));
-				}
-			}
-		}
-		if ((!FF_FS_READONLY) && (fp->fptr > fp->obj.objsize)) {	/* Set file change flag if the file size is extended */
-			fp->obj.objsize = fp->fptr;
-			fp->flag |= FA_MODIFIED;
-		}
-		if ((fp->fptr % SS(fs)) && (nsect != fp->sect)) {	/* Fill sector cache if needed */
+
+                    if(res == FR_OK){
+                        fp->clust = clst;
+                    }
+                }
+
+                if ((res == FR_OK) && (clst != 0U)) {
+                    while (ofs > bcs) {						/* Cluster following loop */
+                        ofs -= bcs; fp->fptr += bcs;
+    #if !FF_FS_READONLY
+                        if (fp->flag & FA_WRITE) {			/* Check if in write mode or not */
+
+    #if FF_FS_EXFAT
+                            if (fp->fptr > fp->obj.objsize) {	/* No FAT chain object needs correct objsize to generate FAT value */
+                                fp->obj.objsize = fp->fptr;
+                                fp->flag |= FA_MODIFIED;
+                            }
+    #endif
+                            clst = create_chain(&fp->obj, clst);	/* Follow chain with forceed stretch */
+                            if (clst == 0U) {				/* Clip file size in case of disk full */
+                                ofs = 0U;
+                                break;
+                            }
+                        } else
+    #endif
+                        {
+                            clst = get_fat(&fp->obj, clst);	/* Follow cluster chain if not in write mode */
+                        }
+
+                        if (clst == 0xFFFFFFFFU){
+                            res = FR_DISK_ERR;
+                            fp->err = (BYTE)(res);
+                        }
+                        else if ((clst <= 1U) || (clst >= fs->n_fatent)){
+                            res = FR_INT_ERR;
+                            fp->err = (BYTE)(res);
+                        }
+                        else{
+                            fp->clust = clst;
+                        }
+                    }
+
+                    if(res == FR_OK){
+
+                        fp->fptr += ofs;
+                        if (ofs % SS(fs)) {
+                            nsect = clst2sect(fs, clst);	/* Current sector */
+                            if (nsect == 0U){
+                                res = FR_INT_ERR;
+                                fp->err = (BYTE)(res);
+                            }
+                            nsect += (DWORD)(ofs / SS(fs));
+                        }
+                    }
+                }
+            }
+
+            if ((!FF_FS_READONLY) && (fp->fptr > fp->obj.objsize)) {	/* Set file change flag if the file size is extended */
+                fp->obj.objsize = fp->fptr;
+                fp->flag |= FA_MODIFIED;
+            }
+
+            if ((fp->fptr % SS(fs)) && (nsect != fp->sect)) {	/* Fill sector cache if needed */
 #if !FF_FS_TINY
 #if !FF_FS_READONLY
-			if (fp->flag & FA_DIRTY) {			/* Write-back dirty sector cache */
-				if (disk_write(fs->pdrv, fp->buf, fp->sect, 1U) != RES_OK) ABORT(fs, FR_DISK_ERR);
-				fp->flag &= (BYTE)~FA_DIRTY;
-			}
+                if (fp->flag & FA_DIRTY) {			/* Write-back dirty sector cache */
+                    if (disk_write(fs->pdrv, fp->buf, fp->sect, 1U) != RES_OK){
+                        res = FR_DISK_ERR;
+                        fp->err = (BYTE)(res);
+                    }
+                    else{
+                        fp->flag &= (BYTE)~FA_DIRTY;
+                    }
+                }
 #endif
-			if (disk_read(fs->pdrv, fp->buf, nsect, 1U) != RES_OK) ABORT(fs, FR_DISK_ERR);	/* Fill sector cache */
+                if(res == FR_OK){
+                    if (disk_read(fs->pdrv, fp->buf, nsect, 1U) != RES_OK){
+                        res = FR_DISK_ERR;
+                        fp->err = (BYTE)(res);
+                        /* Fill sector cache */
+                    }
+                }
 #endif
-			fp->sect = nsect;
-		}
+
+                if(res == FR_OK){
+                    fp->sect = nsect;
+                }
+            }
+	    }
 	}
 
 	LEAVE_FF(fs, res);
