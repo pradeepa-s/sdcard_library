@@ -5297,7 +5297,7 @@ FRESULT f_sync (
 {
 	FRESULT res;
     FATFS *fs = (FATFS *)0;
-	DWORD tm;
+	DWORD ff_tm;
 	BYTE *dir;
 
 
@@ -5306,12 +5306,14 @@ FRESULT f_sync (
 		if (fp->flag & FA_MODIFIED) {	/* Is there any change to the file? */
 #if !FF_FS_TINY
 			if (fp->flag & FA_DIRTY) {	/* Write-back cached data if needed */
-				if (disk_write(fs->pdrv, fp->buf, fp->sect, 1U) != RES_OK) LEAVE_FF(fs, FR_DISK_ERR);
+				if (disk_write(fs->pdrv, fp->buf, fp->sect, 1U) != RES_OK){
+				    LEAVE_FF(fs, FR_DISK_ERR);
+				}
 				fp->flag &= (BYTE)~FA_DIRTY;
 			}
 #endif
 			/* Update the directory entry */
-			tm = GET_FATTIME();				/* Modified time */
+			ff_tm = GET_FATTIME();				/* Modified time */
 #if FF_FS_EXFAT
 			if (fs->fs_type == FS_EXFAT) {
 				res = fill_first_frag(&fp->obj);	/* Fill first fragment on the FAT if needed */
@@ -5330,7 +5332,7 @@ FRESULT f_sync (
 						st_dword(fs->dirbuf + XDIR_FstClus, fp->obj.sclust);
 						st_qword(fs->dirbuf + XDIR_FileSize, fp->obj.objsize);
 						st_qword(fs->dirbuf + XDIR_ValidFileSize, fp->obj.objsize);
-						st_dword(fs->dirbuf + XDIR_ModTime, tm);		/* Update modified time */
+						st_dword(fs->dirbuf + XDIR_ModTime, ff_tm);		/* Update modified time */
 						fs->dirbuf[XDIR_ModTime10] = 0;
 						st_dword(fs->dirbuf + XDIR_AccTime, 0);
 						res = store_xdir(&dj);	/* Restore it to the directory */
@@ -5350,7 +5352,7 @@ FRESULT f_sync (
 					dir[DIR_Attr] |= AM_ARC;						/* Set archive attribute to indicate that the file has been changed */
 					st_clust(fp->obj.fs, dir, fp->obj.sclust);		/* Update file allocation information  */
 					st_dword(dir + DIR_FileSize, (DWORD)fp->obj.objsize);	/* Update file size */
-					st_dword(dir + DIR_ModTime, tm);				/* Update modified time */
+					st_dword(dir + DIR_ModTime, ff_tm);				/* Update modified time */
 					st_word(dir + DIR_LstAccDate, 0U);
 					fs->wflag = 1U;
 					res = sync_fs(fs);					/* Restore it to the directory */
@@ -6338,7 +6340,7 @@ FRESULT f_mkdir (
 	DIR dj;
     FATFS *fs = (FATFS *)0;
 	BYTE *dir;
-	DWORD dcl, pcl, tm;
+	DWORD dcl, pcl, ff_tm;
 	DEF_NAMBUF
 	WORD temp_word;
 
@@ -6380,7 +6382,7 @@ FRESULT f_mkdir (
 			    res = sync_window(fs);	/* Flush FAT */
 			}
 
-			tm = GET_FATTIME();
+			ff_tm = GET_FATTIME();
 			if (res == FR_OK) {					/* Initialize the new directory table */
 				res = dir_clear(fs, dcl);		/* Clean up the new table */
 				if ((res == FR_OK) && ((!FF_FS_EXFAT) || (fs->fs_type != FS_EXFAT))) {	/* Create dot entries (FAT only) */
@@ -6390,7 +6392,7 @@ FRESULT f_mkdir (
 
 					dir[DIR_Name] = (BYTE) '.';
 					dir[DIR_Attr] = AM_DIR;
-					st_dword(dir + DIR_ModTime, tm);
+					st_dword(dir + DIR_ModTime, ff_tm);
 
 					st_clust(fs, dir, dcl);
 					mem_cpy(dir + SZDIRE, dir, SZDIRE); /* Create ".." entry */
@@ -6409,7 +6411,7 @@ FRESULT f_mkdir (
 			if (res == FR_OK) {
 #if FF_FS_EXFAT
 				if (fs->fs_type == FS_EXFAT) {	/* Initialize directory entry block */
-					st_dword(fs->dirbuf + XDIR_ModTime, tm);	/* Created time */
+					st_dword(fs->dirbuf + XDIR_ModTime, ff_tm);	/* Created time */
 					st_dword(fs->dirbuf + XDIR_FstClus, dcl);	/* Table start cluster */
 					st_dword(fs->dirbuf + XDIR_FileSize, (DWORD)dj.obj.objsize);	/* File size needs to be valid */
 					st_dword(fs->dirbuf + XDIR_ValidFileSize, (DWORD)dj.obj.objsize);
@@ -6420,7 +6422,7 @@ FRESULT f_mkdir (
 #endif
 				{
 					dir = dj.dir;
-					st_dword(dir + DIR_ModTime, tm);	/* Created time */
+					st_dword(dir + DIR_ModTime, ff_tm);	/* Created time */
 					st_clust(fs, dir, dcl);				/* Table start cluster */
 					dir[DIR_Attr] = AM_DIR;				/* Attribute */
 					fs->wflag = 1U;
@@ -7615,6 +7617,7 @@ TCHAR* f_gets (
 	BYTE s[4];
 	UINT rc;
 	DWORD dc;
+	BYTE loop_exit = 0U;
 #if FF_USE_LFN && FF_LFN_UNICODE && FF_STRF_ENCODE <= 2
 	WCHAR wc;
 #endif
@@ -7711,15 +7714,32 @@ TCHAR* f_gets (
 	len -= 1;	/* Make a room for the terminator */
 	while (nc < len) {
 		f_read(fp, s, 1U, &rc);
-		if (rc != 1U) break;
-		dc = s[0];
-		if ((FF_USE_STRFUNC == 2) && (dc == '\r')) continue;
-		*p++ = (TCHAR)dc; nc++;
-		if (dc == '\n') break;
+		if (rc != 1U){
+		    /* break */
+		    loop_exit = 1U;
+		}
+		else{
+            dc = s[0];
+            if ((FF_USE_STRFUNC == 2) && (dc == (DWORD)'\r')){
+                /* continue */
+            }
+            else{
+                *p++ = (TCHAR)dc;
+                nc++;
+                if (dc == (DWORD)'\n'){
+                    /* break */
+                    loop_exit = 1U;
+                }
+            }
+		}
+
+		if(loop_exit == 1U){
+		    break;
+		}
 	}
 #endif
 
-	*p = 0U;		/* Terminate the string */
+	*p = (TCHAR)0U;		/* Terminate the string */
 	return nc ? buff : 0;	/* When no data read due to EOF or error, return with error. */
 }
 
