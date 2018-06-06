@@ -4027,6 +4027,7 @@ static int get_ldnumber (	/* Returns logical drive number (-1:invalid drive numb
 	const TCHAR temp_char = '!';
 #endif
 	BYTE func_exit = 0U;
+	TCHAR temp_tchar;
 
 	tp = *path;
 	tt = tp;
@@ -4038,8 +4039,10 @@ static int get_ldnumber (	/* Returns logical drive number (-1:invalid drive numb
 
         if (tc == ':') {	/* DOS/Windows style volume ID? */
             i = FF_VOLUMES;
-            if ((IsDigit((WCHAR)*tp)) && (tp + 2U == tt)) {	/* Is there a numeric volume ID + colon? */
-                i = (int)*tp - (INT)'0';	/* Get the LD number */
+            if ((IsDigit((WCHAR)*tp)) && ((UINT)tp + 2U == (UINT)tt)) {	/* Is there a numeric volume ID + colon? */
+
+                temp_tchar = *tp;
+                i = (INT)temp_tchar - (INT)'0';	/* Get the LD number */
             }
 #if FF_STR_VOLUME_ID == 1	/* Arbitrary string is enabled */
             else {
