@@ -592,6 +592,8 @@ static int pick_lfn (WCHAR lfnbuf[], BYTE dir[]);
 static void put_lfn (const WCHAR lfn[], BYTE dir[], BYTE ord, BYTE sum);
 static void gen_numname (BYTE dst[], const BYTE* src, const WCHAR lfn[], UINT seq);
 static BYTE sum_sfn (const BYTE dir[]);
+static FRESULT dir_read_file (DIR* dp);
+static FRESULT dir_read_label (DIR* dp);
 static FRESULT dir_read (DIR* dp, int vol);
 static FRESULT dir_find (DIR* dp);
 static FRESULT dir_register (DIR* dp);
@@ -801,6 +803,7 @@ static DWORD tchar2uni (	/* Returns character in UTF-16 encoding (>=0x10000 on d
     DWORD ret = 0U;
     DWORD uc;
 	const TCHAR *p = *str;
+	TCHAR temp_tchar;
 
 #if FF_LFN_UNICODE == 1		/* UTF-16 input */
 	WCHAR wc;
@@ -849,7 +852,8 @@ static DWORD tchar2uni (	/* Returns character in UTF-16 encoding (>=0x10000 on d
 	BYTE b;
 	WCHAR wc;
 
-	wc = (BYTE)*p++;			/* Get a byte */
+	temp_tchar = *p++;  /* Get a byte */
+	wc = (WCHAR)temp_tchar;
 	if (dbc_1st((BYTE)wc)) {	/* Is it a DBC 1st byte? */
 		b = (BYTE)*p++;			/* Get 2nd byte */
 		if (!dbc_2nd(b)){
@@ -2869,8 +2873,21 @@ static void create_xdir (
 /* Read an object from the directory                                     */
 /*-----------------------------------------------------------------------*/
 
-#define dir_read_file(dp) dir_read(dp, 0)
-#define dir_read_label(dp) dir_read(dp, 1)
+
+static FRESULT dir_read_file (
+    DIR* dp       /* Pointer to the directory object */
+)
+{
+    return dir_read(dp, 0);
+}
+
+
+static FRESULT dir_read_label (
+    DIR* dp        /* Pointer to the directory object */
+)
+{
+    return dir_read(dp, 1);
+}
 
 static FRESULT dir_read (
 	DIR* dp,		/* Pointer to the directory object */
@@ -3096,6 +3113,11 @@ static FRESULT dir_find (	/* FR_OK(0):succeeded, !=0:error */
                     }
 
                     if (!(dp->fn[NSFLAG] & NS_LOSS)){
+
+                        /*
+                         * MISRA-C:2004 12.2/R can be ignored because evaluation order doesn't interfere with the
+                         * integrity of the internal strucutres in the following expression
+                         */
                         if(!mem_cmp(dp->dir, dp->fn, 11U)){
                             break;  /* SFN matched? */
                         }
@@ -3218,6 +3240,11 @@ static FRESULT dir_register (	/* FR_OK:succeeded, FR_DENIED:no free entry or too
             res = dir_alloc(dp, nent);      /* Allocate entries */
             if(res == FR_OK){
                 if (--nent) {   /* Set LFN entry if needed */
+
+                    /*
+                     * MISRA-C:2004 12.2/R can be ignored because evaluation order doesn't interfere with the
+                     * integrity of the internal strucutres in the following expression
+                     */
                     res = dir_sdi(dp, dp->dptr - nent * SZDIRE);
                     if (res == FR_OK) {
                         sum = sum_sfn(dp->fn);  /* Checksum value of the SFN tied to the LFN */
@@ -3249,6 +3276,11 @@ static FRESULT dir_register (	/* FR_OK:succeeded, FR_DENIED:no free entry or too
                 res = move_window(fs, dp->sect);
                 if (res == FR_OK) {
                     mem_set(dp->dir, 0U, SZDIRE);   /* Clean the entry */
+
+                    /*
+                     * MISRA-C:2004 12.2/R can be ignored because evaluation order doesn't interfere with the
+                     * integrity of the internal strucutres in the following expression
+                     */
                     mem_cpy(dp->dir + DIR_Name, dp->fn, 11U);   /* Put SFN */
         #if FF_USE_LFN
                     dp->dir[DIR_NTres] = dp->fn[NSFLAG] & (NS_BODY | NS_EXT);   /* Put NT flag */
@@ -3285,6 +3317,11 @@ static FRESULT dir_remove (	/* FR_OK:Succeeded, FR_DISK_ERR:A disk error */
 	    res = FR_OK;
 	}
 	else{
+
+	    /*
+         * MISRA-C:2004 12.2/R can be ignored because evaluation order doesn't interfere with the
+         * integrity of the internal strucutres in the following expression
+         */
 	    res = dir_sdi(dp, dp->blk_ofs);
 	}
 
@@ -3994,7 +4031,11 @@ static FRESULT follow_path (	/* FR_OK(0): successful, !=0: error code */
 			} else
 #endif
 			{
-				dp->obj.sclust = ld_clust(fs, fs->win + dp->dptr % SS(fs));	/* Open next directory */
+			    /*
+                 * MISRA-C:2004 12.2/R can be ignored because evaluation order doesn't interfere with the
+                 * integrity of the internal strucutres in the following expression
+                 */
+			    dp->obj.sclust = ld_clust(fs, fs->win + dp->dptr % SS(fs));	/* Open next directory */
 			}
 		}
 	}
@@ -4014,6 +4055,7 @@ static int get_ldnumber (	/* Returns logical drive number (-1:invalid drive numb
 )
 {
     const TCHAR *tp, *tt;
+    TCHAR tchar_temp;
 	TCHAR tc;
 	int i, vol = -1;
 #if FF_STR_VOLUME_ID		/* Find string volume ID */
@@ -4039,10 +4081,14 @@ static int get_ldnumber (	/* Returns logical drive number (-1:invalid drive numb
 
         if (tc == ':') {	/* DOS/Windows style volume ID? */
             i = FF_VOLUMES;
-            if ((IsDigit((WCHAR)*tp)) && ((UINT)tp + 2U == (UINT)tt)) {	/* Is there a numeric volume ID + colon? */
 
-                temp_tchar = *tp;
-                i = (INT)temp_tchar - (INT)'0';	/* Get the LD number */
+            tchar_temp = *tp;
+            if (IsDigit((WCHAR)tchar_temp)){
+                if(((UINT)tp + 2U == (UINT)tt)) {	/* Is there a numeric volume ID + colon? */
+
+                    temp_tchar = *tp;
+                    i = (INT)temp_tchar - (INT)'0';	/* Get the LD number */
+                }
             }
 #if FF_STR_VOLUME_ID == 1	/* Arbitrary string is enabled */
             else {
@@ -4650,7 +4696,7 @@ FRESULT f_mount (
         }
 	}
 
-	LEAVE_FF(fs, res);
+	return res;
 }
 
 
@@ -4862,7 +4908,7 @@ FRESULT f_open (
         }
 	}
 
-	LEAVE_FF(fs, res);
+	return res;
 }
 
 
@@ -4888,6 +4934,10 @@ FRESULT f_read (
 	WORD temp_word;
 	FSIZE_t temp_fsize;
 
+	BYTE func_exit = 0U;
+	BYTE loop_exit = 0U;
+	BYTE loop_skip = 0U;
+
 	*br = 0U;	/* Clear read byte counter */
 	res = validate(&fp->obj, &fs);				/* Check validity of the file object */
 	if (res != FR_OK){
@@ -4909,7 +4959,10 @@ FRESULT f_read (
         }
 
         for ( ;  btr;								/* Repeat until btr bytes read */
-            btr -= rcnt, *br += rcnt, rbuff += rcnt, fp->fptr += rcnt) {
+            btr -= rcnt) {
+
+            loop_skip = 0U;
+
             if (fp->fptr % SS(fs) == 0U) {			/* On the sector boundary? */
 
                 temp_word = fs->csize;
@@ -4930,77 +4983,147 @@ FRESULT f_read (
                     }
 
                     if (clst < 2U){
-                        ABORT(fs, FR_INT_ERR);
+                        res = FR_INT_ERR;
+                        loop_exit = 1U;
+                        func_exit = 1U;
+                        fp->err = (BYTE)(res);
+                        /*ABORT(fs, FR_INT_ERR);*/
                     }
-
-                    if (clst == 0xFFFFFFFFU){
-                        ABORT(fs, FR_DISK_ERR);
+                    else if(clst == 0xFFFFFFFFU){
+                        res = FR_DISK_ERR;
+                        loop_exit = 1U;
+                        func_exit = 1U;
+                        fp->err = (BYTE)(res);
+                        /*ABORT(fs, FR_DISK_ERR);*/
                     }
-
-                    fp->clust = clst;				/* Update current cluster */
+                    else{
+                        fp->clust = clst;				/* Update current cluster */
+                    }
                 }
 
-                sect = clst2sect(fs, fp->clust);	/* Get current sector */
-                if (sect == 0U){
-                    ABORT(fs, FR_INT_ERR);
+                if(loop_exit == 0U){
+                    sect = clst2sect(fs, fp->clust);	/* Get current sector */
+                    if (sect == 0U){
+                        res = FR_INT_ERR;
+                        loop_exit = 1U;
+                        func_exit = 1U;
+                        fp->err = (BYTE)(res);
+                        /*ABORT(fs, FR_INT_ERR);*/
+                    }
                 }
-                sect += csect;
-                cc = btr / SS(fs);					/* When remaining bytes >= sector size, */
-                if (cc > 0U) {						/* Read maximum contiguous sectors directly */
 
-                    temp_word = fs->csize;
+                if(loop_exit == 0U){
+                    sect += csect;
+                    cc = btr / SS(fs);					/* When remaining bytes >= sector size, */
+                    if (cc > 0U) {						/* Read maximum contiguous sectors directly */
 
-                    if (csect + cc > temp_word) {	/* Clip at cluster boundary */
-                        cc = fs->csize - csect;
-                    }
-                    if (disk_read(fs->pdrv, rbuff, sect, cc) != RES_OK){
-                        ABORT(fs, FR_DISK_ERR);
-                    }
-    #if !FF_FS_READONLY && FF_FS_MINIMIZE <= 2		/* Replace one of the read sectors with cached data if it contains a dirty sector */
-    #if FF_FS_TINY
-                    if (fs->wflag && fs->winsect - sect < cc) {
-                        mem_cpy(rbuff + ((fs->winsect - sect) * SS(fs)), fs->win, SS(fs));
-                    }
-    #else
-                    if ((fp->flag & FA_DIRTY) && (fp->sect - sect < cc)) {
-                        mem_cpy(rbuff + ((fp->sect - sect) * SS(fs)), fp->buf, SS(fs));
-                    }
-    #endif
-    #endif
-                    rcnt = SS(fs) * cc;				/* Number of bytes transferred */
-                    continue;
-                }
-    #if !FF_FS_TINY
-                if (fp->sect != sect) {			/* Load data sector if not in cache */
-    #if !FF_FS_READONLY
-                    if (fp->flag & FA_DIRTY) {		/* Write-back dirty sector cache */
-                        if (disk_write(fs->pdrv, fp->buf, fp->sect, 1U) != RES_OK){
-                            ABORT(fs, FR_DISK_ERR);
+                        temp_word = fs->csize;
+
+                        if (csect + cc > temp_word) {	/* Clip at cluster boundary */
+                            cc = fs->csize - csect;
                         }
-                        fp->flag &= (BYTE)~FA_DIRTY;
-                    }
-    #endif
-                    if (disk_read(fs->pdrv, fp->buf, sect, 1U) != RES_OK){
-                        ABORT(fs, FR_DISK_ERR);	/* Fill sector cache */
+
+                        if (disk_read(fs->pdrv, rbuff, sect, cc) != RES_OK){
+                            res = FR_DISK_ERR;
+                            loop_exit = 1U;
+                            func_exit = 1U;
+                            fp->err = (BYTE)(res);
+                            /*ABORT(fs, FR_DISK_ERR);*/
+                        }
+                        else{
+#if !FF_FS_READONLY && FF_FS_MINIMIZE <= 2		/* Replace one of the read sectors with cached data if it contains a dirty sector */
+#if FF_FS_TINY
+                            if (fs->wflag && fs->winsect - sect < cc) {
+                                mem_cpy(rbuff + ((fs->winsect - sect) * SS(fs)), fs->win, SS(fs));
+                            }
+#else
+                            if ((fp->flag & FA_DIRTY) && (fp->sect - sect < cc)) {
+                                mem_cpy(rbuff + ((fp->sect - sect) * SS(fs)), fp->buf, SS(fs));
+                            }
+#endif
+#endif
+                            rcnt = SS(fs) * cc;				/* Number of bytes transferred */
+
+                            loop_skip = 1U;
+                            /*continue;*/
+                        }
                     }
                 }
-    #endif
-                fp->sect = sect;
+
+                if(loop_exit == 0U){
+                    if(loop_skip == 0U){
+
+#if !FF_FS_TINY
+                        if (fp->sect != sect) {			/* Load data sector if not in cache */
+#if !FF_FS_READONLY
+                            if (fp->flag & FA_DIRTY) {		/* Write-back dirty sector cache */
+                                if (disk_write(fs->pdrv, fp->buf, fp->sect, 1U) != RES_OK){
+                                    res = FR_DISK_ERR;
+                                    loop_exit = 1U;
+                                    func_exit = 1U;
+                                    fp->err = (BYTE)(res);
+                                    /*ABORT(fs, FR_DISK_ERR);*/
+                                }
+                                else{
+                                    fp->flag &= (BYTE)~FA_DIRTY;
+                                }
+                            }
+#endif
+
+                            if(loop_exit == 0U){
+                                if (disk_read(fs->pdrv, fp->buf, sect, 1U) != RES_OK){
+                                    res = FR_DISK_ERR;
+                                    loop_exit = 1U;
+                                    func_exit = 1U;
+                                    fp->err = (BYTE)(res);  /* Fill sector cache */
+                                    /*ABORT(fs, FR_DISK_ERR);*/
+                                }
+                            }
+                        }
+#endif
+                        if(loop_exit == 0U){
+                            fp->sect = sect;
+                        }
+                    }
+                }
             }
-            rcnt = SS(fs) - (UINT)fp->fptr % SS(fs);	/* Number of bytes left in the sector */
-            if (rcnt > btr){
-                rcnt = btr;					/* Clip it by btr if needed */
+
+
+            if(loop_exit == 0U){
+                if(loop_skip == 0U){
+                    rcnt = SS(fs) - (UINT)fp->fptr % SS(fs);	/* Number of bytes left in the sector */
+                    if (rcnt > btr){
+                        rcnt = btr;					/* Clip it by btr if needed */
+                    }
+#if FF_FS_TINY
+                    if (move_window(fs, fp->sect) != FR_OK){
+                        res = FR_DISK_ERR;
+                        loop_exit = 1U;
+                        func_exit = 1U;
+                        fp->err = (BYTE)(res);  /* Move sector window */
+                        /*ABORT(fs, FR_DISK_ERR);*/
+                    }
+                    else{
+                        mem_cpy(rbuff, fs->win + fp->fptr % SS(fs), rcnt);	/* Extract partial sector */
+                    }
+#else
+                    mem_cpy(rbuff, fp->buf + fp->fptr % SS(fs), rcnt);	/* Extract partial sector */
+#endif
+                }
             }
-    #if FF_FS_TINY
-            if (move_window(fs, fp->sect) != FR_OK) ABORT(fs, FR_DISK_ERR);	/* Move sector window */
-            mem_cpy(rbuff, fs->win + fp->fptr % SS(fs), rcnt);	/* Extract partial sector */
-    #else
-            mem_cpy(rbuff, fp->buf + fp->fptr % SS(fs), rcnt);	/* Extract partial sector */
-    #endif
+
+            if(loop_exit || func_exit){
+                break;
+            }
+            else{
+                *br += rcnt;
+                rbuff += rcnt;
+                fp->fptr += rcnt;
+            }
         }
 	}
 
-	LEAVE_FF(fs, FR_OK);
+	return res;
 }
 
 
