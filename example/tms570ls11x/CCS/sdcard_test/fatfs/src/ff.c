@@ -5422,7 +5422,7 @@ FRESULT f_sync (
     FATFS *fs = (FATFS *)0;
 	DWORD ff_tm;
 	BYTE *dir;
-
+	BYTE func_exit = 0U;
 
 	res = validate(&fp->obj, &fs);	/* Check validity of the file object */
 	if (res == FR_OK) {
@@ -5430,13 +5430,20 @@ FRESULT f_sync (
 #if !FF_FS_TINY
 			if (fp->flag & FA_DIRTY) {	/* Write-back cached data if needed */
 				if (disk_write(fs->pdrv, fp->buf, fp->sect, 1U) != RES_OK){
-				    LEAVE_FF(fs, FR_DISK_ERR);
+				    res = FR_DISK_ERR;
+				    func_exit = 1U;
+				    /*LEAVE_FF(fs, FR_DISK_ERR);*/
 				}
-				fp->flag &= (BYTE)~FA_DIRTY;
+				else{
+				    fp->flag &= (BYTE)~FA_DIRTY;
+				}
 			}
 #endif
-			/* Update the directory entry */
-			ff_tm = GET_FATTIME();				/* Modified time */
+
+			if(func_exit == 0U){
+
+			    /* Update the directory entry */
+			    ff_tm = GET_FATTIME();				/* Modified time */
 #if FF_FS_EXFAT
 			if (fs->fs_type == FS_EXFAT) {
 				res = fill_first_frag(&fp->obj);	/* Fill first fragment on the FAT if needed */
@@ -5444,48 +5451,49 @@ FRESULT f_sync (
 					res = fill_last_frag(&fp->obj, fp->clust, 0xFFFFFFFF);	/* Fill last fragment on the FAT if needed */
 				}
 				if (res == FR_OK) {
-					DIR dj;
-					DEF_NAMBUF
+                        DIR dj;
+                        DEF_NAMBUF
 
-					INIT_NAMBUF(fs);
-					res = load_obj_xdir(&dj, &fp->obj);	/* Load directory entry block */
-					if (res == FR_OK) {
-						fs->dirbuf[XDIR_Attr] |= AM_ARC;				/* Set archive attribute to indicate that the file has been changed */
-						fs->dirbuf[XDIR_GenFlags] = fp->obj.stat | 1;	/* Update file allocation information */
-						st_dword(fs->dirbuf + XDIR_FstClus, fp->obj.sclust);
-						st_qword(fs->dirbuf + XDIR_FileSize, fp->obj.objsize);
-						st_qword(fs->dirbuf + XDIR_ValidFileSize, fp->obj.objsize);
-						st_dword(fs->dirbuf + XDIR_ModTime, ff_tm);		/* Update modified time */
-						fs->dirbuf[XDIR_ModTime10] = 0;
-						st_dword(fs->dirbuf + XDIR_AccTime, 0);
-						res = store_xdir(&dj);	/* Restore it to the directory */
-						if (res == FR_OK) {
-							res = sync_fs(fs);
-							fp->flag &= (BYTE)~FA_MODIFIED;
-						}
-					}
-					FREE_NAMBUF();
-				}
-			} else
+                        INIT_NAMBUF(fs);
+                        res = load_obj_xdir(&dj, &fp->obj);	/* Load directory entry block */
+                        if (res == FR_OK) {
+                            fs->dirbuf[XDIR_Attr] |= AM_ARC;				/* Set archive attribute to indicate that the file has been changed */
+                            fs->dirbuf[XDIR_GenFlags] = fp->obj.stat | 1;	/* Update file allocation information */
+                            st_dword(fs->dirbuf + XDIR_FstClus, fp->obj.sclust);
+                            st_qword(fs->dirbuf + XDIR_FileSize, fp->obj.objsize);
+                            st_qword(fs->dirbuf + XDIR_ValidFileSize, fp->obj.objsize);
+                            st_dword(fs->dirbuf + XDIR_ModTime, ff_tm);		/* Update modified time */
+                            fs->dirbuf[XDIR_ModTime10] = 0;
+                            st_dword(fs->dirbuf + XDIR_AccTime, 0);
+                            res = store_xdir(&dj);	/* Restore it to the directory */
+                            if (res == FR_OK) {
+                                res = sync_fs(fs);
+                                fp->flag &= (BYTE)~FA_MODIFIED;
+                            }
+                        }
+                        FREE_NAMBUF();
+                    }
+                } else
 #endif
-			{
-				res = move_window(fs, fp->dir_sect);
-				if (res == FR_OK) {
-					dir = fp->dir_ptr;
-					dir[DIR_Attr] |= AM_ARC;						/* Set archive attribute to indicate that the file has been changed */
-					st_clust(fp->obj.fs, dir, fp->obj.sclust);		/* Update file allocation information  */
-					st_dword(dir + DIR_FileSize, (DWORD)fp->obj.objsize);	/* Update file size */
-					st_dword(dir + DIR_ModTime, ff_tm);				/* Update modified time */
-					st_word(dir + DIR_LstAccDate, 0U);
-					fs->wflag = 1U;
-					res = sync_fs(fs);					/* Restore it to the directory */
-					fp->flag &= (BYTE)~FA_MODIFIED;
-				}
+                {
+                    res = move_window(fs, fp->dir_sect);
+                    if (res == FR_OK) {
+                        dir = fp->dir_ptr;
+                        dir[DIR_Attr] |= AM_ARC;						/* Set archive attribute to indicate that the file has been changed */
+                        st_clust(fp->obj.fs, dir, fp->obj.sclust);		/* Update file allocation information  */
+                        st_dword(dir + DIR_FileSize, (DWORD)fp->obj.objsize);	/* Update file size */
+                        st_dword(dir + DIR_ModTime, ff_tm);				/* Update modified time */
+                        st_word(dir + DIR_LstAccDate, 0U);
+                        fs->wflag = 1U;
+                        res = sync_fs(fs);					/* Restore it to the directory */
+                        fp->flag &= (BYTE)~FA_MODIFIED;
+                    }
+                }
 			}
 		}
 	}
 
-	LEAVE_FF(fs, res);
+	return res;
 }
 
 #endif /* !FF_FS_READONLY */
